@@ -114,11 +114,22 @@ func (r *AccountRepository) AuthenticateSession(ctx context.Context, token strin
 	tokenHash, err := auth.HashSessionToken(token)
 	if err != nil { return auth.Account{}, ErrSessionNotFound }
 	var account auth.Account
-	err = r.db.QueryRowContext(ctx, `UPDATE account_sessions s SET last_used_at=$2
-		FROM accounts a
-		WHERE s.token_hash=$1 AND s.account_id=a.id AND s.revoked_at IS NULL
-		AND s.expires_at > $2 AND a.disabled_at IS NULL
-		RETURNING a.id,a.email,a.created_at`, tokenHash[:], now.UTC()).
+	now = now.UTC()
+	// Authentication is checked on every API request, but persisting last_used_at
+	// on every request creates avoidable write amplification. Touch a session at
+	// most once per minute while still returning the account on every valid call.
+	err = r.db.QueryRowContext(ctx, `WITH touched AS (
+		UPDATE account_sessions
+		SET last_used_at=$2
+		WHERE token_hash=$1 AND revoked_at IS NULL AND expires_at>$2
+			AND last_used_at <= $2 - INTERVAL '1 minute'
+		RETURNING token_hash
+	)
+	SELECT a.id,a.email,a.created_at
+	FROM account_sessions s
+	JOIN accounts a ON a.id=s.account_id
+	WHERE s.token_hash=$1 AND s.revoked_at IS NULL
+		AND s.expires_at>$2 AND a.disabled_at IS NULL`, tokenHash[:], now).
 		Scan(&account.ID,&account.Email,&account.CreatedAt)
 	if errors.Is(err,sql.ErrNoRows) { return auth.Account{}, ErrSessionNotFound }
 	if err != nil { return auth.Account{}, fmt.Errorf("authenticate session: %w",err) }
