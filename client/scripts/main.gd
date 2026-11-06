@@ -8,6 +8,7 @@ var auth_panel: PanelContainer
 var auth_email_input: LineEdit
 var auth_password_input: LineEdit
 var auth_status_label: Label
+var character_status_label: Label
 var logout_button: Button
 var character_button: Button
 var character_panel: PanelContainer
@@ -326,10 +327,7 @@ func _on_api_request_completed(result: int, response_code: int, _headers: Packed
 		return
 	if response_code < 200 or response_code >= 300:
 		var error_code := str(payload.get("error", "request_failed"))
-		if auth_panel != null and auth_panel.visible:
-			auth_status_label.text = "Account: " + error_code.replace("_", " ")
-		else:
-			status_label.text = "Account: " + error_code.replace("_", " ")
+		_set_account_status("Account: " + error_code.replace("_", " "))
 		return
 	match api_stage:
 		"login", "register":
@@ -611,13 +609,12 @@ func _request_character_list() -> void:
 		HTTPClient.METHOD_GET
 	)
 	if error != OK:
-		auth_status_label.text = "Could not load account characters."
+		_set_account_status("Could not load account characters.")
 
 func _create_account_character(character_name: String) -> void:
 	character_name = character_name.strip_edges()
 	if character_name.length() < 3 or character_name.length() > 20:
-		if auth_status_label != null:
-			auth_status_label.text = "Character names must be 3–20 characters."
+		_set_account_status("Character names must be 3–20 characters.")
 		return
 	api_stage = "create_character"
 	var error := api_request.request(
@@ -627,7 +624,7 @@ func _create_account_character(character_name: String) -> void:
 		JSON.stringify({"name": character_name})
 	)
 	if error != OK:
-		auth_status_label.text = "Could not create a character."
+		_set_account_status("Could not create a character.")
 
 
 
@@ -640,10 +637,17 @@ func _expire_session() -> void:
 		movement_timer.stop()
 	auth_panel.visible = true
 	logout_button.visible = false
+	character_button.visible = false
+	if character_panel != null:
+		character_panel.visible = false
 	status_label.text = "Server: session expired"
 	auth_status_label.text = "Your session expired. Please sign in again."
 
 func _show_character_selection(characters: Array) -> void:
+	if movement_timer != null:
+		movement_timer.stop()
+	player_id = ""
+	interaction_pending = false
 	if character_panel != null:
 		character_panel.queue_free()
 	character_panel = PanelContainer.new()
@@ -685,9 +689,17 @@ func _show_character_selection(characters: Array) -> void:
 	create_button.text = "Create character"
 	create_button.pressed.connect(func() -> void: _create_account_character(character_name_input.text))
 	column.add_child(create_button)
-	auth_status_label = Label.new()
-	auth_status_label.text = "Choose an existing character or create another."
-	auth_status_label.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
-	column.add_child(auth_status_label)
+	character_status_label = Label.new()
+	character_status_label.text = "Choose an existing character or create another."
+	character_status_label.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+	column.add_child(character_status_label)
 	auth_panel.get_parent().add_child(character_panel)
 
+
+func _set_account_status(message: String) -> void:
+	if character_panel != null and character_panel.visible and character_status_label != null:
+		character_status_label.text = message
+	elif auth_status_label != null:
+		auth_status_label.text = message
+	else:
+		status_label.text = message
