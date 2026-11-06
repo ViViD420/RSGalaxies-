@@ -254,8 +254,8 @@ func (s *testAccountStore) AuthenticateSession(_ context.Context,token string,_ 
 }
 func (s *testAccountStore) RevokeSession(_ context.Context,token string,_ time.Time)error{s.revoked[token]=true;return nil}
 
-type testCharacterStore struct { players map[string]map[game.PlayerID]game.Player }
-func newTestCharacterStore()*testCharacterStore{return &testCharacterStore{players:map[string]map[game.PlayerID]game.Player{}}}
+type testCharacterStore struct { players map[string]map[game.PlayerID]game.Player; enemies map[string]game.EnemyState }
+func newTestCharacterStore()*testCharacterStore{return &testCharacterStore{players:map[string]map[game.PlayerID]game.Player{},enemies:map[string]game.EnemyState{}}}
 func (s *testCharacterStore) CreateCharacter(_ context.Context,accountID string,player game.Player)error{
 	if s.players[accountID]==nil{s.players[accountID]=map[game.PlayerID]game.Player{}}
 	if _,ok:=s.players[accountID][player.ID];ok{return game.ErrPlayerAlreadyExists}
@@ -316,6 +316,25 @@ func TestAuthenticatedCharacterLifecycleAndOwnership(t *testing.T) {
 	equipRequest.Header.Set("Authorization","Bearer "+registration.AccessToken)
 	handler.ServeHTTP(equip,equipRequest)
 	if equip.Code!=http.StatusOK{t.Fatalf("equip status=%d body=%s",equip.Code,equip.Body.String())}
+	characters.players[registration.Account.ID][player.ID].Position.X=6
+	characters.players[registration.Account.ID][player.ID].LastCombatAt=time.Now().Add(-2*time.Second)
+	attack:=httptest.NewRecorder()
+	attackRequest:=httptest.NewRequest(http.MethodPost,"/api/v1/account/characters/"+string(player.ID)+"/combat/attack/frontier-rat-001",nil)
+	attackRequest.Header.Set("Authorization","Bearer "+registration.AccessToken)
+	handler.ServeHTTP(attack,attackRequest)
+	if attack.Code!=http.StatusOK{t.Fatalf("combat attack status=%d body=%s",attack.Code,attack.Body.String())}
+	if characters.players[registration.Account.ID][player.ID].Health!=98{t.Fatalf("combat did not apply retaliation: health=%d",characters.players[registration.Account.ID][player.ID].Health)}
+	restAway:=httptest.NewRecorder()
+	restAwayRequest:=httptest.NewRequest(http.MethodPost,"/api/v1/account/characters/"+string(player.ID)+"/rest",nil)
+	restAwayRequest.Header.Set("Authorization","Bearer "+registration.AccessToken)
+	handler.ServeHTTP(restAway,restAwayRequest)
+	if restAway.Code!=http.StatusConflict{t.Fatalf("rest away from spawn status=%d body=%s",restAway.Code,restAway.Body.String())}
+	characters.players[registration.Account.ID][player.ID].Position.X=0
+	rest:=httptest.NewRecorder()
+	restRequest:=httptest.NewRequest(http.MethodPost,"/api/v1/account/characters/"+string(player.ID)+"/rest",nil)
+	restRequest.Header.Set("Authorization","Bearer "+registration.AccessToken)
+	handler.ServeHTTP(rest,restRequest)
+	if rest.Code!=http.StatusOK||characters.players[registration.Account.ID][player.ID].Health!=game.MaxPlayerHealth{t.Fatalf("safe rest status=%d health=%d body=%s",rest.Code,characters.players[registration.Account.ID][player.ID].Health,rest.Body.String())}
 	unequip:=httptest.NewRecorder()
 	unequipRequest:=httptest.NewRequest(http.MethodPost,"/api/v1/account/characters/"+string(player.ID)+"/equipment/unequip/main_hand",nil)
 	unequipRequest.Header.Set("Authorization","Bearer "+registration.AccessToken)
@@ -457,3 +476,14 @@ func TestMarketCatalogIsPublicAndContainsServerPrices(t *testing.T) {
 
 func (s *testCharacterStore) EquipItemForAccount(_ context.Context, accountID string, id game.PlayerID, itemID string) (game.Player,error) { player,ok:=s.players[accountID][id]; if !ok{return game.Player{},game.ErrPlayerNotFound}; if err:=player.EquipItem(itemID);err!=nil{return player,err};s.players[accountID][id]=player;return player,nil }
 func (s *testCharacterStore) UnequipItemForAccount(_ context.Context, accountID string, id game.PlayerID, slot string) (game.Player,error) { player,ok:=s.players[accountID][id]; if !ok{return game.Player{},game.ErrPlayerNotFound}; if err:=player.UnequipItem(slot);err!=nil{return player,err};s.players[accountID][id]=player;return player,nil }
+
+func (s *testCharacterStore) AttackEnemyForAccount(_ context.Context,accountID string,id game.PlayerID,enemyID string,now time.Time)(game.Player,game.CombatResult,error){
+ player,ok:=s.players[accountID][id];if !ok{return game.Player{},game.CombatResult{},game.ErrPlayerNotFound}
+ enemy,ok:=game.FindEnemy(enemyID);if !ok{return game.Player{},game.CombatResult{},game.ErrUnknownEnemy}
+ result,state,err:=player.AttackEnemy(enemy,s.enemies[enemyID],now);if err!=nil{return player,game.CombatResult{},err}
+ s.enemies[enemyID]=state;s.players[accountID][id]=player;return player,result,nil
+}
+func (s *testCharacterStore) RestForAccount(_ context.Context,accountID string,id game.PlayerID)(game.Player,error){
+ player,ok:=s.players[accountID][id];if !ok{return game.Player{},game.ErrPlayerNotFound}
+ if err:=player.Rest();err!=nil{return player,err};s.players[accountID][id]=player;return player,nil
+}
