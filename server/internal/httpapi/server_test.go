@@ -552,7 +552,7 @@ func (s *testCharacterStore) UseItemForAccount(_ context.Context,accountID strin
 }
 
 
-func TestAuthenticationRateLimiterBoundsHighCardinalityKeys(t *testing.T) {
+func TestAuthenticationRateLimiterRejectsNewKeysWhenCapacityIsFull(t *testing.T) {
 	now:=time.Date(2026,11,6,18,0,0,0,time.UTC)
 	server:=New(game.NewMemoryPlayerRepository())
 	server.now=func()time.Time{return now}
@@ -565,10 +565,11 @@ func TestAuthenticationRateLimiterBoundsHighCardinalityKeys(t *testing.T) {
 	request:=httptest.NewRequest(http.MethodPost,"/api/v1/auth/login",nil)
 	request.RemoteAddr="new-host:12345"
 	response:=httptest.NewRecorder()
-	if !server.allowAuthAttempt(response,request,5){t.Fatalf("new key unexpectedly rate limited: %s",response.Body.String())}
+	if server.allowAuthAttempt(response,request,5){t.Fatal("new key should be rejected while rate-limit capacity is full")}
+	if response.Code!=http.StatusTooManyRequests||response.Header().Get("Retry-After")!="60"{t.Fatalf("capacity response status=%d retry-after=%q",response.Code,response.Header().Get("Retry-After"))}
 	if len(server.authAttempts)!=maxAuthRateKeys{t.Fatalf("rate-limit key count=%d want=%d",len(server.authAttempts),maxAuthRateKeys)}
-	if _,ok:=server.authAttempts["host-0|/api/v1/auth/login"];ok{t.Fatal("oldest key was not evicted")}
-	if _,ok:=server.authAttempts["new-host|/api/v1/auth/login"];!ok{t.Fatal("new key was not retained")}
+	if _,ok:=server.authAttempts["host-0|/api/v1/auth/login"];!ok{t.Fatal("active key was evicted under pressure")}
+	if _,ok:=server.authAttempts["new-host|/api/v1/auth/login"];ok{t.Fatal("rejected key was retained")}
 }
 
 
