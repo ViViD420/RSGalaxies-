@@ -2,6 +2,7 @@ package main
 
 import (
 	"context"
+	"database/sql"
 	"errors"
 	"log"
 	"net/http"
@@ -12,6 +13,8 @@ import (
 
 	"github.com/ViViD420/RSGalaxies-/server/internal/game"
 	"github.com/ViViD420/RSGalaxies-/server/internal/httpapi"
+	"github.com/ViViD420/RSGalaxies-/server/internal/storage/postgres"
+	_ "github.com/jackc/pgx/v5/stdlib"
 )
 
 func main() {
@@ -20,9 +23,29 @@ func main() {
 		address = ":8080"
 	}
 
+	var players game.PlayerRepository = game.NewMemoryPlayerRepository()
+	var database *sql.DB
+	if databaseURL := os.Getenv("RS_GALAXIES_DATABASE_URL"); databaseURL != "" {
+		var err error
+		database, err = sql.Open("pgx", databaseURL)
+		if err != nil { log.Fatalf("open PostgreSQL: %v", err) }
+		database.SetMaxOpenConns(20)
+		database.SetMaxIdleConns(5)
+		database.SetConnMaxLifetime(30 * time.Minute)
+		ctx, cancel := context.WithTimeout(context.Background(), 15*time.Second)
+		defer cancel()
+		if err := database.PingContext(ctx); err != nil { log.Fatalf("connect PostgreSQL: %v", err) }
+		if err := postgres.Migrate(ctx, database); err != nil { log.Fatalf("migrate PostgreSQL: %v", err) }
+		players = postgres.NewPlayerRepository(database)
+		defer database.Close()
+		log.Printf("using PostgreSQL player/world persistence")
+	} else {
+		log.Printf("using in-memory development storage; set RS_GALAXIES_DATABASE_URL for PostgreSQL")
+	}
+
 	server := &http.Server{
 		Addr:              address,
-		Handler:           httpapi.New(game.NewMemoryPlayerRepository()).Routes(),
+		Handler:           httpapi.New(players).Routes(),
 		ReadHeaderTimeout: 5 * time.Second,
 		ReadTimeout:       10 * time.Second,
 		WriteTimeout:      10 * time.Second,
