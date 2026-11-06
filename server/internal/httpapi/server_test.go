@@ -680,7 +680,8 @@ func TestWorldCatalogBundlesAllPublicDefinitions(t *testing.T) {
 	}
 }
 
-func (s *testCharacterStore) CreateTradeInviteForAccount(_ context.Context,accountID string,initiatorID,targetID game.PlayerID,now time.Time)(game.TradeSnapshot,error){
+
+func (s *testCharacterStore) CreateTradeForAccount(_ context.Context,accountID string,initiatorID,targetID game.PlayerID,offer game.TradeOffer,now time.Time)(game.TradeSnapshot,error){
 	initiator,ok:=s.players[accountID][initiatorID];if !ok{return game.TradeSnapshot{},game.ErrPlayerNotFound}
 	remote,ok:=s.presence[targetID];if !ok||now.Sub(remote.LastSeenAt)>game.PresenceLease{return game.TradeSnapshot{},game.ErrTradeParticipantUnavailable}
 	var target game.Player;var targetAccount string
@@ -689,37 +690,58 @@ func (s *testCharacterStore) CreateTradeInviteForAccount(_ context.Context,accou
 	if targetAccount==accountID{return game.TradeSnapshot{},game.ErrTradeSelf}
 	if err:=game.ValidateTradeInvite(initiator,target);err!=nil{return game.TradeSnapshot{},err}
 	if s.activeTrades[initiatorID]!=""||s.activeTrades[targetID]!=""{return game.TradeSnapshot{},game.ErrTradeAlreadyActive}
-	s.nextTradeID++
-	id:=fmt.Sprintf("test-trade-%d",s.nextTradeID)
-	trade:=game.TradeSnapshot{ID:id,Status:game.TradeStatusPending,Revision:1,CreatedAt:now,ExpiresAt:now.Add(game.TradeLifetime),Participants:[]game.TradeParticipant{{CharacterID:initiatorID,Name:initiator.Name,Role:"initiator",Offer:game.TradeOffer{Items:map[string]int{}}},{CharacterID:targetID,Name:target.Name,Role:"target",Offer:game.TradeOffer{Items:map[string]int{}}}}}
+	if err:=game.EscrowTradeOffer(&initiator,offer);err!=nil{return game.TradeSnapshot{},err}
+	s.players[accountID][initiatorID]=initiator
+	s.nextTradeID++;id:=fmt.Sprintf("test-trade-%d",s.nextTradeID)
+	trade:=game.TradeSnapshot{ID:id,Status:game.TradePending,Revision:1,CreatedAt:now,ExpiresAt:now.Add(game.TradeLifetime),Participants:[]game.TradeParticipant{{CharacterID:initiatorID,Name:initiator.Name,Role:"initiator",Offer:offer.Clone()},{CharacterID:targetID,Name:target.Name,Role:"target",Offer:game.TradeOffer{Items:map[string]int{}}}}}
 	s.trades[id]=trade;s.activeTrades[initiatorID]=id;s.activeTrades[targetID]=id
 	return trade,nil
 }
-func (s *testCharacterStore) AcceptTradeInviteForAccount(_ context.Context,accountID,tradeID string,now time.Time)(game.TradeSnapshot,error){
+func (s *testCharacterStore) AcceptTradeForAccount(_ context.Context,accountID string,id game.PlayerID,tradeID string,offer game.TradeOffer,now time.Time)(game.TradeSnapshot,error){
 	trade,ok:=s.trades[tradeID];if !ok{return game.TradeSnapshot{},game.ErrTradeNotFound}
-	allowed:=false
-	for _,participant:=range trade.Participants{if participant.Role=="target"{for _,player:=range s.players[accountID]{if player.ID==participant.CharacterID{allowed=true}}}}
-	if !allowed{return game.TradeSnapshot{},game.ErrTradeNotFound}
-	if trade.Status!=game.TradeStatusPending{return game.TradeSnapshot{},game.ErrTradeNotAccepted}
-	if !now.Before(trade.ExpiresAt){trade.Status=game.TradeStatusExpired;s.trades[tradeID]=trade;delete(s.activeTrades,trade.Participants[0].CharacterID);delete(s.activeTrades,trade.Participants[1].CharacterID);return game.TradeSnapshot{},game.ErrTradeExpired}
-	trade.Status=game.TradeStatusOpen;s.trades[tradeID]=trade;return trade,nil
+	if trade.Status!=game.TradePending{return game.TradeSnapshot{},game.ErrTradeNotAccepted}
+	if !now.Before(trade.ExpiresAt){return game.TradeSnapshot{},game.ErrTradeExpired}
+	if trade.Participants[1].CharacterID!=id||s.players[accountID][id].ID==""{return game.TradeSnapshot{},game.ErrTradeNotParticipant}
+	initiator:=s.playersForCharacter(trade.Participants[0].CharacterID)
+	target:=s.players[accountID][id]
+	if err:=game.ValidateTradeInvite(initiator,target);err!=nil{return game.TradeSnapshot{},err}
+	if err:=game.EscrowTradeOffer(&target,offer);err!=nil{return game.TradeSnapshot{},err}
+	s.players[accountID][id]=target
+	trade.Participants[1].Offer=offer.Clone();trade.Status=game.TradeOpen;trade.Revision++
+	s.trades[tradeID]=trade;return trade,nil
 }
-func (s *testCharacterStore) GetActiveTradeForAccount(_ context.Context,accountID string,id game.PlayerID,now time.Time)(game.TradeSnapshot,error){
-	player,ok:=s.players[accountID][id]
-	if !ok{return game.TradeSnapshot{},game.ErrPlayerNotFound}
-	_ = player
-	tradeID:=s.activeTrades[id]
-	if tradeID==""{return game.TradeSnapshot{},game.ErrTradeNotFound}
-	trade,ok:=s.trades[tradeID]
-	if !ok{return game.TradeSnapshot{},game.ErrTradeNotFound}
-	if !now.Before(trade.ExpiresAt){
-		trade.Status=game.TradeStatusExpired;s.trades[tradeID]=trade
-		delete(s.activeTrades,trade.Participants[0].CharacterID);delete(s.activeTrades,trade.Participants[1].CharacterID)
-		return trade,nil
+func (s *testCharacterStore) playersForCharacter(id game.PlayerID)game.Player{for _,players:=range s.players{if p,ok:=players[id];ok{return p}};return game.Player{}}
+func (s *testCharacterStore) UpdateTradeOfferForAccount(_ context.Context,accountID string,id game.PlayerID,tradeID string,revision int64,offer game.TradeOffer,now time.Time)(game.TradeSnapshot,error){
+	trade,ok:=s.trades[tradeID];if !ok{return game.TradeSnapshot{},game.ErrTradeNotFound}
+	if trade.Status!=game.TradeOpen{return game.TradeSnapshot{},game.ErrTradeInvalidState};if trade.Revision!=revision{return game.TradeSnapshot{},game.ErrTradeStaleRevision}
+	for i:=range trade.Participants{if trade.Participants[i].CharacterID==id{
+		player,ok:=s.players[accountID][id];if !ok{return game.TradeSnapshot{},game.ErrTradeNotParticipant}
+		if err:=game.ApplyTradeOffer(&player,trade.Participants[i].Offer);err!=nil{return game.TradeSnapshot{},err}
+		if err:=game.EscrowTradeOffer(&player,offer);err!=nil{return game.TradeSnapshot{},err}
+		s.players[accountID][id]=player;trade.Participants[i].Offer=offer.Clone();trade.Participants[i].Confirmed=false;trade.Revision++;s.trades[tradeID]=trade;return trade,nil
+	}}
+	return game.TradeSnapshot{},game.ErrTradeNotParticipant
+}
+func (s *testCharacterStore) ConfirmTradeForAccount(_ context.Context,accountID string,id game.PlayerID,tradeID string,revision int64,now time.Time)(game.TradeSnapshot,error){
+	trade,ok:=s.trades[tradeID];if !ok{return game.TradeSnapshot{},game.ErrTradeNotFound}
+	if trade.Status!=game.TradeOpen||trade.Revision!=revision{return game.TradeSnapshot{},game.ErrTradeStaleRevision}
+	found:=false
+	for i:=range trade.Participants{if trade.Participants[i].CharacterID==id{if _,ok:=s.players[accountID][id];!ok{return game.TradeSnapshot{},game.ErrTradeNotParticipant};trade.Participants[i].Confirmed=true;found=true}}
+	if !found{return game.TradeSnapshot{},game.ErrTradeNotParticipant}
+	if trade.Participants[0].Confirmed&&trade.Participants[1].Confirmed{
+		for i:=range trade.Participants{other:=1-i;player:=s.playersForCharacter(trade.Participants[i].CharacterID);if err:=game.ApplyTradeOffer(&player,trade.Participants[other].Offer);err!=nil{return game.TradeSnapshot{},err};for owner,players:=range s.players{if _,ok:=players[player.ID];ok{s.players[owner][player.ID]=player}}}
+		trade.Status=game.TradeCompleted;delete(s.activeTrades,trade.Participants[0].CharacterID);delete(s.activeTrades,trade.Participants[1].CharacterID)
 	}
-	return trade,nil
+	s.trades[tradeID]=trade;return trade,nil
 }
-
+func (s *testCharacterStore) CancelTradeForAccount(_ context.Context,accountID string,id game.PlayerID,tradeID string,now time.Time)(game.TradeSnapshot,error){
+	trade,ok:=s.trades[tradeID];if !ok{return game.TradeSnapshot{},game.ErrTradeNotFound}
+	found:=false
+	for i:=range trade.Participants{player,exists:=s.players[accountID][trade.Participants[i].CharacterID];if exists&&trade.Participants[i].CharacterID==id{found=true}}
+	if !found{return game.TradeSnapshot{},game.ErrTradeNotParticipant}
+	for i:=range trade.Participants{participant:=trade.Participants[i];player:=s.playersForCharacter(participant.CharacterID);if err:=game.ApplyTradeOffer(&player,participant.Offer);err!=nil{return game.TradeSnapshot{},err};for owner,players:=range s.players{if _,ok:=players[player.ID];ok{s.players[owner][player.ID]=player}}}
+	trade.Status=game.TradeCancelled;s.trades[tradeID]=trade;delete(s.activeTrades,trade.Participants[0].CharacterID);delete(s.activeTrades,trade.Participants[1].CharacterID);return trade,nil
+}
 func (s *testCharacterStore) GetTradeForAccount(_ context.Context,accountID,tradeID string)(game.TradeSnapshot,error){
 	trade,ok:=s.trades[tradeID];if !ok{return game.TradeSnapshot{},game.ErrTradeNotFound}
 	for _,participant:=range trade.Participants{for _,player:=range s.players[accountID]{if player.ID==participant.CharacterID{return trade,nil}}}
@@ -755,7 +777,7 @@ func TestAuthenticatedTradeInvitationAcceptanceAndPrivacy(t *testing.T) {
 	heartbeat:=httptest.NewRecorder();heartbeatRequest:=httptest.NewRequest(http.MethodPost,"/api/v1/account/characters/"+string(second.ID)+"/presence/heartbeat",nil)
 	heartbeatRequest.Header.Set("Authorization","Bearer "+secondToken);handler.ServeHTTP(heartbeat,heartbeatRequest)
 	if heartbeat.Code!=http.StatusNoContent{t.Fatalf("target heartbeat status=%d body=%s",heartbeat.Code,heartbeat.Body.String())}
-	invite:=httptest.NewRecorder();inviteRequest:=httptest.NewRequest(http.MethodPost,"/api/v1/account/characters/"+string(first.ID)+"/trades/invite/"+string(second.ID),nil)
+	invite:=httptest.NewRecorder();inviteRequest:=httptest.NewRequest(http.MethodPost,"/api/v1/account/characters/"+string(first.ID)+"/trades/invite/"+string(second.ID),bytes.NewBufferString(`{"items":{},"coins":0}`))
 	inviteRequest.Header.Set("Authorization","Bearer "+firstToken);handler.ServeHTTP(invite,inviteRequest)
 	if invite.Code!=http.StatusCreated{t.Fatalf("invite status=%d body=%s",invite.Code,invite.Body.String())}
 	var trade game.TradeSnapshot;if err:=json.Unmarshal(invite.Body.Bytes(),&trade);err!=nil{t.Fatal(err)}
@@ -764,12 +786,12 @@ func TestAuthenticatedTradeInvitationAcceptanceAndPrivacy(t *testing.T) {
 	foreign:=httptest.NewRecorder();foreignRequest:=httptest.NewRequest(http.MethodGet,"/api/v1/account/trades/"+trade.ID,nil)
 	foreignRequest.Header.Set("Authorization","Bearer "+outsiderToken);handler.ServeHTTP(foreign,foreignRequest)
 	if foreign.Code!=http.StatusNotFound{t.Fatalf("outsider trade read status=%d body=%s",foreign.Code,foreign.Body.String())}
-	accept:=httptest.NewRecorder();acceptRequest:=httptest.NewRequest(http.MethodPost,"/api/v1/account/trades/"+trade.ID+"/accept",nil)
+	accept:=httptest.NewRecorder();acceptRequest:=httptest.NewRequest(http.MethodPost,"/api/v1/account/characters/"+string(second.ID)+"/trades/"+trade.ID+"/accept",bytes.NewBufferString(`{"items":{},"coins":0}`))
 	acceptRequest.Header.Set("Authorization","Bearer "+secondToken);handler.ServeHTTP(accept,acceptRequest)
 	if accept.Code!=http.StatusOK{t.Fatalf("accept status=%d body=%s",accept.Code,accept.Body.String())}
 	var accepted game.TradeSnapshot;if err:=json.Unmarshal(accept.Body.Bytes(),&accepted);err!=nil{t.Fatal(err)}
 	if accepted.Status!=game.TradeStatusOpen{t.Fatalf("accepted trade status=%s",accepted.Status)}
-	self:=httptest.NewRecorder();selfRequest:=httptest.NewRequest(http.MethodPost,"/api/v1/account/characters/"+string(first.ID)+"/trades/invite/"+string(first.ID),nil)
+	self:=httptest.NewRecorder();selfRequest:=httptest.NewRequest(http.MethodPost,"/api/v1/account/characters/"+string(first.ID)+"/trades/invite/"+string(first.ID),bytes.NewBufferString(`{"items":{},"coins":0}`))
 	selfRequest.Header.Set("Authorization","Bearer "+firstToken);handler.ServeHTTP(self,selfRequest)
 	if self.Code!=http.StatusConflict{t.Fatalf("self invite status=%d body=%s",self.Code,self.Body.String())}
 }
