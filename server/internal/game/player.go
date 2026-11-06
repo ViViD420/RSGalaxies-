@@ -23,6 +23,8 @@ type Player struct {
 	Name string `json:"name"`
 	CreatedAt time.Time `json:"createdAt"`
 	Skills map[string]SkillProgress `json:"skills"`
+	Position WorldPosition `json:"position"`
+	lastMoveAt time.Time
 }
 
 func NewPlayer(id PlayerID, name string, now time.Time) (Player, error) {
@@ -31,7 +33,7 @@ func NewPlayer(id PlayerID, name string, now time.Time) (Player, error) {
 	if id == "" { return Player{}, errors.New("player id is required") }
 	skills := make(map[string]SkillProgress, len(skillDefinitions))
 	for _, definition := range skillDefinitions { skills[definition.ID] = SkillProgress{Level: 1} }
-	return Player{ID:id, Name:name, CreatedAt:now.UTC(), Skills:skills}, nil
+	return Player{ID:id, Name:name, CreatedAt:now.UTC(), Skills:skills, Position:worldZones[0].Spawn, lastMoveAt:now.UTC()}, nil
 }
 
 func (p *Player) AwardExperience(skillID string, amount int) (bool, error) {
