@@ -15,6 +15,7 @@ var equipment_button: Button
 var rest_button: Button
 var bag_button: Button
 var inventory_panel: PanelContainer
+var inventory_use_select: OptionButton
 var equipment_panel: PanelContainer
 var equipment_item_select: OptionButton
 var equipment_slot_select: OptionButton
@@ -782,6 +783,11 @@ func _on_gather_completed(result: int, response_code: int, _headers: PackedStrin
 				movement_timer.stop()
 		status_label.text = "Combat: " + combat_message
 		return
+	if interaction_type == "use_item":
+		var item_id := str(payload.get("itemId", "minor_healing_potion"))
+		_update_inventory(player_data.get("inventory", {}), player_data.get("bank", {}), player_data.get("coins", current_coins), player_data.get("equipment", {}), payload.get("health", player_data.get("health", current_health)))
+		status_label.text = "Used " + item_id.replace("_", " ") + " • +" + str(payload.get("healed", 0)) + " health"
+		return
 	if interaction_type == "rest":
 		_update_inventory(player_data.get("inventory", {}), player_data.get("bank", {}), player_data.get("coins", current_coins), player_data.get("equipment", {}), payload.get("health", player_data.get("health", current_health)))
 		var position_data: Variant = player_data.get("position", {})
@@ -1484,6 +1490,20 @@ func _show_inventory_panel() -> void:
 		var empty_label := Label.new()
 		empty_label.text = "Your bags and bank are empty."
 		items_column.add_child(empty_label)
+	inventory_use_select = OptionButton.new()
+	inventory_use_select.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	for item in market_catalog:
+		if item is Dictionary:
+			var item_id := str(item.get("id", ""))
+			if bool(item.get("consumable", false)) and int(current_inventory.get(item_id, 0)) > 0:
+				inventory_use_select.add_item(str(item.get("name", item_id)))
+				inventory_use_select.set_item_metadata(inventory_use_select.item_count - 1, item_id)
+	column.add_child(inventory_use_select)
+	var use_button := Button.new()
+	use_button.text = "Use selected consumable"
+	use_button.disabled = inventory_use_select.item_count == 0
+	use_button.pressed.connect(_use_selected_inventory_item)
+	column.add_child(use_button)
 	var close_button := Button.new()
 	close_button.text = "Close"
 	close_button.pressed.connect(func() -> void: inventory_panel.visible = false)
@@ -1561,4 +1581,22 @@ func _append_chat_line(line: String) -> void:
 	chat_history.clear()
 	for entry in chat_lines:
 		chat_history.append_text(entry + "\n")
+
+
+func _use_selected_inventory_item() -> void:
+	var item_id := str(inventory_use_select.get_selected_metadata())
+	if item_id.is_empty():
+		return
+	interaction_type = "use_item"
+	var error := gather_request.request(
+		api_base_url + "/api/v1/account/characters/" + player_id + "/inventory/use/" + item_id,
+		_api_headers(),
+		HTTPClient.METHOD_POST,
+		""
+	)
+	if error == OK:
+		interaction_pending = true
+		status_label.text = "Using " + item_id.replace("_", " ") + "..."
+	else:
+		status_label.text = "Could not use item."
 
