@@ -688,14 +688,18 @@ func _update_inventory(inventory_data: Variant, bank_data: Variant = {}, coins_d
 			if item is Dictionary and str(item.get("id", "")) == str(item_id):
 				current_attack_bonus += int(item.get("attackBonus", 0))
 				current_defense_bonus += int(item.get("defenseBonus", 0))
-	inventory_label.text = "Coins %d • ATK %d DEF %d • Bag L:%d P:%d S:%d • Bank L:%d P:%d S:%d" % [
+	inventory_label.text = "Coins %d • ATK %d DEF %d • Bag L:%d P:%d S:%d Cu:%d/%d • Bank L:%d P:%d S:%d Cu:%d/%d" % [
 			current_coins, current_attack_bonus, current_defense_bonus,
 		int(current_inventory.get("softwood_log", 0)),
 		int(current_inventory.get("wooden_plank", 0)),
 		int(current_inventory.get("rough_stone", 0)),
+		int(current_inventory.get("copper_ore", 0)),
+		int(current_inventory.get("copper_bar", 0)),
 		int(current_bank.get("softwood_log", 0)),
 		int(current_bank.get("wooden_plank", 0)),
-		int(current_bank.get("rough_stone", 0))
+		int(current_bank.get("rough_stone", 0)),
+		int(current_bank.get("copper_ore", 0)),
+		int(current_bank.get("copper_bar", 0))
 	]
 
 func _apply_server_position(position_data: Dictionary, force: bool) -> void:
