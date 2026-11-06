@@ -346,7 +346,7 @@ func TestPostgresPlayerTradeEscrowSchemaEnforcesReservationsAndPositiveBalances(
 	}
 	_ = tx.Rollback()
 
-	overfunded := clonePlayer(firstPlayer)
+	overfunded := cloneTradeTestPlayer(firstPlayer)
 	overfunded.Coins = math.MaxInt64 - 25
 	tx, err = db.BeginTx(ctx, nil)
 	if err != nil { t.Fatal(err) }
@@ -356,7 +356,7 @@ func TestPostgresPlayerTradeEscrowSchemaEnforcesReservationsAndPositiveBalances(
 	}
 	_ = tx.Rollback()
 
-	atCapacity := clonePlayer(firstPlayer)
+	atCapacity := cloneTradeTestPlayer(firstPlayer)
 	atCapacity.Inventory["softwood_log"] = 98
 	atCapacity.Coins = math.MaxInt64 - 50
 	tx, err = db.BeginTx(ctx, nil)
