@@ -235,6 +235,16 @@ func TestPostgresLocalChatIsZoneScopedAndRateLimited(t *testing.T) {
  if _,err:=repo.SendLocalChatForAccount(ctx,first.ID,playerOne.ID,"too soon",now.Add(time.Second));!errors.Is(err,game.ErrChatCooldown){t.Fatalf("chat cooldown error=%v",err)}
  after,err:=repo.ListLocalChatForAccount(ctx,second.ID,playerTwo.ID,sent.ID,50);if err!=nil||len(after)!=0{t.Fatalf("chat cursor result=%+v err=%v",after,err)}
  if _,err:=repo.ListLocalChatForAccount(ctx,second.ID,playerOne.ID,0,50);!errors.Is(err,game.ErrPlayerNotFound){t.Fatalf("foreign chat read error=%v",err)}
+	for index:=0;index<55;index++ {
+		messageAt:=now.Add(time.Duration(index+1)*game.ChatCooldown)
+		if _,err:=repo.SendLocalChatForAccount(ctx,second.ID,playerTwo.ID,fmt.Sprintf("history message %02d",index),messageAt);err!=nil{t.Fatalf("send history message %d: %v",index,err)}
+	}
+	latest,err:=repo.ListLocalChatForAccount(ctx,first.ID,playerOne.ID,0,50)
+	if err!=nil{t.Fatalf("load initial bounded chat history: %v",err)}
+	if len(latest)!=50||latest[0].ID<=sent.ID||latest[len(latest)-1].ID<=latest[0].ID{t.Fatalf("initial chat history should contain newest 50 ordered messages: count=%d first=%+v last=%+v",len(latest),latest[0],latest[len(latest)-1])}
+	newer,err:=repo.ListLocalChatForAccount(ctx,first.ID,playerOne.ID,latest[len(latest)-1].ID,50)
+	if err!=nil||len(newer)!=0{t.Fatalf("chat cursor after newest history result=%+v err=%v",newer,err)}
+
 }
 
 func TestPostgresOwnedConsumableUsePersistsHealthAndInventory(t *testing.T) {
