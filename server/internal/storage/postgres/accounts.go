@@ -2,6 +2,9 @@ package postgres
 
 import (
 	"context"
+	"crypto/rand"
+	"encoding/hex"
+	"encoding/json"
 	"database/sql"
 	"errors"
 	"encoding/json"
@@ -19,16 +22,11 @@ const SessionLifetime = 30 * 24 * time.Hour
 
 var (
 	ErrAccountExists = errors.New("account already exists")
+	ErrAccountNotFound = errors.New("account not found")
 	ErrInvalidCredentials = errors.New("invalid email or password")
 	ErrInvalidEmail = errors.New("invalid email address")
 	ErrSessionNotFound = errors.New("session not found or expired")
 )
-
-type Account struct {
-	ID string
-	Email string
-	CreatedAt time.Time
-}
 
 type AccountRepository struct { db *sql.DB }
 
@@ -45,14 +43,14 @@ func normalizeEmail(email string) (string, error) {
 }
 
 func newAccountID() (string, error) {
-	id, err := newRandomID()
-	if err != nil { return "", err }
-	return id, nil
+	var raw [16]byte
+	if _, err := rand.Read(raw[:]); err != nil { return "", err }
+	return hex.EncodeToString(raw[:]), nil
 }
 
-func (r *AccountRepository) Register(ctx context.Context, email, password string, now time.Time) (Account, string, error) {
+func (r *AccountRepository) Register(ctx context.Context, email, password string, now time.Time) (auth.Account, string, error) {
 	email, err := normalizeEmail(email)
-	if err != nil { return Account{}, "", err }
+	if err != nil { return auth.Account{}, "", err }
 	passwordHash, err := auth.HashPassword(password)
 	if err != nil { return Account{}, "", err }
 	id, err := newAccountID()
@@ -75,13 +73,13 @@ func (r *AccountRepository) Register(ctx context.Context, email, password string
 		return Account{}, "", fmt.Errorf("create initial session: %w", err)
 	}
 	if err := tx.Commit(); err != nil { return Account{}, "", fmt.Errorf("commit account registration: %w", err) }
-	return Account{ID:id, Email:email, CreatedAt:now}, token, nil
+	return auth.Account{ID:id, Email:email, CreatedAt:now}, token, nil
 }
 
 func (r *AccountRepository) Login(ctx context.Context, email, password string, now time.Time) (Account, string, error) {
 	email, err := normalizeEmail(email)
 	if err != nil { return Account{}, "", ErrInvalidCredentials }
-	var account Account
+	var account auth.Account
 	var passwordHash string
 	var disabledAt sql.NullTime
 	err = r.db.QueryRowContext(ctx, `SELECT id,email,password_hash,created_at,disabled_at FROM accounts WHERE LOWER(email)=$1`, email).
@@ -126,17 +124,21 @@ func (r *AccountRepository) RevokeSession(ctx context.Context, token string, now
 
 // CreateCharacter atomically binds a newly-created character to its owning account.
 func (r *AccountRepository) CreateCharacter(ctx context.Context, accountID string, player game.Player) error {
-	_, err := r.db.ExecContext(ctx,`INSERT INTO players
+	skills, err := json.Marshal(player.Skills)
+	if err != nil { return fmt.Errorf("encode character skills: %w", err) }
+	inventory, err := json.Marshal(player.Inventory)
+	if err != nil { return fmt.Errorf("encode character inventory: %w", err) }
+	_, err = r.db.ExecContext(ctx,`INSERT INTO players
 		(id,account_id,name,created_at,skills,inventory,zone_id,position_x,position_z,last_move_at)
 		VALUES ($1,$2,$3,$4,$5::jsonb,$6::jsonb,$7,$8,$9,$10)`,
-		string(player.ID),accountID,player.Name,player.CreatedAt,marshalJSON(player.Skills),marshalJSON(player.Inventory),
+		string(player.ID),accountID,player.Name,player.CreatedAt,string(skills),string(inventory),
 		player.Position.ZoneID,player.Position.X,player.Position.Z,player.LastMoveAt)
 	if err != nil {
 		var pgErr *pgconn.PgError
 		if errors.As(err,&pgErr) {
 			switch pgErr.Code {
 			case "23505": return game.ErrPlayerAlreadyExists
-			case "23503": return ErrSessionNotFound
+			case "23503": return ErrAccountNotFound
 			}
 		}
 		return fmt.Errorf("create owned character: %w",err)
@@ -159,12 +161,4 @@ func (r *AccountRepository) ListCharacters(ctx context.Context, accountID string
 	return players,nil
 }
 
-func marshalJSON(value any) string {
-	encoded,err:=jsonMarshal(value)
-	if err!=nil { panic("JSON encoding of validated game state failed: "+err.Error()) }
-	return string(encoded)
-}
 
-var jsonMarshal = func(value any) ([]byte,error) { return json.Marshal(value) }
-
-var _ = sql.ErrNoRows
