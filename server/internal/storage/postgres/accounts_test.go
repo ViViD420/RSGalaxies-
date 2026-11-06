@@ -289,3 +289,60 @@ func TestPostgresZonePresenceHeartbeatLeaseAndOwnership(t *testing.T) {
 	if len(expired)!=0{t.Fatalf("expired presence remained visible: %+v",expired)}
 	if _,err:=repo.ListZonePresenceForAccount(ctx,first.ID,two.ID,now);!errors.Is(err,game.ErrPlayerNotFound){t.Fatalf("foreign character presence error=%v",err)}
 }
+
+
+func TestPostgresPlayerTradeEscrowSchemaEnforcesReservationsAndPositiveBalances(t *testing.T) {
+	db := integrationDatabase(t)
+	repo := NewAccountRepository(db)
+	ctx := context.Background()
+	now := time.Now().UTC().Truncate(time.Microsecond)
+	first, _, err := repo.Register(ctx, fmt.Sprintf("trade-a-%d@example.test", now.UnixNano()), "correct-horse-battery-staple", now)
+	if err != nil { t.Fatal(err) }
+	second, _, err := repo.Register(ctx, fmt.Sprintf("trade-b-%d@example.test", now.UnixNano()), "correct-horse-battery-staple", now)
+	if err != nil { cleanupTestAccounts(db, first.ID); t.Fatal(err) }
+	third, _, err := repo.Register(ctx, fmt.Sprintf("trade-c-%d@example.test", now.UnixNano()), "correct-horse-battery-staple", now)
+	if err != nil { cleanupTestAccounts(db, first.ID, second.ID); t.Fatal(err) }
+
+	firstPlayer, err := game.NewPlayer(game.PlayerID(fmt.Sprintf("trade-char-a-%d", now.UnixNano())), "TradeWayfarerA", now)
+	if err != nil { t.Fatal(err) }
+	secondPlayer, err := game.NewPlayer(game.PlayerID(fmt.Sprintf("trade-char-b-%d", now.UnixNano())), "TradeWayfarerB", now)
+	if err != nil { t.Fatal(err) }
+	thirdPlayer, err := game.NewPlayer(game.PlayerID(fmt.Sprintf("trade-char-c-%d", now.UnixNano())), "TradeWayfarerC", now)
+	if err != nil { t.Fatal(err) }
+	if err := repo.CreateCharacter(ctx, first.ID, firstPlayer); err != nil { t.Fatal(err) }
+	if err := repo.CreateCharacter(ctx, second.ID, secondPlayer); err != nil { t.Fatal(err) }
+	if err := repo.CreateCharacter(ctx, third.ID, thirdPlayer); err != nil { t.Fatal(err) }
+
+	tradeID := fmt.Sprintf("trade-%d", now.UnixNano())
+	t.Cleanup(func() {
+		_, _ = db.ExecContext(context.Background(), "DELETE FROM player_trades WHERE id=$1", tradeID)
+		cleanupTestAccounts(db, first.ID, second.ID, third.ID)
+	})
+	if _, err := db.ExecContext(ctx, `INSERT INTO player_trades(id,status,revision,created_at,updated_at,expires_at)
+		VALUES($1,'pending',1,$2,$2,$3)`, tradeID, now, now.Add(10*time.Minute)); err != nil { t.Fatal(err) }
+	for _, participant := range []struct{ player game.Player; accountID, role string }{
+		{firstPlayer, first.ID, "initiator"}, {secondPlayer, second.ID, "target"},
+	} {
+		if _, err := db.ExecContext(ctx, `INSERT INTO player_trade_participants(trade_id,character_id,account_id,role)
+			VALUES($1,$2,$3,$4)`, tradeID, string(participant.player.ID), participant.accountID, participant.role); err != nil { t.Fatal(err) }
+		if _, err := db.ExecContext(ctx, `INSERT INTO player_trade_offers(trade_id,character_id,offered_coins)
+			VALUES($1,$2,0)`, tradeID, string(participant.player.ID)); err != nil { t.Fatal(err) }
+		if _, err := db.ExecContext(ctx, `INSERT INTO player_trade_active_characters(character_id,trade_id,account_id)
+			VALUES($1,$2,$3)`, string(participant.player.ID), tradeID, participant.accountID); err != nil { t.Fatal(err) }
+	}
+	if _, err := db.ExecContext(ctx, `INSERT INTO player_trade_escrow_items(trade_id,owner_character_id,item_id,quantity)
+		VALUES($1,$2,'softwood_log',2)`, tradeID, string(firstPlayer.ID)); err != nil { t.Fatal(err) }
+
+	if _, err := db.ExecContext(ctx, `INSERT INTO player_trade_active_characters(character_id,trade_id,account_id)
+		VALUES($1,$2,$3)`, string(firstPlayer.ID), tradeID, first.ID); err == nil {
+		t.Fatal("character was allowed to reserve a second active trade")
+	}
+	if _, err := db.ExecContext(ctx, `INSERT INTO player_trade_offers(trade_id,character_id,offered_coins)
+		VALUES($1,$2,-1)`, tradeID, string(thirdPlayer.ID)); err == nil {
+		t.Fatal("negative escrow currency was accepted")
+	}
+	if _, err := db.ExecContext(ctx, `INSERT INTO player_trade_escrow_items(trade_id,owner_character_id,item_id,quantity)
+		VALUES($1,$2,'rough_stone',0)`, tradeID, string(firstPlayer.ID)); err == nil {
+		t.Fatal("zero-quantity escrow item was accepted")
+	}
+}
