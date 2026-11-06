@@ -49,57 +49,57 @@ func newAccountID() (string, error) {
 
 func (r *AccountRepository) Register(ctx context.Context, email, password string, now time.Time) (auth.Account, string, error) {
 	email, err := normalizeEmail(email)
-	if err != nil { return auth.Account{}, "", err }
+	if err != nil { return auth.auth.Account{}, "", err }
 	passwordHash, err := auth.HashPassword(password)
-	if err != nil { return auth.Account{}, "", err }
+	if err != nil { return auth.auth.Account{}, "", err }
 	id, err := newAccountID()
-	if err != nil { return Account{}, "", fmt.Errorf("generate account id: %w", err) }
+	if err != nil { return auth.Account{}, "", fmt.Errorf("generate account id: %w", err) }
 	token, tokenHash, err := auth.NewSessionToken()
-	if err != nil { return Account{}, "", err }
+	if err != nil { return auth.Account{}, "", err }
 	now = now.UTC()
 	expires := now.Add(SessionLifetime)
 
 	tx, err := r.db.BeginTx(ctx, nil)
-	if err != nil { return Account{}, "", fmt.Errorf("begin account registration: %w", err) }
+	if err != nil { return auth.Account{}, "", fmt.Errorf("begin account registration: %w", err) }
 	defer tx.Rollback()
 	_, err = tx.ExecContext(ctx, `INSERT INTO accounts (id,email,password_hash,created_at) VALUES ($1,$2,$3,$4)`, id, email, passwordHash, now)
 	if err != nil {
 		var pgErr *pgconn.PgError
-		if errors.As(err, &pgErr) && pgErr.Code == "23505" { return Account{}, "", ErrAccountExists }
-		return Account{}, "", fmt.Errorf("insert account: %w", err)
+		if errors.As(err, &pgErr) && pgErr.Code == "23505" { return auth.Account{}, "", ErrAccountExists }
+		return auth.Account{}, "", fmt.Errorf("insert account: %w", err)
 	}
 	if _, err := tx.ExecContext(ctx, `INSERT INTO account_sessions (token_hash,account_id,created_at,expires_at,last_used_at) VALUES ($1,$2,$3,$4,$3)`, tokenHash[:], id, now, expires); err != nil {
-		return Account{}, "", fmt.Errorf("create initial session: %w", err)
+		return auth.Account{}, "", fmt.Errorf("create initial session: %w", err)
 	}
-	if err := tx.Commit(); err != nil { return Account{}, "", fmt.Errorf("commit account registration: %w", err) }
+	if err := tx.Commit(); err != nil { return auth.Account{}, "", fmt.Errorf("commit account registration: %w", err) }
 	return auth.Account{ID:id, Email:email, CreatedAt:now}, token, nil
 }
 
 func (r *AccountRepository) Login(ctx context.Context, email, password string, now time.Time) (auth.Account, string, error) {
 	email, err := normalizeEmail(email)
-	if err != nil { return Account{}, "", ErrInvalidCredentials }
+	if err != nil { return auth.Account{}, "", ErrInvalidCredentials }
 	var account auth.Account
 	var passwordHash string
 	var disabledAt sql.NullTime
 	err = r.db.QueryRowContext(ctx, `SELECT id,email,password_hash,created_at,disabled_at FROM accounts WHERE LOWER(email)=$1`, email).
 		Scan(&account.ID,&account.Email,&passwordHash,&account.CreatedAt,&disabledAt)
-	if err != nil { return Account{}, "", ErrInvalidCredentials }
-	if disabledAt.Valid { return Account{}, "", ErrInvalidCredentials }
+	if err != nil { return auth.Account{}, "", ErrInvalidCredentials }
+	if disabledAt.Valid { return auth.Account{}, "", ErrInvalidCredentials }
 	valid, err := auth.VerifyPassword(passwordHash,password)
-	if err != nil || !valid { return Account{}, "", ErrInvalidCredentials }
+	if err != nil || !valid { return auth.Account{}, "", ErrInvalidCredentials }
 	token, tokenHash, err := auth.NewSessionToken()
-	if err != nil { return Account{}, "", err }
+	if err != nil { return auth.Account{}, "", err }
 	now = now.UTC()
 	_, err = r.db.ExecContext(ctx, `INSERT INTO account_sessions (token_hash,account_id,created_at,expires_at,last_used_at) VALUES ($1,$2,$3,$4,$3)`,
 		tokenHash[:],account.ID,now,now.Add(SessionLifetime))
-	if err != nil { return Account{}, "", fmt.Errorf("create login session: %w", err) }
+	if err != nil { return auth.Account{}, "", fmt.Errorf("create login session: %w", err) }
 	account.CreatedAt = account.CreatedAt.UTC()
 	return account, token, nil
 }
 
 func (r *AccountRepository) AuthenticateSession(ctx context.Context, token string, now time.Time) (auth.Account, error) {
 	tokenHash, err := auth.HashSessionToken(token)
-	if err != nil { return Account{}, ErrSessionNotFound }
+	if err != nil { return auth.Account{}, ErrSessionNotFound }
 	var account auth.Account
 	err = r.db.QueryRowContext(ctx, `UPDATE account_sessions s SET last_used_at=$2
 		FROM accounts a
@@ -107,8 +107,8 @@ func (r *AccountRepository) AuthenticateSession(ctx context.Context, token strin
 		AND s.expires_at > $2 AND a.disabled_at IS NULL
 		RETURNING a.id,a.email,a.created_at`, tokenHash[:], now.UTC()).
 		Scan(&account.ID,&account.Email,&account.CreatedAt)
-	if errors.Is(err,sql.ErrNoRows) { return Account{}, ErrSessionNotFound }
-	if err != nil { return Account{}, fmt.Errorf("authenticate session: %w",err) }
+	if errors.Is(err,sql.ErrNoRows) { return auth.Account{}, ErrSessionNotFound }
+	if err != nil { return auth.Account{}, fmt.Errorf("authenticate session: %w",err) }
 	account.CreatedAt = account.CreatedAt.UTC()
 	return account,nil
 }
