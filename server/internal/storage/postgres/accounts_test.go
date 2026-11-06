@@ -236,3 +236,16 @@ func TestPostgresLocalChatIsZoneScopedAndRateLimited(t *testing.T) {
  after,err:=repo.ListLocalChatForAccount(ctx,second.ID,playerTwo.ID,sent.ID,50);if err!=nil||len(after)!=0{t.Fatalf("chat cursor result=%+v err=%v",after,err)}
  if _,err:=repo.ListLocalChatForAccount(ctx,second.ID,playerOne.ID,0,50);!errors.Is(err,game.ErrPlayerNotFound){t.Fatalf("foreign chat read error=%v",err)}
 }
+
+func TestPostgresOwnedConsumableUsePersistsHealthAndInventory(t *testing.T) {
+ db:=integrationDatabase(t);repo:=NewAccountRepository(db);ctx:=context.Background();now:=time.Now().UTC()
+ account,_,err:=repo.Register(ctx,fmt.Sprintf("potion-%d@example.test",now.UnixNano()),"correct-horse-battery-staple",now);if err!=nil{t.Fatal(err)}
+ t.Cleanup(func(){cleanupTestAccounts(db,account.ID)})
+ player,err:=game.NewPlayer(game.PlayerID(fmt.Sprintf("potion-char-%d",now.UnixNano())),"PotionWayfarer",now);if err!=nil{t.Fatal(err)}
+ player.Health=60;player.Inventory["minor_healing_potion"]=2
+ if err:=repo.CreateCharacter(ctx,account.ID,player);err!=nil{t.Fatal(err)}
+ used,healed,err:=repo.UseItemForAccount(ctx,account.ID,player.ID,"minor_healing_potion");if err!=nil{t.Fatalf("use potion: %v",err)}
+ if healed!=25||used.Health!=85||used.Inventory["minor_healing_potion"]!=1{t.Fatalf("potion result healed=%d player=%+v",healed,used)}
+ persisted,err:=repo.GetCharacter(ctx,account.ID,player.ID);if err!=nil{t.Fatal(err)}
+ if persisted.Health!=85||persisted.Inventory["minor_healing_potion"]!=1{t.Fatalf("potion use not persisted: %+v",persisted)}
+}
