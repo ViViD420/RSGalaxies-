@@ -102,6 +102,18 @@ func TestProductionDisablesDevelopmentAwardEndpoint(t *testing.T) {
 	if craft.Code != http.StatusNotFound && craft.Code != http.StatusMethodNotAllowed {
 		t.Fatalf("production crafting route status = %d, want route unavailable", craft.Code)
 	}
+	for _, request := range []*http.Request{
+		httptest.NewRequest(http.MethodGet, "/api/v1/players", nil),
+		httptest.NewRequest(http.MethodPost, "/api/v1/players", bytes.NewBufferString(`{"name":"Wayfarer"}`)),
+		httptest.NewRequest(http.MethodGet, "/api/v1/players/player", nil),
+		httptest.NewRequest(http.MethodGet, "/api/v1/players/player/skills", nil),
+	} {
+		response := httptest.NewRecorder()
+		handler.ServeHTTP(response, request)
+		if response.Code != http.StatusNotFound && response.Code != http.StatusMethodNotAllowed {
+			t.Fatalf("production player API %s status = %d, want route unavailable", request.Method+" "+request.URL.Path, response.Code)
+		}
+	}
 }
 
 func TestDevelopmentCORSPreflight(t *testing.T) {
