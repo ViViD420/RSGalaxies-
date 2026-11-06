@@ -37,6 +37,8 @@ type characterStore interface {
 	SendLocalChatForAccount(context.Context, string, game.PlayerID, string, time.Time) (game.ChatMessage, error)
 	ListLocalChatForAccount(context.Context, string, game.PlayerID, int64, int) ([]game.ChatMessage, error)
 	UseItemForAccount(context.Context, string, game.PlayerID, string) (game.Player, int, error)
+	HeartbeatPresenceForAccount(context.Context, string, game.PlayerID, time.Time) error
+	ListZonePresenceForAccount(context.Context, string, game.PlayerID, time.Time) ([]game.RemotePlayer, error)
 }
 
 const maxAuthRateKeys = 10000
@@ -110,6 +112,8 @@ func (s *Server) Routes() http.Handler {
 		mux.HandleFunc("GET /api/v1/account/characters/{id}/chat/local", s.listOwnedLocalChat)
 		mux.HandleFunc("POST /api/v1/account/characters/{id}/chat/local", s.sendOwnedLocalChat)
 		mux.HandleFunc("POST /api/v1/account/characters/{id}/inventory/use/{itemID}", s.useOwnedItem)
+		mux.HandleFunc("POST /api/v1/account/characters/{id}/presence/heartbeat", s.heartbeatOwnedPresence)
+		mux.HandleFunc("GET /api/v1/account/characters/{id}/presence", s.listOwnedPresence)
 	}
 	return securityHeaders(mux)
 }
@@ -769,4 +773,24 @@ func (s *Server) useOwnedItem(w http.ResponseWriter,r *http.Request) {
 		return
 	}
 	writeJSON(w,200,map[string]any{"character":player,"itemId":r.PathValue("itemID"),"healed":healed,"health":player.Health,"inventory":player.Inventory})
+}
+
+func (s *Server) heartbeatOwnedPresence(w http.ResponseWriter,r *http.Request) {
+	account,_,ok:=s.authenticatedAccount(w,r);if !ok{return}
+	err:=s.characters.HeartbeatPresenceForAccount(r.Context(),account.ID,game.PlayerID(strings.TrimSpace(r.PathValue("id"))),s.now())
+	if err!=nil{
+		if errors.Is(err,game.ErrPlayerNotFound){writeError(w,404,"character_not_found")}else{log.Printf("heartbeat character presence: %v",err);writeError(w,500,"internal_error")}
+		return
+	}
+	w.WriteHeader(http.StatusNoContent)
+}
+
+func (s *Server) listOwnedPresence(w http.ResponseWriter,r *http.Request) {
+	account,_,ok:=s.authenticatedAccount(w,r);if !ok{return}
+	players,err:=s.characters.ListZonePresenceForAccount(r.Context(),account.ID,game.PlayerID(strings.TrimSpace(r.PathValue("id"))),s.now())
+	if err!=nil{
+		if errors.Is(err,game.ErrPlayerNotFound){writeError(w,404,"character_not_found")}else{log.Printf("list zone presence: %v",err);writeError(w,500,"internal_error")}
+		return
+	}
+	writeJSON(w,http.StatusOK,map[string]any{"players":players,"leaseSeconds":int(game.PresenceLease.Seconds())})
 }
