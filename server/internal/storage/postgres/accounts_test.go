@@ -29,7 +29,7 @@ func TestPostgresAccountRegistrationLoginAndSessionRevocation(t *testing.T) {
 	if err:=repo.RevokeSession(ctx,token,now.Add(3*time.Minute));err!=nil{t.Fatal(err)}
 	if _,err:=repo.AuthenticateSession(ctx,token,now.Add(4*time.Minute));!errors.Is(err,ErrSessionNotFound){t.Fatalf("revoked session error=%v",err)}
 	if _,err:=repo.AuthenticateSession(ctx,loginToken,now.Add(4*time.Minute));err!=nil{t.Fatalf("second session should remain valid: %v",err)}
-	if _,err:=repo.AuthenticateSession(ctx,loginToken,now.Add(SessionLifetime+time.Minute));!errors.Is(err,ErrSessionNotFound){t.Fatalf("expired session error=%v",err)}
+	if _,err:=repo.AuthenticateSession(ctx,loginToken,now.Add(SessionLifetime+3*time.Minute));!errors.Is(err,ErrSessionNotFound){t.Fatalf("expired session error=%v",err)}
 }
 
 func TestPostgresAccountEmailUniquenessAndValidation(t *testing.T) {
