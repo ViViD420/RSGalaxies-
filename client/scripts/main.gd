@@ -22,6 +22,7 @@ var auth_token := ""
 var current_inventory: Dictionary = {}
 var current_bank: Dictionary = {}
 var current_coins := 0
+var market_catalog: Array = []
 var api_request: HTTPRequest
 var movement_request: HTTPRequest
 var gather_request: HTTPRequest
@@ -361,8 +362,11 @@ func _on_api_request_completed(result: int, response_code: int, _headers: Packed
 		if response_code != 200 or not payload is Dictionary or payload.get("status") != "ok":
 			status_label.text = "Server: unexpected health response"
 			return
-		status_label.text = "Server: ready • sign in to continue"
-		auth_panel.visible = true
+		api_stage = "market_catalog"
+		var catalog_error := api_request.request(api_base_url + "/api/v1/market/items")
+		if catalog_error != OK:
+			status_label.text = "Server: ready • market catalog unavailable"
+			auth_panel.visible = true
 		return
 	if not payload is Dictionary:
 		if auth_panel != null and auth_panel.visible:
