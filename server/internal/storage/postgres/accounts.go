@@ -365,3 +365,12 @@ func (r *AccountRepository) ListLocalChatForAccount(ctx context.Context,accountI
 	if err:=rows.Err();err!=nil{return nil,fmt.Errorf("iterate local chat messages: %w",err)}
 	return messages,nil
 }
+
+func (r *AccountRepository) UseItemForAccount(ctx context.Context,accountID string,id game.PlayerID,itemID string)(game.Player,int,error){
+	tx,err:=r.db.BeginTx(ctx,nil);if err!=nil{return game.Player{},0,err};defer tx.Rollback()
+	player,err:=r.lockOwnedPlayer(ctx,tx,accountID,id);if err!=nil{return game.Player{},0,err}
+	healed,err:=player.UseItem(itemID);if err!=nil{return player,0,err}
+	if err:=updateOwnedPlayer(ctx,tx,accountID,player);err!=nil{return game.Player{},0,err}
+	if err:=tx.Commit();err!=nil{return game.Player{},0,fmt.Errorf("commit item use: %w",err)}
+	return player,healed,nil
+}
