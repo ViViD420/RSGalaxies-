@@ -112,8 +112,8 @@ func TestPostgresMigrationsAreIdempotent(t *testing.T) {
  ctx:=context.Background()
  if err:=Migrate(ctx,db);err!=nil{t.Fatalf("second migration: %v",err)}
  var count int
- if err:=db.QueryRowContext(ctx,"SELECT COUNT(*) FROM schema_migrations WHERE version IN (1,2,3,4,5)").Scan(&count);err!=nil{t.Fatal(err)}
- if count!=5{t.Fatalf("migration versions applied=%d want=5",count)}
+ if err:=db.QueryRowContext(ctx,"SELECT COUNT(*) FROM schema_migrations WHERE version IN (1,2,3,4,5,6)").Scan(&count);err!=nil{t.Fatal(err)}
+ if count!=6{t.Fatalf("migration versions applied=%d want=6",count)}
 }
 
 func TestPostgresOwnedGatheringLocksSharedNodeAndChecksOwner(t *testing.T) {
@@ -193,4 +193,27 @@ func TestPostgresOwnedCopperSmithingPersistsRecipes(t *testing.T) {
  forged,_,err:=repo.CraftForAccount(ctx,account.ID,player.ID,"copper-sword",now.Add(2*time.Second));if err!=nil{t.Fatalf("forge training sword: %v",err)}
  persisted,err:=repo.GetCharacter(ctx,account.ID,player.ID);if err!=nil{t.Fatal(err)}
  if forged.Inventory["training_sword"]!=1||persisted.Inventory["training_sword"]!=1||persisted.Skills["smithing"].Experience!=95{t.Fatalf("forged sword state=%+v persisted=%+v",forged,persisted)}
+}
+
+func TestPostgresCombatPersistsEnemyPlayerLootAndRestState(t *testing.T) {
+ db:=integrationDatabase(t);repo:=NewAccountRepository(db);ctx:=context.Background();now:=time.Now().UTC()
+ account,_,err:=repo.Register(ctx,fmt.Sprintf("combat-%d@example.test",now.UnixNano()),"correct-horse-battery-staple",now);if err!=nil{t.Fatal(err)}
+ t.Cleanup(func(){cleanupTestAccounts(db,account.ID);_,_=db.ExecContext(context.Background(),"DELETE FROM enemy_spawn_state WHERE enemy_id=$1","frontier-rat-001")})
+ _,_=db.ExecContext(ctx,"DELETE FROM enemy_spawn_state WHERE enemy_id=$1","frontier-rat-001")
+ player,err:=game.NewPlayer(game.PlayerID(fmt.Sprintf("combat-char-%d",now.UnixNano())),"CombatWayfarer",now.Add(-2*time.Second));if err!=nil{t.Fatal(err)}
+ player.Position.X=6;player.Equipment["main_hand"]="training_sword"
+ if err:=repo.CreateCharacter(ctx,account.ID,player);err!=nil{t.Fatal(err)}
+ var last game.Player
+ var final game.CombatResult
+ for hit:=0;hit<3;hit++{last,final,err=repo.AttackEnemyForAccount(ctx,account.ID,player.ID,"frontier-rat-001",now.Add(time.Duration(hit)*time.Second));if err!=nil{t.Fatalf("combat hit %d: %v",hit,err)}}
+ if !final.EnemyDefeated||final.Experience!=25||final.LootItemID!="rat_pelt"||last.Inventory["rat_pelt"]!=1||last.Skills["combat"].Experience!=25{t.Fatalf("combat defeat result=%+v player=%+v",final,last)}
+ persisted,err:=repo.GetCharacter(ctx,account.ID,player.ID);if err!=nil{t.Fatal(err)}
+ if persisted.Health!=94||persisted.Inventory["rat_pelt"]!=1||persisted.Skills["combat"].Experience!=25{t.Fatalf("combat player state not persisted: %+v",persisted)}
+ if _,err:=repo.RestForAccount(ctx,account.ID,player.ID);!errors.Is(err,game.ErrRestOutOfRange){t.Fatalf("rest outside safe zone error=%v",err)}
+ if _,err:=db.ExecContext(ctx,"UPDATE players SET position_x=0,position_z=0 WHERE id=$1",string(player.ID));err!=nil{t.Fatal(err)}
+ rested,err:=repo.RestForAccount(ctx,account.ID,player.ID);if err!=nil{t.Fatalf("safe-zone rest: %v",err)}
+ if rested.Health!=game.MaxPlayerHealth{t.Fatalf("rest health=%d want=%d",rested.Health,game.MaxPlayerHealth)}
+ var enemyHealth int;var initialized bool
+ if err:=db.QueryRowContext(ctx,"SELECT health,initialized FROM enemy_spawn_state WHERE enemy_id=$1","frontier-rat-001").Scan(&enemyHealth,&initialized);err!=nil{t.Fatal(err)}
+ if !initialized||enemyHealth!=0{t.Fatalf("persisted enemy state initialized=%v health=%d",initialized,enemyHealth)}
 }
