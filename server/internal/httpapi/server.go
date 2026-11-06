@@ -75,7 +75,7 @@ func (s *Server) Routes() http.Handler {
 	mux.HandleFunc("GET /api/v1/combat/enemies", s.listEnemies)
 	mux.HandleFunc("GET /api/v1/crafting/recipes", s.listCraftingRecipes)
 	mux.HandleFunc("GET /api/v1/crafting/stations", s.listCraftingStations)
-	// Player APIs are development-only until account authentication and character ownership are implemented.
+	// Legacy unscoped player APIs are development-only; production uses the account-scoped routes below.
 	if os.Getenv("RS_GALAXIES_ENV") != "production" {
 		mux.HandleFunc("GET /api/v1/players", s.listPlayers)
 		mux.HandleFunc("POST /api/v1/players", s.createPlayer)
