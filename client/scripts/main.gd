@@ -2009,6 +2009,9 @@ func _add_trade_offer_item() -> void:
 		trade_status_label.text = "Enter a positive whole-number item quantity."
 		return
 	var quantity := int(quantity_text)
+	if not trade_offer_items.has(item_id) and trade_offer_items.size() >= 20:
+		trade_status_label.text = "A trade offer can contain at most 20 item types."
+		return
 	var current_offer := _current_own_trade_offer()
 	var current_items: Dictionary = current_offer.get("items", {})
 	var total_available := int(current_inventory.get(item_id, 0)) + int(current_items.get(item_id, 0))
