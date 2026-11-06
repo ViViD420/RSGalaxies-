@@ -4,6 +4,12 @@ const PLAYER_SCENE := preload("res://scenes/player.tscn")
 
 var status_label: Label
 var api_request: HTTPRequest
+var movement_request: HTTPRequest
+var movement_timer: Timer
+var player_node: CharacterBody3D
+var player_id := ""
+var api_stage := "health"
+var movement_pending := false
 var api_base_url := "http://127.0.0.1:8080"
 
 func _ready() -> void:
@@ -62,9 +68,9 @@ func _build_world() -> void:
 	floor_body.add_child(floor_collision)
 	add_child(floor_body)
 
-	var player := PLAYER_SCENE.instantiate()
-	player.position = Vector3(0.0, 0.05, 0.0)
-	add_child(player)
+	player_node = PLAYER_SCENE.instantiate() as CharacterBody3D
+	player_node.position = Vector3(0.0, 0.05, 0.0)
+	add_child(player_node)
 
 func _build_hud() -> void:
 	var layer := CanvasLayer.new()
@@ -85,7 +91,7 @@ func _build_hud() -> void:
 	column.add_child(instructions)
 
 	status_label = Label.new()
-	status_label.text = "Server: checking local development API..."
+	status_label.text = "Server: connecting..."
 	column.add_child(status_label)
 
 	if DisplayServer.is_touchscreen_available():
@@ -127,17 +133,93 @@ func _connect_api() -> void:
 	api_request.request_completed.connect(_on_api_request_completed)
 	var error := api_request.request(api_base_url + "/healthz")
 	if error != OK:
-		status_label.text = "Server: unavailable (start the Go service on port 8080)"
+		status_label.text = "Server: unavailable (start the Go world service)"
 
 func _on_api_request_completed(result: int, response_code: int, _headers: PackedStringArray, body: PackedByteArray) -> void:
 	if result != HTTPRequest.RESULT_SUCCESS or response_code != 200:
-		status_label.text = "Server: offline — run the Go world service on port 8080"
+		status_label.text = "Server: unavailable — world service did not respond"
 		return
 	var payload: Variant = JSON.parse_string(body.get_string_from_utf8())
-	if payload is Dictionary and payload.get("status") == "ok":
-		status_label.text = "Server: connected to RS Galaxies world service"
+	if not payload is Dictionary:
+		status_label.text = "Server: invalid response"
+		return
+
+	if api_stage == "health":
+		if payload.get("status") != "ok":
+			status_label.text = "Server: unexpected health response"
+			return
+		api_stage = "create_player"
+		var error := api_request.request(
+			api_base_url + "/api/v1/players",
+			PackedStringArray(["Content-Type: application/json"]),
+			HTTPClient.METHOD_POST,
+			JSON.stringify({"name": "Wayfarer"})
+		)
+		if error != OK:
+			status_label.text = "Server: could not create development character"
+	elif api_stage == "create_player":
+		player_id = str(payload.get("id", ""))
+		if player_id.is_empty():
+			status_label.text = "Server: character creation returned no ID"
+			return
+		var spawn: Variant = payload.get("position", {})
+		if spawn is Dictionary:
+			_apply_server_position(spawn, true)
+		status_label.text = "Server: connected • character saved in this session"
+		_start_movement_sync()
+
+func _start_movement_sync() -> void:
+	movement_request = HTTPRequest.new()
+	add_child(movement_request)
+	movement_request.request_completed.connect(_on_movement_completed)
+	movement_timer = Timer.new()
+	movement_timer.wait_time = 0.2
+	movement_timer.timeout.connect(_sync_player_position)
+	add_child(movement_timer)
+	movement_timer.start()
+
+func _sync_player_position() -> void:
+	if player_id.is_empty() or movement_pending:
+		return
+	movement_pending = true
+	var body := JSON.stringify({
+		"x": player_node.global_position.x,
+		"z": player_node.global_position.z
+	})
+	var error := movement_request.request(
+		api_base_url + "/api/v1/players/" + player_id + "/move",
+		PackedStringArray(["Content-Type: application/json"]),
+		HTTPClient.METHOD_POST,
+		body
+	)
+	if error != OK:
+		movement_pending = false
+
+func _on_movement_completed(result: int, response_code: int, _headers: PackedStringArray, body: PackedByteArray) -> void:
+	movement_pending = false
+	if result != HTTPRequest.RESULT_SUCCESS:
+		return
+	var payload: Variant = JSON.parse_string(body.get_string_from_utf8())
+	if not payload is Dictionary:
+		return
+	var authoritative_position: Variant = payload.get("position", {})
+	if authoritative_position is Dictionary:
+		_apply_server_position(authoritative_position, response_code != 200)
+	if response_code != 200:
+		status_label.text = "Server: movement corrected by world rules"
 	else:
-		status_label.text = "Server: response received; health payload was unexpected"
+		status_label.text = "Server: connected • character synchronized"
+
+func _apply_server_position(position_data: Dictionary, force: bool) -> void:
+	var target := Vector3(
+		float(position_data.get("x", 0.0)),
+		player_node.global_position.y,
+		float(position_data.get("z", 0.0))
+	)
+	if force or player_node.global_position.distance_to(target) > 2.5:
+		player_node.global_position = target
+	else:
+		player_node.global_position = player_node.global_position.lerp(target, 0.08)
 
 func _unhandled_input(event: InputEvent) -> void:
 	if event is InputEventKey and event.pressed and event.keycode == KEY_ESCAPE:
