@@ -58,7 +58,9 @@ func TestPostgresRepositoryPersistsPlayerAndCraftingTransaction(t *testing.T) {
 		t.Fatalf("craft transaction was not persisted: %+v", persisted)
 	}
 
-	moveAt := time.Now().Add(100 * time.Millisecond)
+	// PostgreSQL TIMESTAMPTZ stores microsecond precision; normalize the
+	// test value so a reload can be compared without nanosecond truncation.
+	moveAt := time.Now().UTC().Add(100 * time.Millisecond).Truncate(time.Microsecond)
 	moved, err := repository.MovePlayer(ctx, id, 0.1, 2, moveAt)
 	if err != nil { t.Fatalf("move player: %v", err) }
 	if moved.Position.X != 0.1 || !moved.LastMoveAt.Equal(moveAt) {
