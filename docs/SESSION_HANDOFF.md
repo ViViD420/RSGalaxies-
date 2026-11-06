@@ -24,6 +24,8 @@ An original sandbox MMORPG combining long-form skill progression and item gamepl
 - Defensive copying of player skill maps and stable player listing.
 - HTTP routes for skill catalog, world zones, player skills and development-only XP awards/movement. Development shortcuts are disabled when RS_GALAXIES_ENV=production.
 - World zone bounds, default spawn point and server-time-based movement speed/bounds validation. Repository movement updates are atomic.
+- Starter item definitions, per-character stack inventory and two gathering nodes (tree/stone). Gathering atomically validates range, awards skill XP and an item, depletes node charges and respawns nodes after a cooldown.
+- HTTP endpoints expose item/node definitions and development-only gathering actions; development shortcuts are disabled when RS_GALAXIES_ENV=production.
 - Domain, API and repository concurrency tests.
 - Go CI runs tests with the race detector and go vet.
 
@@ -45,7 +47,7 @@ An original sandbox MMORPG combining long-form skill progression and item gamepl
 - Go is the server language. Godot is the provisional client engine, pending camera, movement and web/mobile export validation.
 - Storage is in memory; data is lost when the server stops.
 - The XP-award HTTP endpoint is development-only and must not be exposed publicly. Production XP must come from validated game actions.
-- PostgreSQL, authentication, secure sessions, realtime replication, production persistence, NPCs, gathering and combat are not implemented. Movement synchronization is a development prototype, not authenticated production multiplayer.
+- PostgreSQL, authentication, secure sessions, realtime replication, production persistence, NPCs, combat, crafting, player trading and production inventory persistence are not implemented. The current gathering loop is a small in-memory tutorial slice. Movement synchronization is a development prototype, not authenticated production multiplayer.
 - Code and tests are committed, but GitHub Actions execution results have not yet been inspected in this session. Do not claim CI passes until verified.
 
 ## Next engineering tasks
