@@ -61,12 +61,12 @@ An original sandbox MMORPG combining long-form skill progression and item gamepl
 - Email verification, password reset/recovery, MFA, distributed rate limiting, admin account tools and security/load review remain incomplete.
 - The current in-process auth throttle is only a local safety net; production still needs trusted edge controls.
 - The Godot client does not persist access tokens across launches. Secure platform-specific persistence is a future decision.
-- No remote-player replication, NPC behaviors, combat calculations, equipment visuals/item instances/durability, housing, settlements, player-to-player trading or large-scale world streaming yet.
+- No remote-player replication, enemy AI/movement, combat animations/abilities, equipment visuals/item instances/durability, housing, settlements, player-to-player trading or large-scale world streaming yet.
 - The account APIs require PostgreSQL. The server's in-memory-only development mode does not register account routes.
 
 ## Next engineering tasks
 
-1. Validate the first server-authoritative PvE combat loop, including enemy spawn persistence, cooldowns, loot and safe-spawn recovery.
+1. Finish validating the first server-authoritative PvE combat loop in PostgreSQL CI, including enemy spawn persistence, cooldowns, loot and safe-spawn recovery.
 2. Add merchant/bank usability improvements and a real-phone pass on the Godot Web client.
 3. Add email verification, password recovery, MFA, distributed abuse controls and administrative account operations before enabling public registration.
 4. Add equipment visuals, item instances/durability, combat calculations, currency sinks and player-to-player trade with escrow/transaction safety.
