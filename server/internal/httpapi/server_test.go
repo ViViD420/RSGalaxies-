@@ -57,3 +57,18 @@ func TestMissingPlayerReturnsNotFound(t *testing.T) {
 	}
 }
 
+
+func TestCreatePlayerRejectsTrailingJSONData(t *testing.T) {
+	handler := New(game.NewMemoryPlayerRepository()).Routes()
+	for _, body := range []string{
+		`{"name":"Wayfarer"} {"name":"Second"}`,
+		`{"name":"Wayfarer"} trailing`,
+	} {
+		request := httptest.NewRequest(http.MethodPost, "/api/v1/players", bytes.NewBufferString(body))
+		response := httptest.NewRecorder()
+		handler.ServeHTTP(response, request)
+		if response.Code != http.StatusBadRequest {
+			t.Fatalf("body %q: status = %d, want %d", body, response.Code, http.StatusBadRequest)
+		}
+	}
+}
