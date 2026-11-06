@@ -31,3 +31,10 @@ Still required before public launch:
 - MFA and administrative account disable/recovery workflows.
 - Operational alerting, backup restore drills, capacity/load testing and security review.
 - Secure client-side token persistence if persistent sign-in is desired. The current Godot client deliberately keeps tokens in memory only.
+
+
+## Health checks
+
+- Probe `GET /healthz` for process liveness. It deliberately does not depend on PostgreSQL, so a database outage does not trigger a restart loop.
+- Probe `GET /readyz` for readiness. When PostgreSQL is configured, it performs a bounded two-second database ping and returns HTTP 503 with a generic response if the dependency is unavailable.
+- Route traffic only to ready instances; let the orchestrator use liveness independently.
