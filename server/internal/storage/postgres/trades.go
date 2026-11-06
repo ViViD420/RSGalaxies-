@@ -3,8 +3,13 @@ package postgres
 import (
 	"context"
 	"database/sql"
+	"errors"
 	"fmt"
 	"math"
+	"sort"
+	"time"
+
+	"github.com/jackc/pgx/v5/pgconn"
 
 	"github.com/ViViD420/RSGalaxies-/server/internal/game"
 )
@@ -28,6 +33,25 @@ func validateTradeReservations(ctx context.Context, tx *sql.Tx, accountID string
 	if err := tx.QueryRowContext(ctx, `SELECT COALESCE(SUM(o.offered_coins),0) FROM player_trade_offers o JOIN player_trade_participants p ON p.trade_id=o.trade_id AND p.character_id=o.character_id WHERE p.character_id=$1 AND p.account_id=$2`, string(player.ID), accountID).Scan(&reservedCoins); err != nil { return fmt.Errorf("load reserved trade currency: %w", err) }
 	if player.Coins < 0 || reservedCoins < 0 || player.Coins > math.MaxInt64-reservedCoins { return game.ErrTradeOfferCapacity }
 	return nil
+}
+
+
+type lockedTradePlayer struct {
+	AccountID string
+	Player game.Player
+}
+
+type tradeQueryer interface {
+	QueryContext(context.Context,string,...any)(*sql.Rows,error)
+	QueryRowContext(context.Context,string,...any)*sql.Row
+}
+
+func rLockOwnedPlayer(ctx context.Context,tx *sql.Tx,accountID string,id game.PlayerID)(game.Player,error){
+	return scanPlayer(tx.QueryRowContext(ctx,"SELECT "+playerColumns+" FROM players WHERE account_id=$1 AND id=$2 FOR UPDATE",accountID,string(id)))
+}
+
+func updateTradePlayer(ctx context.Context,tx *sql.Tx,ref lockedTradePlayer)error{
+	return updateOwnedPlayer(ctx,tx,ref.AccountID,ref.Player)
 }
 
 type tradeParticipantRef struct {
