@@ -543,7 +543,7 @@ func (s *Server) withdrawOwnedBankItem(w http.ResponseWriter,r *http.Request) {
 
 func (s *Server) transferOwnedBankItem(w http.ResponseWriter,r *http.Request,deposit bool) {
 	account,_,ok:=s.authenticatedAccount(w,r);if !ok{return}
-	var request struct { ItemID string; Quantity int }
+	var request struct { ItemID string `json:"itemId"`; Quantity int `json:"quantity"` }
 	if !decodeStrictJSON(w,r,1<<10,&request){return}
 	player,err:=s.characters.TransferBankItemForAccount(r.Context(),account.ID,game.PlayerID(strings.TrimSpace(r.PathValue("id"))),request.ItemID,request.Quantity,deposit)
 	if err!=nil {
