@@ -29,6 +29,8 @@ var (
 
 type AccountRepository struct { db *sql.DB }
 
+var _ auth.AccountStore = (*AccountRepository)(nil)
+
 func NewAccountRepository(db *sql.DB) *AccountRepository { return &AccountRepository{db: db} }
 
 func normalizeEmail(email string) (string, error) {
