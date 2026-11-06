@@ -796,6 +796,34 @@ func TestAuthenticatedTradeInvitationAcceptanceAndPrivacy(t *testing.T) {
 	if active.Code!=http.StatusOK{t.Fatalf("active trade recovery status=%d body=%s",active.Code,active.Body.String())}
 	var recovered game.TradeSnapshot;if err:=json.Unmarshal(active.Body.Bytes(),&recovered);err!=nil{t.Fatal(err)}
 	if recovered.ID!=trade.ID||recovered.Status!=game.TradeStatusOpen{t.Fatalf("active trade recovery=%+v",recovered)}
+	for owner,players:=range characters.players {
+		if player,ok:=players[first.ID];ok{player.Inventory["softwood_log"]=5;characters.players[owner][first.ID]=player}
+		if player,ok:=players[second.ID];ok{player.Inventory["rough_stone"]=3;characters.players[owner][second.ID]=player}
+	}
+	firstOffer:=httptest.NewRecorder()
+	firstOfferRequest:=httptest.NewRequest(http.MethodPut,"/api/v1/account/characters/"+string(first.ID)+"/trades/"+trade.ID+"/offer",bytes.NewBufferString(fmt.Sprintf(`{"revision":%d,"offer":{"items":{"softwood_log":2},"coins":10}}`,accepted.Revision)))
+	firstOfferRequest.Header.Set("Authorization","Bearer "+firstToken);handler.ServeHTTP(firstOffer,firstOfferRequest)
+	if firstOffer.Code!=http.StatusOK{t.Fatalf("first offer status=%d body=%s",firstOffer.Code,firstOffer.Body.String())}
+	var revised game.TradeSnapshot;if err:=json.Unmarshal(firstOffer.Body.Bytes(),&revised);err!=nil{t.Fatal(err)}
+	secondOffer:=httptest.NewRecorder()
+	secondOfferRequest:=httptest.NewRequest(http.MethodPut,"/api/v1/account/characters/"+string(second.ID)+"/trades/"+trade.ID+"/offer",bytes.NewBufferString(fmt.Sprintf(`{"revision":%d,"offer":{"items":{"rough_stone":1},"coins":5}}`,revised.Revision)))
+	secondOfferRequest.Header.Set("Authorization","Bearer "+secondToken);handler.ServeHTTP(secondOffer,secondOfferRequest)
+	if secondOffer.Code!=http.StatusOK{t.Fatalf("second offer status=%d body=%s",secondOffer.Code,secondOffer.Body.String())}
+	if err:=json.Unmarshal(secondOffer.Body.Bytes(),&revised);err!=nil{t.Fatal(err)}
+	confirmFirst:=httptest.NewRecorder()
+	confirmFirstRequest:=httptest.NewRequest(http.MethodPost,"/api/v1/account/characters/"+string(first.ID)+"/trades/"+trade.ID+"/confirm",bytes.NewBufferString(fmt.Sprintf(`{"revision":%d}`,revised.Revision)))
+	confirmFirstRequest.Header.Set("Authorization","Bearer "+firstToken);handler.ServeHTTP(confirmFirst,confirmFirstRequest)
+	if confirmFirst.Code!=http.StatusOK{t.Fatalf("first confirmation status=%d body=%s",confirmFirst.Code,confirmFirst.Body.String())}
+	confirmSecond:=httptest.NewRecorder()
+	confirmSecondRequest:=httptest.NewRequest(http.MethodPost,"/api/v1/account/characters/"+string(second.ID)+"/trades/"+trade.ID+"/confirm",bytes.NewBufferString(fmt.Sprintf(`{"revision":%d}`,revised.Revision)))
+	confirmSecondRequest.Header.Set("Authorization","Bearer "+secondToken);handler.ServeHTTP(confirmSecond,confirmSecondRequest)
+	if confirmSecond.Code!=http.StatusOK{t.Fatalf("second confirmation status=%d body=%s",confirmSecond.Code,confirmSecond.Body.String())}
+	if err:=json.Unmarshal(confirmSecond.Body.Bytes(),&revised);err!=nil{t.Fatal(err)}
+	if revised.Status!=game.TradeStatusCompleted{t.Fatalf("trade did not settle: %+v",revised)}
+	finalFirst:=characters.playersForCharacter(first.ID)
+	finalSecond:=characters.playersForCharacter(second.ID)
+	if finalFirst.Inventory["softwood_log"]!=3||finalFirst.Inventory["rough_stone"]!=1||finalFirst.Coins!=95{t.Fatalf("first player trade result=%+v",finalFirst)}
+	if finalSecond.Inventory["rough_stone"]!=2||finalSecond.Inventory["softwood_log"]!=2||finalSecond.Coins!=105{t.Fatalf("second player trade result=%+v",finalSecond)}
 	self:=httptest.NewRecorder();selfRequest:=httptest.NewRequest(http.MethodPost,"/api/v1/account/characters/"+string(first.ID)+"/trades/invite/"+string(first.ID),bytes.NewBufferString(`{"items":{},"coins":0}`))
 	selfRequest.Header.Set("Authorization","Bearer "+firstToken);handler.ServeHTTP(self,selfRequest)
 	if self.Code!=http.StatusConflict{t.Fatalf("self invite status=%d body=%s",self.Code,self.Body.String())}
