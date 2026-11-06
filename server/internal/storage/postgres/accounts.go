@@ -49,9 +49,9 @@ func newAccountID() (string, error) {
 
 func (r *AccountRepository) Register(ctx context.Context, email, password string, now time.Time) (auth.Account, string, error) {
 	email, err := normalizeEmail(email)
-	if err != nil { return auth.auth.Account{}, "", err }
+	if err != nil { return auth.Account{}, "", err }
 	passwordHash, err := auth.HashPassword(password)
-	if err != nil { return auth.auth.Account{}, "", err }
+	if err != nil { return auth.Account{}, "", err }
 	id, err := newAccountID()
 	if err != nil { return auth.Account{}, "", fmt.Errorf("generate account id: %w", err) }
 	token, tokenHash, err := auth.NewSessionToken()
