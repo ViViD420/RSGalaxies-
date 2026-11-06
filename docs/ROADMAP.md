@@ -44,7 +44,7 @@
 
 ## Milestone 5: Social sandbox
 
-- [x] Persistent account-owned local zone chat with polling, message cursors and per-character cooldown.
+- [x] Persistent account-owned local zone chat with polling, message cursors, newest-50 initial history, bounded client history and per-character cooldown.
 - [ ] Direct messages, friends, groups and guilds.
 - [ ] Player housing, permissions, storage and decoration.
 - [ ] Settlement plots, construction, shared storage and governance.
