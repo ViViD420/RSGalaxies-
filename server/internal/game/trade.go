@@ -7,23 +7,23 @@ import (
 )
 
 const (
-	TradeLifetime = 5 * time.Minute
-	TradeInteractionRange = 6.0
+	TradeInteractionRange = 5.0
+	TradeLifetime = 10 * time.Minute
 )
 
 type TradeStatus string
 
 const (
-	TradePending TradeStatus = "pending"
-	TradeOpen TradeStatus = "open"
-	TradeCompleted TradeStatus = "completed"
-	TradeCancelled TradeStatus = "cancelled"
-	TradeExpired TradeStatus = "expired"
+	TradeStatusPending TradeStatus = "pending"
+	TradeStatusOpen TradeStatus = "open"
+	TradeStatusCompleted TradeStatus = "completed"
+	TradeStatusCancelled TradeStatus = "cancelled"
+	TradeStatusExpired TradeStatus = "expired"
 )
 
 type TradeParticipant struct {
 	CharacterID PlayerID `json:"characterId"`
-	CharacterName string `json:"characterName"`
+	Name string `json:"name"`
 	Role string `json:"role"`
 	Offer TradeOffer `json:"offer"`
 	Confirmed bool `json:"confirmed"`
@@ -33,19 +33,12 @@ type TradeSnapshot struct {
 	ID string `json:"id"`
 	Status TradeStatus `json:"status"`
 	Revision int64 `json:"revision"`
+	CreatedAt time.Time `json:"createdAt"`
 	ExpiresAt time.Time `json:"expiresAt"`
 	Participants []TradeParticipant `json:"participants"`
 }
 
 var (
-	ErrTradeNotFound = errors.New("trade not found")
-	ErrTradeNotParticipant = errors.New("character is not a trade participant")
-	ErrTradeInvalidState = errors.New("trade is not in the required state")
-	ErrTradeExpired = errors.New("trade has expired")
-	ErrTradeOutOfRange = errors.New("trade participants are too far apart")
-	ErrTradeAlreadyActive = errors.New("character already has an active trade")
-	ErrTradeStaleRevision = errors.New("trade revision is stale")
-	ErrTradeSelf = errors.New("cannot trade with the same character")
 	ErrInvalidTradeOffer = errors.New("invalid trade offer")
 	ErrTradeItemEquipped = errors.New("equipped items cannot be traded")
 	ErrTradeOfferCapacity = errors.New("trade offer exceeds inventory or currency capacity")
@@ -59,6 +52,8 @@ var (
 	ErrTradeNotAccepted = errors.New("trade invitation has not been accepted")
 	ErrTradeExpired = errors.New("trade invitation expired")
 	ErrTradeRevisionConflict = errors.New("trade revision conflict")
+	ErrTradeStaleRevision = ErrTradeRevisionConflict
+	ErrTradeInvalidState = errors.New("trade is not in the required state")
 )
 
 // TradeOffer is a server-validated snapshot of the items and coins escrowed
@@ -77,10 +72,32 @@ func (o TradeOffer) Clone() TradeOffer {
 	return cloned
 }
 
-// ValidateTradeOffer checks an offer against the character's current, unescrowed
-// inventory and wallet. Item metadata is always resolved from the server catalog.
-// ValidateTradeProximity requires two distinct, active characters in the same
+// ValidateTradeInvite requires two distinct, active characters in the same
 // zone and within the server-defined interaction range.
+func ValidateTradeInvite(initiator, target Player) error {
+	if initiator.ID == "" || target.ID == "" {
+		return ErrTradeParticipantUnavailable
+	}
+	if initiator.ID == target.ID {
+		return ErrTradeSelf
+	}
+	if err := initiator.CanAct(); err != nil {
+		return err
+	}
+	if err := target.CanAct(); err != nil {
+		return ErrTradeParticipantUnavailable
+	}
+	if initiator.Position.ZoneID != target.Position.ZoneID {
+		return ErrTradeDifferentZone
+	}
+	if math.Hypot(initiator.Position.X-target.Position.X, initiator.Position.Z-target.Position.Z) > TradeInteractionRange {
+		return ErrTradeOutOfRange
+	}
+	return nil
+}
+
+// ValidateTradeProximity is retained as a simple domain helper for same-zone
+// proximity checks used by tests and non-invitation trade operations.
 func ValidateTradeProximity(first, second Player) error {
 	if first.ID == second.ID {
 		return ErrTradeSelf
@@ -98,6 +115,8 @@ func ValidateTradeProximity(first, second Player) error {
 	return nil
 }
 
+// ValidateTradeOffer checks an offer against the character's current, unescrowed
+// inventory and wallet. Item metadata is always resolved from the server catalog.
 func ValidateTradeOffer(player Player, offer TradeOffer) error {
 	if err := player.CanAct(); err != nil {
 		return err
@@ -160,47 +179,5 @@ func ApplyTradeOffer(player *Player, offer TradeOffer) error {
 		player.Inventory[itemID] += quantity
 	}
 	player.Coins += offer.Coins
-	return nil
-}
-
-const (
-	TradeInteractionRange = 5.0
-	TradeLifetime = 10 * time.Minute
-)
-
-type TradeStatus string
-
-const (
-	TradeStatusPending TradeStatus = "pending"
-	TradeStatusOpen TradeStatus = "open"
-	TradeStatusCompleted TradeStatus = "completed"
-	TradeStatusCancelled TradeStatus = "cancelled"
-	TradeStatusExpired TradeStatus = "expired"
-)
-
-type TradeParticipant struct {
-	CharacterID PlayerID `json:"characterId"`
-	Name string `json:"name"`
-	Role string `json:"role"`
-	Offer TradeOffer `json:"offer"`
-	Confirmed bool `json:"confirmed"`
-}
-
-type TradeSnapshot struct {
-	ID string `json:"id"`
-	Status TradeStatus `json:"status"`
-	Revision int64 `json:"revision"`
-	CreatedAt time.Time `json:"createdAt"`
-	ExpiresAt time.Time `json:"expiresAt"`
-	Participants []TradeParticipant `json:"participants"`
-}
-
-func ValidateTradeInvite(initiator,target Player) error {
-	if initiator.ID==""||target.ID=="" { return ErrTradeParticipantUnavailable }
-	if initiator.ID==target.ID { return ErrTradeSelf }
-	if err:=initiator.CanAct();err!=nil{return err}
-	if err:=target.CanAct();err!=nil{return ErrTradeParticipantUnavailable}
-	if initiator.Position.ZoneID!=target.Position.ZoneID{return ErrTradeDifferentZone}
-	if math.Hypot(initiator.Position.X-target.Position.X,initiator.Position.Z-target.Position.Z)>TradeInteractionRange{return ErrTradeOutOfRange}
 	return nil
 }
