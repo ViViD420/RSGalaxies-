@@ -65,6 +65,7 @@ func FindGatheringNode(id string) (GatheringNodeDefinition, bool) {
 }
 
 func (p *Player) Gather(node GatheringNodeDefinition, state GatheringNodeState, now time.Time) (GatheringResult, GatheringNodeState, error) {
+	if err:=p.CanAct();err!=nil{return GatheringResult{},state,err}
 	if p.Position.ZoneID != node.Position.ZoneID {
 		return GatheringResult{}, state, ErrGatheringOutOfRange
 	}
