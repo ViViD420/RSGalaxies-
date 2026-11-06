@@ -105,7 +105,7 @@ func (s *Server) movePlayer(w http.ResponseWriter, r *http.Request) {
 		case errors.Is(err, game.ErrOutsideWorld):
 			writeJSON(w, http.StatusUnprocessableEntity, map[string]any{"error": "outside_world_bounds", "position": player.Position})
 		case errors.Is(err, game.ErrInvalidMovement), errors.Is(err, game.ErrUnknownWorldZone):
-			writeError(w, http.StatusUnprocessableEntity, "invalid_movement")
+			writeJSON(w, http.StatusUnprocessableEntity, map[string]any{"error": "invalid_movement", "position": player.Position})
 		default:
 			log.Printf("move player: %v", err)
 			writeError(w, http.StatusInternalServerError, "internal_error")
