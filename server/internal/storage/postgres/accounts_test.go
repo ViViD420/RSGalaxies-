@@ -114,7 +114,7 @@ func TestPostgresAccountSessionLimitPrunesOldestSessions(t *testing.T) {
  db:=integrationDatabase(t);repo:=NewAccountRepository(db);ctx:=context.Background();now:=time.Now().UTC()
  account,firstToken,err:=repo.Register(ctx,fmt.Sprintf("session-cap-%d@example.test",now.UnixNano()),"correct-horse-battery-staple",now);if err!=nil{t.Fatal(err)}
  t.Cleanup(func(){_,_=db.ExecContext(context.Background(),"DELETE FROM accounts WHERE id=$1",account.ID)})
- for i:=1;i<MaxActiveSessionsPerAccount;i++ {
+ for i:=1;i<=MaxActiveSessionsPerAccount;i++ {
   _,hash,err:=auth.NewSessionToken();if err!=nil{t.Fatal(err)}
   tx,err:=db.BeginTx(ctx,nil);if err!=nil{t.Fatal(err)}
   if err:=createSession(ctx,tx,account.ID,hash[:],now.Add(time.Duration(i)*time.Second));err!=nil{_ = tx.Rollback();t.Fatal(err)}
