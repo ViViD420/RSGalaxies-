@@ -9,18 +9,24 @@
         "ms-azuretools.vscode-docker"
       ],
       "settings": {
-        "go.testFlags": ["-race"],
+        "go.testFlags": [
+          "-race"
+        ],
         "editor.formatOnSave": true,
-        "[go]": { "editor.defaultFormatter": "golang.go" }
+        "[go]": {
+          "editor.defaultFormatter": "golang.go"
+        }
       }
     }
   },
-  "forwardPorts": [8080],
+  "forwardPorts": [
+    8080
+  ],
   "portsAttributes": {
     "8080": {
       "label": "RS Galaxies development API",
       "onAutoForward": "notify"
     }
   },
-  "postCreateCommand": "cd server && go mod download && go test ./... && go vet ./..."
+  "postCreateCommand": "bash .devcontainer/setup.sh"
 }
