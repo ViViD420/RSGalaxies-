@@ -294,6 +294,18 @@ func TestAuthenticatedCharacterLifecycleAndOwnership(t *testing.T) {
 	if create.Code!=http.StatusCreated{t.Fatalf("create character status=%d body=%s",create.Code,create.Body.String())}
 	var player game.Player
 	if err:=json.Unmarshal(create.Body.Bytes(),&player);err!=nil{t.Fatal(err)}
+	characters.players[registration.Account.ID][player.ID].Inventory["softwood_log"]=3
+	deposit:=httptest.NewRecorder()
+	depositRequest:=httptest.NewRequest(http.MethodPost,"/api/v1/account/characters/"+string(player.ID)+"/bank/deposit",bytes.NewBufferString(`{"itemId":"softwood_log","quantity":2}`))
+	depositRequest.Header.Set("Authorization","Bearer "+registration.AccessToken)
+	handler.ServeHTTP(deposit,depositRequest)
+	if deposit.Code!=http.StatusOK{t.Fatalf("bank deposit status=%d body=%s",deposit.Code,deposit.Body.String())}
+	withdraw:=httptest.NewRecorder()
+	withdrawRequest:=httptest.NewRequest(http.MethodPost,"/api/v1/account/characters/"+string(player.ID)+"/bank/withdraw",bytes.NewBufferString(`{"itemId":"softwood_log","quantity":1}`))
+	withdrawRequest.Header.Set("Authorization","Bearer "+registration.AccessToken)
+	handler.ServeHTTP(withdraw,withdrawRequest)
+	if withdraw.Code!=http.StatusOK{t.Fatalf("bank withdraw status=%d body=%s",withdraw.Code,withdraw.Body.String())}
+	if characters.players[registration.Account.ID][player.ID].Bank["softwood_log"]!=1{t.Fatal("bank balance did not persist in test store")}
 
 	secondRegister:=httptest.NewRecorder()
 	handler.ServeHTTP(secondRegister,httptest.NewRequest(http.MethodPost,"/api/v1/auth/register",bytes.NewBufferString(`{"email":"other@example.test","password":"long-enough-password"}`)))
@@ -389,4 +401,11 @@ func TestProductionCORSUsesExplicitOriginAllowlist(t *testing.T) {
  blocked.Header.Set("Origin","https://untrusted.example.test")
  blockedResponse:=httptest.NewRecorder();handler.ServeHTTP(blockedResponse,blocked)
  if blockedResponse.Header().Get("Access-Control-Allow-Origin")!=""{t.Fatal("unconfigured production origin was allowed")}
+}
+
+func (s *testCharacterStore) TransferBankItemForAccount(_ context.Context,accountID string,id game.PlayerID,itemID string,quantity int,deposit bool)(game.Player,error){
+ player,ok:=s.players[accountID][id];if !ok{return game.Player{},game.ErrPlayerNotFound}
+ var err error
+ if deposit{err=player.DepositItem(itemID,quantity)}else{err=player.WithdrawItem(itemID,quantity)}
+ if err!=nil{return player,err};s.players[accountID][id]=player;return player,nil
 }
