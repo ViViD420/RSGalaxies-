@@ -707,10 +707,10 @@ func _on_api_request_completed(result: int, response_code: int, _headers: Packed
 		if response_code != 200 or not payload is Dictionary or payload.get("status") != "ok":
 			status_label.text = "Server: unexpected health response"
 			return
-		api_stage = "market_catalog"
-		var catalog_error := api_request.request(api_base_url + "/api/v1/market/items")
+		api_stage = "world_catalog"
+		var catalog_error := api_request.request(api_base_url + "/api/v1/world/catalog")
 		if catalog_error != OK:
-			status_label.text = "Server: ready • market catalog unavailable"
+			status_label.text = "Server: ready • world catalog unavailable"
 			auth_panel.visible = true
 		return
 	if not payload is Dictionary:
@@ -721,38 +721,19 @@ func _on_api_request_completed(result: int, response_code: int, _headers: Packed
 		var error_code := str(payload.get("error", "request_failed"))
 		_set_account_status("Account: " + error_code.replace("_", " "))
 		return
-	if api_stage == "market_catalog":
+	if api_stage == "world_catalog":
 		var catalog_items: Variant = payload.get("items", [])
+		var enemies: Variant = payload.get("enemies", [])
+		var nodes: Variant = payload.get("nodes", [])
+		var stations: Variant = payload.get("stations", [])
 		if catalog_items is Array:
 			market_catalog = catalog_items
-		api_stage = "enemy_catalog"
-		var enemy_error := api_request.request(api_base_url + "/api/v1/combat/enemies")
-		if enemy_error != OK:
-			auth_panel.visible = true
-			status_label.text = "Server: ready • enemy catalog unavailable"
-		return
-	if api_stage == "enemy_catalog":
-		var enemies: Variant = payload.get("enemies", [])
 		if enemies is Array:
 			enemy_catalog = enemies
 			_build_enemy_spawns()
-		api_stage = "node_catalog"
-		var node_error := api_request.request(api_base_url + "/api/v1/world/nodes")
-		if node_error != OK:
-			status_label.text = "Server: ready • gathering catalog unavailable"
-		return
-	if api_stage == "node_catalog":
-		var nodes: Variant = payload.get("nodes", [])
 		if nodes is Array:
 			gathering_catalog = nodes
 			_build_gathering_node_visuals()
-		api_stage = "station_catalog"
-		var station_error := api_request.request(api_base_url + "/api/v1/crafting/stations")
-		if station_error != OK:
-			status_label.text = "Server: ready • crafting station catalog unavailable"
-		return
-	if api_stage == "station_catalog":
-		var stations: Variant = payload.get("stations", [])
 		if stations is Array:
 			station_catalog = stations
 			_build_crafting_station_visuals()
