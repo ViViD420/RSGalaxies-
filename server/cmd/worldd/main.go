@@ -59,6 +59,7 @@ func main() {
 	api := httpapi.New(players)
 	if accountRepository != nil {
 		api = httpapi.NewWithAccounts(players, accountRepository, accountRepository)
+		api.SetReadinessCheck(database.PingContext)
 	}
 
 	server := &http.Server{
