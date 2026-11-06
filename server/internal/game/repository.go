@@ -13,9 +13,11 @@ type PlayerRepository interface {
 	List(ctx context.Context) ([]Player, error)
 	AwardExperience(ctx context.Context, id PlayerID, skillID string, amount int) (Player, bool, error)
 	MovePlayer(ctx context.Context, id PlayerID, x, z float64, now time.Time) (Player, error)
+	Gather(ctx context.Context, id PlayerID, nodeID string, now time.Time) (Player, GatheringResult, error)
 }
 
-type MemoryPlayerRepository struct { mu sync.RWMutex; players map[PlayerID]Player }
+type MemoryPlayerRepository struct { mu sync.RWMutex; players map[PlayerID]Player
+	nodes map[string]GatheringNodeState }
 
 func NewMemoryPlayerRepository() *MemoryPlayerRepository {
 	return &MemoryPlayerRepository{players:make(map[PlayerID]Player)}
@@ -68,8 +70,31 @@ func (r *MemoryPlayerRepository) MovePlayer(_ context.Context, id PlayerID, x, z
 	return clonePlayer(player), nil
 }
 
+
+func (r *MemoryPlayerRepository) Gather(_ context.Context, id PlayerID, nodeID string, now time.Time) (Player, GatheringResult, error) {
+	r.mu.Lock()
+	defer r.mu.Unlock()
+	player, ok := r.players[id]
+	if !ok {
+		return Player{}, GatheringResult{}, ErrPlayerNotFound
+	}
+	node, ok := FindGatheringNode(nodeID)
+	if !ok {
+		return clonePlayer(player), GatheringResult{}, ErrUnknownGatheringNode
+	}
+	result, state, err := player.Gather(node, r.nodes[nodeID], now)
+	if err != nil {
+		return clonePlayer(player), GatheringResult{}, err
+	}
+	r.nodes[nodeID] = state
+	r.players[id] = clonePlayer(player)
+	return clonePlayer(player), result, nil
+}
+
 func clonePlayer(player Player) Player {
 	cloned := player
+	cloned.Inventory = make(map[string]int, len(player.Inventory))
+	for id, quantity := range player.Inventory { cloned.Inventory[id] = quantity }
 	cloned.Skills = make(map[string]SkillProgress, len(player.Skills))
 	for id, progress := range player.Skills { cloned.Skills[id] = progress }
 	return cloned
