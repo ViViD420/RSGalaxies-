@@ -254,8 +254,8 @@ func (s *testAccountStore) AuthenticateSession(_ context.Context,token string,_ 
 }
 func (s *testAccountStore) RevokeSession(_ context.Context,token string,_ time.Time)error{s.revoked[token]=true;return nil}
 
-type testCharacterStore struct { players map[string]map[game.PlayerID]game.Player; enemies map[string]game.EnemyState }
-func newTestCharacterStore()*testCharacterStore{return &testCharacterStore{players:map[string]map[game.PlayerID]game.Player{},enemies:map[string]game.EnemyState{}}}
+type testCharacterStore struct { players map[string]map[game.PlayerID]game.Player; enemies map[string]game.EnemyState; messages []game.ChatMessage; lastChat map[game.PlayerID]time.Time; nextChatID int64 }
+func newTestCharacterStore()*testCharacterStore{return &testCharacterStore{players:map[string]map[game.PlayerID]game.Player{},enemies:map[string]game.EnemyState{},lastChat:map[game.PlayerID]time.Time{}}}
 func (s *testCharacterStore) CreateCharacter(_ context.Context,accountID string,player game.Player)error{
 	if s.players[accountID]==nil{s.players[accountID]=map[game.PlayerID]game.Player{}}
 	if _,ok:=s.players[accountID][player.ID];ok{return game.ErrPlayerAlreadyExists}
@@ -501,4 +501,19 @@ func TestEnemyCatalogIsPublic(t *testing.T) {
  var payload struct{Enemies []game.EnemyDefinition `json:"enemies"`}
  if err:=json.Unmarshal(response.Body.Bytes(),&payload);err!=nil{t.Fatal(err)}
  if len(payload.Enemies)!=2{t.Fatalf("enemy definitions=%d want=2",len(payload.Enemies))}
+}
+
+func (s *testCharacterStore) SendLocalChatForAccount(_ context.Context,accountID string,id game.PlayerID,message string,now time.Time)(game.ChatMessage,error){
+ player,ok:=s.players[accountID][id];if !ok{return game.ChatMessage{},game.ErrPlayerNotFound}
+ cleaned,err:=game.ValidateChatMessage(message);if err!=nil{return game.ChatMessage{},err}
+ if last:=s.lastChat[id];!last.IsZero()&&now.Sub(last)<game.ChatCooldown{return game.ChatMessage{},game.ErrChatCooldown}
+ s.nextChatID++
+ result:=game.ChatMessage{ID:s.nextChatID,ZoneID:player.Position.ZoneID,CharacterID:id,CharacterName:player.Name,Message:cleaned,CreatedAt:now}
+ s.messages=append(s.messages,result);s.lastChat[id]=now;return result,nil
+}
+func (s *testCharacterStore) ListLocalChatForAccount(_ context.Context,accountID string,id game.PlayerID,afterID int64,limit int)([]game.ChatMessage,error){
+ player,ok:=s.players[accountID][id];if !ok{return nil,game.ErrPlayerNotFound}
+ result:=make([]game.ChatMessage,0)
+ for _,message:=range s.messages{if message.ZoneID==player.Position.ZoneID&&message.ID>afterID{result=append(result,message);if len(result)>=limit{break}}}
+ return result,nil
 }
