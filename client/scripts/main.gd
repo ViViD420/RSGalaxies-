@@ -160,12 +160,9 @@ func _build_world() -> void:
 	floor_body.add_child(floor_collision)
 	add_child(floor_body)
 
-	_add_tree(Vector3(2.0, 0.0, 0.0))
-	_add_stone_deposit(Vector3(-2.0, 0.0, 0.0))
 	_add_workbench(Vector3(0.0, 0.0, 4.0))
 	_add_bank_chest(Vector3(0.0, 0.0, -4.0))
 	_add_merchant_stall(Vector3(4.0, 0.0, 0.0))
-	_add_copper_vein(Vector3(0.0, 0.0, -8.0))
 	_add_forge(Vector3(0.0, 0.0, 8.0))
 
 	player_node = PLAYER_SCENE.instantiate() as CharacterBody3D
@@ -228,6 +225,45 @@ func _add_workbench(at: Vector3) -> void:
 
 
 
+
+func _build_gathering_node_visuals() -> void:
+	for node in gathering_catalog:
+		if not node is Dictionary:
+			continue
+		var position_data: Variant = node.get("position", {})
+		if not position_data is Dictionary:
+			continue
+		var at := Vector3(float(position_data.get("x", 0.0)), 0.0, float(position_data.get("z", 0.0)))
+		match str(node.get("resourceId", "")):
+			"softwood_log":
+				_add_tree(at)
+			"rough_stone":
+				_add_stone_deposit(at)
+			"copper_ore":
+				_add_copper_vein(at)
+			_:
+				_add_generic_gathering_node(at, str(node.get("name", "Resource Node")))
+
+func _add_generic_gathering_node(at: Vector3, node_name: String) -> void:
+	var root := Node3D.new()
+	root.position = at
+	var rock := MeshInstance3D.new()
+	var mesh := SphereMesh.new()
+	mesh.radius = 0.6
+	mesh.height = 0.9
+	rock.mesh = mesh
+	rock.position.y = 0.45
+	var material := StandardMaterial3D.new()
+	material.albedo_color = Color(0.42, 0.40, 0.30)
+	rock.material_override = material
+	root.add_child(rock)
+	var label := Label3D.new()
+	label.text = node_name
+	label.position.y = 1.15
+	label.billboard = BaseMaterial3D.BILLBOARD_ENABLED
+	label.font_size = 22
+	root.add_child(label)
+	add_child(root)
 
 func _build_enemy_spawns() -> void:
 	for enemy in enemy_catalog:
