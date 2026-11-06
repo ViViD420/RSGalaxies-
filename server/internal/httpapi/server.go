@@ -21,6 +21,10 @@ type characterStore interface {
 	CreateCharacter(context.Context, string, game.Player) error
 	GetCharacter(context.Context, string, game.PlayerID) (game.Player, error)
 	ListCharacters(context.Context, string) ([]game.Player, error)
+	AwardExperienceForAccount(context.Context, string, game.PlayerID, string, int) (game.Player, bool, error)
+	MovePlayerForAccount(context.Context, string, game.PlayerID, float64, float64, time.Time) (game.Player, error)
+	GatherForAccount(context.Context, string, game.PlayerID, string, time.Time) (game.Player, game.GatheringResult, error)
+	CraftForAccount(context.Context, string, game.PlayerID, string, time.Time) (game.Player, game.CraftingResult, error)
 }
 
 type Server struct {
@@ -66,6 +70,11 @@ func (s *Server) Routes() http.Handler {
 		mux.HandleFunc("GET /api/v1/account/characters", s.listOwnedCharacters)
 		mux.HandleFunc("POST /api/v1/account/characters", s.createOwnedCharacter)
 		mux.HandleFunc("GET /api/v1/account/characters/{id}", s.getOwnedCharacter)
+		mux.HandleFunc("GET /api/v1/account/characters/{id}/skills", s.getOwnedCharacterSkills)
+		mux.HandleFunc("POST /api/v1/account/characters/{id}/skills/{skill}/experience", s.awardOwnedExperience)
+		mux.HandleFunc("POST /api/v1/account/characters/{id}/move", s.moveOwnedCharacter)
+		mux.HandleFunc("POST /api/v1/account/characters/{id}/gather/{nodeID}", s.gatherOwnedCharacter)
+		mux.HandleFunc("POST /api/v1/account/characters/{id}/craft/{recipeID}", s.craftOwnedCharacter)
 	}
 	return securityHeaders(mux)
 }
@@ -399,4 +408,67 @@ func (s *Server) getOwnedCharacter(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	writeJSON(w, http.StatusOK, player)
+}
+
+func (s *Server) getOwnedCharacterSkills(w http.ResponseWriter, r *http.Request) {
+ account, _, ok := s.authenticatedAccount(w, r); if !ok { return }
+ player, err := s.characters.GetCharacter(r.Context(), account.ID, game.PlayerID(strings.TrimSpace(r.PathValue("id"))))
+ if err != nil { if errors.Is(err, game.ErrPlayerNotFound) { writeError(w,404,"character_not_found") } else { log.Printf("get owned skills: %v",err); writeError(w,500,"internal_error") }; return }
+ writeJSON(w,200,map[string]any{"characterId":player.ID,"skills":player.Skills})
+}
+func (s *Server) awardOwnedExperience(w http.ResponseWriter, r *http.Request) {
+ account, _, ok := s.authenticatedAccount(w,r); if !ok { return }
+ var request struct { Amount int }
+ if !decodeStrictJSON(w,r,1<<10,&request) { return }
+ player, leveled, err := s.characters.AwardExperienceForAccount(r.Context(),account.ID,game.PlayerID(strings.TrimSpace(r.PathValue("id"))),r.PathValue("skill"),request.Amount)
+ if err != nil {
+  switch { case errors.Is(err,game.ErrPlayerNotFound): writeError(w,404,"character_not_found")
+  case errors.Is(err,game.ErrUnknownSkill): writeError(w,422,"unknown_skill")
+  case errors.Is(err,game.ErrInvalidExperience): writeError(w,422,"invalid_experience")
+  case errors.Is(err,game.ErrExperienceOverflow): writeError(w,409,"experience_cap_reached")
+  default: log.Printf("award owned XP: %v",err); writeError(w,500,"internal_error") }; return
+ }
+ writeJSON(w,200,map[string]any{"character":player,"skill":player.Skills[strings.ToLower(strings.TrimSpace(r.PathValue("skill")))],"leveledUp":leveled})
+}
+func (s *Server) moveOwnedCharacter(w http.ResponseWriter, r *http.Request) {
+ account, _, ok := s.authenticatedAccount(w,r); if !ok { return }
+ var request struct { X float64; Z float64 }
+ if !decodeStrictJSON(w,r,1<<10,&request) { return }
+ player,err:=s.characters.MovePlayerForAccount(r.Context(),account.ID,game.PlayerID(strings.TrimSpace(r.PathValue("id"))),request.X,request.Z,s.now())
+ if err != nil {
+  switch { case errors.Is(err,game.ErrPlayerNotFound): writeError(w,404,"character_not_found")
+  case errors.Is(err,game.ErrMovementTooFast): writeJSON(w,422,map[string]any{"error":"movement_too_fast","position":player.Position})
+  case errors.Is(err,game.ErrOutsideWorld): writeJSON(w,422,map[string]any{"error":"outside_world_bounds","position":player.Position})
+  case errors.Is(err,game.ErrInvalidMovement),errors.Is(err,game.ErrUnknownWorldZone): writeJSON(w,422,map[string]any{"error":"invalid_movement","position":player.Position})
+  default: log.Printf("move owned character: %v",err); writeError(w,500,"internal_error") }; return
+ }
+ writeJSON(w,200,map[string]any{"character":player,"position":player.Position})
+}
+func (s *Server) gatherOwnedCharacter(w http.ResponseWriter, r *http.Request) {
+ account, _, ok := s.authenticatedAccount(w,r); if !ok { return }
+ player,result,err:=s.characters.GatherForAccount(r.Context(),account.ID,game.PlayerID(strings.TrimSpace(r.PathValue("id"))),r.PathValue("nodeID"),s.now())
+ if err != nil {
+  switch { case errors.Is(err,game.ErrPlayerNotFound): writeError(w,404,"character_not_found")
+  case errors.Is(err,game.ErrUnknownGatheringNode): writeError(w,404,"gathering_node_not_found")
+  case errors.Is(err,game.ErrGatheringOutOfRange): writeError(w,422,"gathering_out_of_range")
+  case errors.Is(err,game.ErrGatheringNodeDepleted): writeError(w,409,"gathering_node_depleted")
+  case errors.Is(err,game.ErrInsufficientSkillLevel): writeError(w,422,"insufficient_skill_level")
+  case errors.Is(err,game.ErrInventoryFull),errors.Is(err,game.ErrExperienceOverflow): writeError(w,409,"inventory_or_progression_limit")
+  default: log.Printf("gather owned: %v",err); writeError(w,500,"internal_error") }; return
+ }
+ writeJSON(w,200,map[string]any{"character":player,"gathering":result})
+}
+func (s *Server) craftOwnedCharacter(w http.ResponseWriter, r *http.Request) {
+ account, _, ok := s.authenticatedAccount(w,r); if !ok { return }
+ player,result,err:=s.characters.CraftForAccount(r.Context(),account.ID,game.PlayerID(strings.TrimSpace(r.PathValue("id"))),r.PathValue("recipeID"),s.now())
+ if err != nil {
+  switch { case errors.Is(err,game.ErrPlayerNotFound): writeError(w,404,"character_not_found")
+  case errors.Is(err,game.ErrUnknownCraftingRecipe),errors.Is(err,game.ErrUnknownCraftingStation): writeError(w,404,"crafting_definition_not_found")
+  case errors.Is(err,game.ErrCraftingOutOfRange): writeError(w,422,"crafting_out_of_range")
+  case errors.Is(err,game.ErrInsufficientIngredients): writeError(w,422,"insufficient_ingredients")
+  case errors.Is(err,game.ErrCraftingSkillTooLow): writeError(w,422,"crafting_skill_too_low")
+  case errors.Is(err,game.ErrCraftingOutputFull),errors.Is(err,game.ErrExperienceOverflow): writeError(w,409,"crafting_capacity_reached")
+  default: log.Printf("craft owned: %v",err); writeError(w,500,"internal_error") }; return
+ }
+ writeJSON(w,200,map[string]any{"character":player,"crafting":result})
 }
