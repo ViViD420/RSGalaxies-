@@ -2009,10 +2009,14 @@ func _add_trade_offer_item() -> void:
 		trade_status_label.text = "Enter a positive whole-number item quantity."
 		return
 	var quantity := int(quantity_text)
-	if quantity > int(current_inventory.get(item_id, 0)):
-		trade_status_label.text = "You can only add items currently in your bag."
+	var current_offer := _current_own_trade_offer()
+	var current_items: Dictionary = current_offer.get("items", {})
+	var total_available := int(current_inventory.get(item_id, 0)) + int(current_items.get(item_id, 0))
+	var new_quantity := int(trade_offer_items.get(item_id, 0)) + quantity
+	if new_quantity > total_available:
+		trade_status_label.text = "You can only add items currently available after returning your existing offer."
 		return
-	trade_offer_items[item_id] = int(trade_offer_items.get(item_id, 0)) + quantity
+	trade_offer_items[item_id] = new_quantity
 	_update_trade_offer_items_label()
 	_refresh_trade_items()
 
