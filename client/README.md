@@ -17,7 +17,7 @@ A Web export preset is included in export_presets.cfg. The Codespaces setup inst
 
 ## Current limitations
 
-- Movement is local-only; the server does not yet own or replicate position.
+- Movement is client-predicted with periodic server validation and correction; there is no continuous world simulation or remote-player replication yet.
 - The world is a generated test floor with a placeholder capsule character.
 - Inventory currently supports two starter stackable resources. There is no authentication, durable persistence, equipment, combat, production art or multiplayer networking yet.
 - This prototype is used to validate camera, movement and touch interaction before committing to a full client architecture.
