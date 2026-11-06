@@ -56,10 +56,10 @@ An original sandbox MMORPG combining long-form skill progression and item gamepl
 
 ## Next engineering tasks
 
-1. Inspect GitHub Actions results and fix any Go/Godot build failures.
-2. Validate the auto-launched browser build and gathering loop on a real phone; refine touch controls and camera feel.
-3. Add PostgreSQL schema/migrations and transactional player, inventory and world persistence.
-4. Add authenticated sessions and ownership checks; retire development-only movement/gather/XP routes before public deployment.
+1. Inspect GitHub Actions results and fix any Go/Godot/PostgreSQL integration failures.
+2. Validate the auto-launched browser build, gathering and crafting loops on a real phone; refine touch controls and camera feel.
+3. Add account authentication, secure sessions and character ownership checks; retire development-only state-changing routes before public deployment.
+4. Add item instances, equipment, bank storage, currency and atomic player trading.
 5. Expand the playable loop with more recipes, tools, resource tiers, NPCs and combat.
 
 ## Continuation instruction
