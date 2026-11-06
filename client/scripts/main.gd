@@ -722,6 +722,8 @@ func _expire_session() -> void:
 	auth_status_label.text = "Your session expired. Please sign in again."
 
 func _show_character_selection(characters: Array) -> void:
+	if market_panel != null:
+		market_panel.visible = false
 	if movement_timer != null:
 		movement_timer.stop()
 	movement_pending = false
