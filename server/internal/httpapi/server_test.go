@@ -532,3 +532,8 @@ func (s *testCharacterStore) ListLocalChatForAccount(_ context.Context,accountID
  for _,message:=range s.messages{if message.ZoneID==player.Position.ZoneID&&message.ID>afterID{result=append(result,message);if len(result)>=limit{break}}}
  return result,nil
 }
+
+func (s *testCharacterStore) UseItemForAccount(_ context.Context,accountID string,id game.PlayerID,itemID string)(game.Player,int,error){
+ player,ok:=s.players[accountID][id];if !ok{return game.Player{},0,game.ErrPlayerNotFound}
+ healed,err:=player.UseItem(itemID);if err!=nil{return player,0,err};s.players[accountID][id]=player;return player,healed,nil
+}
