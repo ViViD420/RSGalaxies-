@@ -33,6 +33,19 @@ func TestPostgresAccountRegistrationLoginAndSessionRevocation(t *testing.T) {
 
 	authenticated,err:=repo.AuthenticateSession(ctx,token,now.Add(time.Minute))
 	if err!=nil || authenticated.ID!=account.ID{t.Fatalf("authenticate registration session: account=%+v err=%v",authenticated,err)}
+	var lastUsed time.Time
+	if err:=db.QueryRowContext(ctx,"SELECT last_used_at FROM account_sessions WHERE token_hash=(SELECT token_hash FROM account_sessions WHERE account_id=$1 ORDER BY created_at LIMIT 1)",account.ID).Scan(&lastUsed);err!=nil{t.Fatal(err)}
+	if !lastUsed.Equal(now.Add(time.Minute)){t.Fatalf("session last-used timestamp=%s want=%s",lastUsed,now.Add(time.Minute))}
+	// Repeated API authentication within the write-coalescing window must not
+	// update the session row again.
+	if _,err:=repo.AuthenticateSession(ctx,token,now.Add(90*time.Second));err!=nil{t.Fatalf("repeat session authentication: %v",err)}
+	var unchanged time.Time
+	if err:=db.QueryRowContext(ctx,"SELECT last_used_at FROM account_sessions WHERE token_hash=(SELECT token_hash FROM account_sessions WHERE account_id=$1 ORDER BY created_at LIMIT 1)",account.ID).Scan(&unchanged);err!=nil{t.Fatal(err)}
+	if !unchanged.Equal(lastUsed){t.Fatalf("session activity write was not coalesced: before=%s after=%s",lastUsed,unchanged)}
+	if _,err:=repo.AuthenticateSession(ctx,token,now.Add(2*time.Minute+time.Second));err!=nil{t.Fatalf("session authentication after coalescing window: %v",err)}
+	var refreshed time.Time
+	if err:=db.QueryRowContext(ctx,"SELECT last_used_at FROM account_sessions WHERE token_hash=(SELECT token_hash FROM account_sessions WHERE account_id=$1 ORDER BY created_at LIMIT 1)",account.ID).Scan(&refreshed);err!=nil{t.Fatal(err)}
+	if !refreshed.Equal(now.Add(2*time.Minute+time.Second)){t.Fatalf("session activity not refreshed: got=%s",refreshed)}
 	loggedIn,loginToken,err:=repo.Login(ctx,"  "+email+"  ","correct-horse-battery-staple",now.Add(2*time.Minute))
 	if err!=nil || loggedIn.ID!=account.ID || loginToken==""{t.Fatalf("login: account=%+v err=%v",loggedIn,err)}
 	if _,_,err:=repo.Login(ctx,email,"incorrect-password",now);!errors.Is(err,ErrInvalidCredentials){t.Fatalf("wrong password error=%v",err)}
