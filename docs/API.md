@@ -13,6 +13,8 @@ The world service listens on port 8080 by default. Responses are JSON unless the
 - `GET /api/v1/world/zones`
 - `GET /api/v1/world/nodes`
 - `GET /api/v1/items`
+- `GET /api/v1/market/items` — item definitions and merchant prices.
+- `GET /api/v1/combat/enemies` — enemy spawn definitions.
 - `GET /api/v1/crafting/recipes`
 - `GET /api/v1/crafting/stations`
 
@@ -45,8 +47,6 @@ Send `Authorization: Bearer <accessToken>`:
 - `GET /api/v1/account/characters`
 - `POST /api/v1/account/characters` with `{"name":"Wayfarer"}`
 - `GET /api/v1/account/characters/{characterId}`
-- `GET /api/v1/market/items` — public item definitions and merchant prices.
-- `GET /api/v1/combat/enemies` — public enemy spawn definitions.
 - `GET /api/v1/account/characters/{characterId}/skills`
 - `POST /api/v1/account/characters/{characterId}/skills/{skillId}/experience` with `{"amount":25}`
 - `POST /api/v1/account/characters/{characterId}/move` with `{"x":1.0,"z":2.0}`
@@ -63,10 +63,8 @@ Send `Authorization: Bearer <accessToken>`:
 - `GET /api/v1/account/characters/{characterId}/chat/local?after={messageId}&limit=50`
 - `POST /api/v1/account/characters/{characterId}/chat/local` with `{"message":"Hello, zone!"}`.
 - `POST /api/v1/account/characters/{characterId}/inventory/use/{itemId}` — consume an owned item effect such as a healing potion.
-- `POST /api/v1/account/characters/{characterId}/presence/heartbeat` — refresh the authenticated character's 20-second active-zone lease; returns 204.
+- `POST /api/v1/account/characters/{characterId}/presence/heartbeat` — refresh this owned character's 20-second zone-presence lease; returns 204.
 - `GET /api/v1/account/characters/{characterId}/presence` — list up to 100 other active characters in the same zone, exposing only character ID, display name, zone and position.
-- `POST /api/v1/account/characters/{characterId}/presence/heartbeat` — refresh this owned character's zone presence lease.
-- `GET /api/v1/account/characters/{characterId}/presence` — list up to 100 active characters in the same zone; account IDs and private state are never returned.
 
 A new local-chat reader starts with `after=0` and receives the latest 50 zone messages in chronological order; later requests fetch newer IDs from the returned cursor. Every character operation is scoped by the authenticated account in its SQL query or transaction. A character belonging to another account is reported as not found.
 
