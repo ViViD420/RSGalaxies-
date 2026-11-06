@@ -22,7 +22,7 @@ An original sandbox MMORPG combining long-form skill progression and item gamepl
 - Defensive in-memory repository copies and concurrency-safe experience awards.
 - Starter zone, spawn point, server-time movement validation and world bounds.
 - Tree, stone, copper and wild-herb gathering nodes with range checks, charges, respawn and atomic inventory/XP rewards. The Foraging skill feeds a new herbal-bundle workbench recipe. Godot chooses the nearest target and builds resource props from the server node catalog rather than hardcoded node IDs.
-- Starter workbench and forge; recipes cover basic planks, herbal bundles, crafted healing herbal tea, copper smelting and a training sword. Herbal tea is a 15-health consumable. Crafting validates range, skill level, ingredients and output stack capacity.
+- Starter workbench and forge; recipes cover basic planks, herbal bundles, crafted healing herbal tea, copper smelting and a training sword. Herbal tea is a 15-health consumable. Crafting aggregates duplicate ingredients/outputs, simulates net stack changes, validates the exact station and commits inventory/XP only after all checks pass.
 - Player inventory, 100-slot bank storage, coin wallet, persistent equipment slots, merchant healing potions and crafted herbal tea. New characters start with 100 coins.
 - Starter merchant catalog with server-defined buy/sell prices. Buy/sell operations update coins and inventory atomically.
 - PostgreSQL migrations 0001–0009 cover player state, gathering, accounts/sessions, character ownership, bank storage, currency, equipment, health, shared enemy spawn state, persistent zone chat, leased zone presence and the initial player-trade escrow schema. Migration 0009 creates trade/participant/offer/escrow tables plus a unique active-character reservation table; trade APIs and settlement logic are not implemented yet.
@@ -32,7 +32,7 @@ An original sandbox MMORPG combining long-form skill progression and item gamepl
 - Authenticated routes cover login/register/logout/me, character list/create/read, skills/XP, movement, gathering, crafting, bank deposits/withdrawals, merchant trades, equipment equip/unequip, combat attacks, safe-spawn rest, local zone chat and account-scoped zone presence.
 - Legacy unscoped player-ID and development mutation routes remain disabled in production. Production registration is disabled unless explicitly enabled.
 - Auth routes have per-process IP/path throttling with bounded key memory. Production CORS uses an exact-origin allowlist. Security response headers and no-store responses are applied.
-- Public catalog routes include skills, world zones, gathering nodes, crafting stations and recipes, items, enemy spawns and merchant prices. `GET /api/v1/world/catalog` returns these definitions in one bounded bootstrap response to reduce client startup round trips.
+- Public catalog routes include skills, world zones, gathering nodes, crafting stations and recipes, items, enemy spawns and merchant prices. `GET /api/v1/world/catalog` returns the complete world definition set in one bootstrap response. `GET /api/v1/world/catalog` returns these definitions in one bounded bootstrap response to reduce client startup round trips.
 - `/healthz` is a dependency-independent liveness probe; `/readyz` performs a bounded two-second PostgreSQL ping and returns a generic 503 on dependency failure.
 - Zone presence uses a 20-second lease, account-owned heartbeat upserts, stale-entry cleanup, a 100-character roster cap and privacy-limited snapshots that never expose account IDs.
 
