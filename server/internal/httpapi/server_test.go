@@ -608,32 +608,53 @@ func (s *testCharacterStore) ListZonePresenceForAccount(_ context.Context,accoun
 	return result,nil
 }
 
+
 func TestAuthenticatedZonePresenceHeartbeatAndRoster(t *testing.T) {
-	t.Setenv("RS_GALAXIES_ENV","development")
+	t.Setenv("RS_GALAXIES_ENV","production")
+	t.Setenv("RS_GALAXIES_ENABLE_REGISTRATION","true")
 	characters:=newTestCharacterStore()
 	handler:=NewWithAccounts(game.NewMemoryPlayerRepository(),newTestAccountStore(),characters).Routes()
-	first:=registerTestAccount(t,handler,"presence-one@example.test")
-	second:=registerTestAccount(t,handler,"presence-two@example.test")
-	firstPlayer:=createTestCharacter(t,handler,first.AccessToken,"PresenceOne")
-	secondPlayer:=createTestCharacter(t,handler,second.AccessToken,"PresenceTwo")
+	register:=func(email string)(string,string){
+		response:=httptest.NewRecorder()
+		body:=fmt.Sprintf(`{"email":%q,"password":"long-enough-password"}`,email)
+		handler.ServeHTTP(response,httptest.NewRequest(http.MethodPost,"/api/v1/auth/register",bytes.NewBufferString(body)))
+		if response.Code!=http.StatusCreated{t.Fatalf("register %s status=%d body=%s",email,response.Code,response.Body.String())}
+		var payload struct{AccessToken string `json:"accessToken"`;Account auth.Account `json:"account"`}
+		if err:=json.Unmarshal(response.Body.Bytes(),&payload);err!=nil{t.Fatal(err)}
+		return payload.AccessToken,payload.Account.ID
+	}
+	create:=func(token,name string)game.Player{
+		response:=httptest.NewRecorder()
+		request:=httptest.NewRequest(http.MethodPost,"/api/v1/account/characters",bytes.NewBufferString(fmt.Sprintf(`{"name":%q}`,name)))
+		request.Header.Set("Authorization","Bearer "+token)
+		handler.ServeHTTP(response,request)
+		if response.Code!=http.StatusCreated{t.Fatalf("create %s status=%d body=%s",name,response.Code,response.Body.String())}
+		var player game.Player
+		if err:=json.Unmarshal(response.Body.Bytes(),&player);err!=nil{t.Fatal(err)}
+		return player
+	}
+	firstToken,firstAccountID:=register("presence-one@example.test")
+	secondToken,secondAccountID:=register("presence-two@example.test")
+	firstPlayer:=create(firstToken,"PresenceOne")
+	secondPlayer:=create(secondToken,"PresenceTwo")
 	heartbeat:=httptest.NewRecorder()
 	heartbeatRequest:=httptest.NewRequest(http.MethodPost,"/api/v1/account/characters/"+string(secondPlayer.ID)+"/presence/heartbeat",nil)
-	heartbeatRequest.Header.Set("Authorization","Bearer "+second.AccessToken)
+	heartbeatRequest.Header.Set("Authorization","Bearer "+secondToken)
 	handler.ServeHTTP(heartbeat,heartbeatRequest)
 	if heartbeat.Code!=http.StatusNoContent{t.Fatalf("presence heartbeat status=%d body=%s",heartbeat.Code,heartbeat.Body.String())}
 	roster:=httptest.NewRecorder()
 	rosterRequest:=httptest.NewRequest(http.MethodGet,"/api/v1/account/characters/"+string(firstPlayer.ID)+"/presence",nil)
-	rosterRequest.Header.Set("Authorization","Bearer "+first.AccessToken)
+	rosterRequest.Header.Set("Authorization","Bearer "+firstToken)
 	handler.ServeHTTP(roster,rosterRequest)
 	if roster.Code!=http.StatusOK{t.Fatalf("presence roster status=%d body=%s",roster.Code,roster.Body.String())}
 	var payload struct{Players []game.RemotePlayer `json:"players"`;LeaseSeconds int `json:"leaseSeconds"`}
 	if err:=json.Unmarshal(roster.Body.Bytes(),&payload);err!=nil{t.Fatal(err)}
 	if len(payload.Players)!=1||payload.Players[0].CharacterID!=secondPlayer.ID||payload.Players[0].Name!="PresenceTwo"{t.Fatalf("presence roster=%+v",payload)}
 	if payload.LeaseSeconds!=int(game.PresenceLease.Seconds()){t.Fatalf("lease seconds=%d",payload.LeaseSeconds)}
-	if strings.Contains(roster.Body.String(),first.Account.ID)||strings.Contains(roster.Body.String(),second.Account.ID){t.Fatal("presence roster leaked account identifiers")}
+	if strings.Contains(roster.Body.String(),firstAccountID)||strings.Contains(roster.Body.String(),secondAccountID){t.Fatal("presence roster leaked account identifiers")}
 	foreign:=httptest.NewRecorder()
 	foreignRequest:=httptest.NewRequest(http.MethodGet,"/api/v1/account/characters/"+string(secondPlayer.ID)+"/presence",nil)
-	foreignRequest.Header.Set("Authorization","Bearer "+first.AccessToken)
+	foreignRequest.Header.Set("Authorization","Bearer "+firstToken)
 	handler.ServeHTTP(foreign,foreignRequest)
 	if foreign.Code!=http.StatusNotFound{t.Fatalf("foreign presence status=%d body=%s",foreign.Code,foreign.Body.String())}
 }
