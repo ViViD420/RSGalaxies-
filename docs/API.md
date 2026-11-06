@@ -2,9 +2,14 @@
 
 The world service listens on port 8080 by default. Responses are JSON unless the status is 204.
 
+## Health
+
+- `GET /healthz` — process liveness; does not depend on PostgreSQL.
+- `GET /readyz` — dependency readiness; performs a two-second bounded PostgreSQL ping when configured and returns HTTP 503 without leaking connection details if unavailable.
+
 ## Public catalogs
 
-- `GET /healthz` — process liveness; remains healthy during dependency outages.
+ — process liveness; remains healthy during dependency outages.
 - `GET /readyz` — readiness; checks PostgreSQL with a two-second timeout when database-backed services are enabled.
 - `GET /api/v1/skills`
 - `GET /api/v1/world/zones`
