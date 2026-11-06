@@ -922,15 +922,15 @@ func _compare_inventory_items(left: Dictionary, right: Dictionary) -> bool:
 	var left_id := str(left.get("id", ""))
 	var right_id := str(right.get("id", ""))
 	if inventory_sort == "bag":
-		var left_count := int(current_inventory.get(left_id, 0))
-		var right_count := int(current_inventory.get(right_id, 0))
-		if left_count != right_count:
-			return left_count > right_count
+		var left_bag_count := int(current_inventory.get(left_id, 0))
+		var right_bag_count := int(current_inventory.get(right_id, 0))
+		if left_bag_count != right_bag_count:
+			return left_bag_count > right_bag_count
 	elif inventory_sort == "bank":
-		var left_count := int(current_bank.get(left_id, 0))
-		var right_count := int(current_bank.get(right_id, 0))
-		if left_count != right_count:
-			return left_count > right_count
+		var left_bank_count := int(current_bank.get(left_id, 0))
+		var right_bank_count := int(current_bank.get(right_id, 0))
+		if left_bank_count != right_bank_count:
+			return left_bank_count > right_bank_count
 	return str(left.get("name", left_id)).naturalnocasecmp_to(str(right.get("name", right_id))) < 0
 
 
