@@ -23,6 +23,7 @@ Open `client/` in Godot 4.3 or newer and run the main scene. Start the Go world 
 - Equipment slots, gear bonuses and simple equipped-item visuals.
 - Server-authoritative PvE attacks, enemy retaliation/respawn, Combat XP, loot and healing consumables.
 - Persistent local-zone chat with a bounded 100-line client display.
+- Leased zone-presence heartbeats and polling remote-player avatars/nameplates; inactive characters disappear after their presence lease expires.
 - Live skills panel with all ten skills, current level, XP totals, per-level progress bars and XP remaining to the next level.
 
 The client uses the public item, skill, crafting and enemy catalogs instead of duplicating those definitions. Gameplay outcomes are committed by the Go server and PostgreSQL repository.
