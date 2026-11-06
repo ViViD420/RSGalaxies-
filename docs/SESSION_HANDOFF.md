@@ -23,7 +23,7 @@ An original sandbox MMORPG combining long-form skill progression and item gamepl
 - Starter zone, spawn point, server-time movement validation and world bounds.
 - Tree, stone and copper gathering nodes with range checks, charges, respawn and atomic inventory/XP rewards.
 - Starter workbench and forge; recipes cover basic planks, copper smelting and a crafted training sword. Crafting validates range, skill level, ingredients and output stack capacity.
-- Player inventory, 100-slot bank storage, coin wallet and persistent equipment slots. New characters start with 100 coins.
+- Player inventory, 100-slot bank storage, coin wallet, persistent equipment slots and consumable healing potions. New characters start with 100 coins.
 - Starter merchant catalog with server-defined buy/sell prices. Buy/sell operations update coins and inventory atomically.
 - PostgreSQL migrations 0001–0007 cover player state, gathering, accounts/sessions, character ownership, bank storage, currency, equipment, health, shared enemy spawn state and persistent zone chat.
 - PostgreSQL transactions and row locks protect XP, movement, gathering, crafting, bank transfers, market trades, equipment changes and PvE combat.
@@ -40,7 +40,7 @@ An original sandbox MMORPG combining long-form skill progression and item gamepl
 - Account login/registration, multi-character selection and additional character creation.
 - Server-driven enemy visuals, combat attacks, damage/loot/XP feedback, health HUD, Rest recovery/respawn and a polling local-zone chat panel.
 - Bearer-authenticated movement, gathering, crafting, bank transfers, merchant buy/sell panel, equipment panel and full inventory/bank contents panel.
-- Starter bank chest, merchant stall, copper vein, forge and enemy spawns in the test world; coin balance, health, attack/defense bonuses, bag and bank counts appear in the HUD. Equipped sword/armor pieces have simple client-side visuals.
+- Starter bank chest, merchant stall/NPC, copper vein, forge and enemy spawns in the test world; coin balance, health, attack/defense bonuses, bag and bank counts appear in the HUD. Equipped sword/armor pieces have simple client-side visuals.
 - Market panel loads item names and prices from the server catalog.
 - Sign-out and session-expiry recovery. Access tokens are held in memory only; the user signs in again after restarting the client.
 - Combat rules are documented in docs/COMBAT.md; local chat behavior is documented in docs/CHAT.md. This remains a small gameplay prototype, not a full multiplayer client or final art direction.
@@ -50,8 +50,8 @@ An original sandbox MMORPG combining long-form skill progression and item gamepl
 - .devcontainer/ provides a GitHub Codespaces Go/Godot/PostgreSQL workspace with separate development and integration-test databases.
 - Codespaces setup installs Godot 4.3 and export templates, runs race-enabled Go tests, go vet, headless project import and Web export.
 - .env.example contains local-only sample settings; docs/API.md, docs/ACCOUNT_AUTH_DESIGN.md, docs/DEPLOYMENT.md, docs/COMBAT.md and docs/CHAT.md describe routes, security boundaries, deployment and gameplay rules.
-- Go server CI runs race-enabled unit/integration tests against PostgreSQL and go vet. Server run #233 passed the full suite through migration 0007, including persistent local chat, combat, economy, equipment and copper progression.
-- Godot client CI uses the official Godot 4.3 release and export templates. Client run #61 passed with the equipment visuals and full inventory/bank panel. Run #62 is validating bounded chat history.
+- Go server CI runs race-enabled unit/integration tests against PostgreSQL and go vet. Server run #244 passed the full suite, including persistent zone chat, combat, economy, equipment, copper progression and transactional consumable use.
+- Godot client CI uses the official Godot 4.3 release and export templates. Client run #63 passed with consumable use from the Bag panel. Run #64 is validating full bank item selection and run #65 is validating the frontier trader NPC visual.
 
 ## Production safeguards and remaining launch gates
 
