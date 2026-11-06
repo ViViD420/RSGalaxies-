@@ -67,8 +67,13 @@ func FindEnemy(id string)(EnemyDefinition,bool){
 	return EnemyDefinition{},false
 }
 
+func (p *Player) CanAct() error {
+	if p.Health <= 0 { return ErrPlayerDefeated }
+	return nil
+}
+
 func (p *Player) AttackEnemy(enemy EnemyDefinition,state EnemyState,now time.Time)(CombatResult,EnemyState,error){
-	if p.Health<=0{return CombatResult{},state,ErrPlayerDefeated}
+	if err:=p.CanAct();err!=nil{return CombatResult{},state,err}
 	if p.Position.ZoneID!=enemy.Position.ZoneID||math.Hypot(p.Position.X-enemy.Position.X,p.Position.Z-enemy.Position.Z)>enemy.InteractionRange{return CombatResult{},state,ErrEnemyOutOfRange}
 	if !p.LastCombatAt.IsZero()&&now.Sub(p.LastCombatAt)<CombatCooldown{return CombatResult{},state,ErrCombatCooldown}
 	if !state.Initialized{state.Health=enemy.MaxHealth;state.Initialized=true}
@@ -114,7 +119,8 @@ func (p *Player) AttackEnemy(enemy EnemyDefinition,state EnemyState,now time.Tim
 
 func (p *Player) Rest() error {
 	zone,ok:=FindWorldZone(p.Position.ZoneID);if !ok{return ErrUnknownWorldZone}
-	if math.Hypot(p.Position.X-zone.Spawn.X,p.Position.Z-zone.Spawn.Z)>4{return ErrRestOutOfRange}
+	if p.Health>0&&math.Hypot(p.Position.X-zone.Spawn.X,p.Position.Z-zone.Spawn.Z)>4{return ErrRestOutOfRange}
+	if p.Health<=0{p.Position=zone.Spawn}
 	p.Health=MaxPlayerHealth
 	p.LastCombatAt=time.Time{}
 	return nil
