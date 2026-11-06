@@ -791,6 +791,11 @@ func TestAuthenticatedTradeInvitationAcceptanceAndPrivacy(t *testing.T) {
 	if accept.Code!=http.StatusOK{t.Fatalf("accept status=%d body=%s",accept.Code,accept.Body.String())}
 	var accepted game.TradeSnapshot;if err:=json.Unmarshal(accept.Body.Bytes(),&accepted);err!=nil{t.Fatal(err)}
 	if accepted.Status!=game.TradeStatusOpen{t.Fatalf("accepted trade status=%s",accepted.Status)}
+	active:=httptest.NewRecorder();activeRequest:=httptest.NewRequest(http.MethodGet,"/api/v1/account/characters/"+string(first.ID)+"/trades/active",nil)
+	activeRequest.Header.Set("Authorization","Bearer "+firstToken);handler.ServeHTTP(active,activeRequest)
+	if active.Code!=http.StatusOK{t.Fatalf("active trade recovery status=%d body=%s",active.Code,active.Body.String())}
+	var recovered game.TradeSnapshot;if err:=json.Unmarshal(active.Body.Bytes(),&recovered);err!=nil{t.Fatal(err)}
+	if recovered.ID!=trade.ID||recovered.Status!=game.TradeStatusOpen{t.Fatalf("active trade recovery=%+v",recovered)}
 	self:=httptest.NewRecorder();selfRequest:=httptest.NewRequest(http.MethodPost,"/api/v1/account/characters/"+string(first.ID)+"/trades/invite/"+string(first.ID),bytes.NewBufferString(`{"items":{},"coins":0}`))
 	selfRequest.Header.Set("Authorization","Bearer "+firstToken);handler.ServeHTTP(self,selfRequest)
 	if self.Code!=http.StatusConflict{t.Fatalf("self invite status=%d body=%s",self.Code,self.Body.String())}
