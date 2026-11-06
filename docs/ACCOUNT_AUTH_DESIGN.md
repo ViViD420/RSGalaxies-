@@ -7,8 +7,8 @@ Status: implemented foundation. PostgreSQL accounts/sessions, bearer authenticat
 - Account identity is separate from character identity. An account may own multiple characters; every character lookup and mutation must be scoped by the authenticated account ID.
 - Passwords are never stored or logged. The current credential primitive uses PBKDF2-HMAC-SHA-256 with a per-password 128-bit random salt and 600,000 iterations. Encoded hashes carry an algorithm/version marker and bounded iteration count.
 - Session tokens are 256-bit random opaque bearer secrets. Only SHA-256 token digests are stored server-side; the raw token is returned once.
-- Session records must have explicit creation, expiry, revocation and last-used timestamps. Logout revokes the server-side record.
-- Authentication errors must not reveal whether an account exists. Registration and login request bodies need strict size limits, unknown-field rejection and trailing-JSON rejection.
+- Session records have creation, fixed 30-day expiry, revocation and last-used timestamps. Logout revokes the server-side record. The repository caps each account at 10 active sessions, prunes the oldest active session when the cap is exceeded, and removes expired or long-revoked sessions when a new session is issued.
+- Authentication errors must not reveal whether an account exists; login performs a dummy PBKDF2 verification for unknown/disabled accounts to reduce response-time enumeration. Registration and login request bodies need strict size limits, unknown-field rejection and trailing-JSON rejection.
 - Cookie-based browser sessions must use Secure, HttpOnly and SameSite=Lax (or stricter), with CSRF protection on state-changing cookie-authenticated requests. Bearer tokens must not be placed in URLs or logs.
 - Rate limiting, email verification, password reset and abuse monitoring are required before public account registration.
 
