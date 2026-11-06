@@ -77,7 +77,6 @@ var market_catalog: Array = []
 var enemy_catalog: Array = []
 var gathering_catalog: Array = []
 var station_catalog: Array = []
-var gathering_catalog: Array = []
 var api_request: HTTPRequest
 var movement_request: HTTPRequest
 var gather_request: HTTPRequest
