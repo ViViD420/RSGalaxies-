@@ -94,6 +94,7 @@ func FindCraftingRecipe(id string) (CraftingRecipeDefinition, bool) {
 }
 
 func (p *Player) Craft(recipe CraftingRecipeDefinition, station CraftingStationDefinition, _ time.Time) (CraftingResult, error) {
+	if err:=p.CanAct();err!=nil{return CraftingResult{},err}
 	if p.Position.ZoneID != station.Position.ZoneID || math.Hypot(p.Position.X-station.Position.X, p.Position.Z-station.Position.Z) > station.InteractionRange {
 		return CraftingResult{}, ErrCraftingOutOfRange
 	}
