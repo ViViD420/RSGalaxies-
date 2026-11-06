@@ -737,7 +737,7 @@ func (s *testCharacterStore) ConfirmTradeForAccount(_ context.Context,accountID 
 func (s *testCharacterStore) CancelTradeForAccount(_ context.Context,accountID string,id game.PlayerID,tradeID string,now time.Time)(game.TradeSnapshot,error){
 	trade,ok:=s.trades[tradeID];if !ok{return game.TradeSnapshot{},game.ErrTradeNotFound}
 	found:=false
-	for i:=range trade.Participants{player,exists:=s.players[accountID][trade.Participants[i].CharacterID];if exists&&trade.Participants[i].CharacterID==id{found=true}}
+	for i:=range trade.Participants{_,exists:=s.players[accountID][trade.Participants[i].CharacterID];if exists&&trade.Participants[i].CharacterID==id{found=true}}
 	if !found{return game.TradeSnapshot{},game.ErrTradeNotParticipant}
 	for i:=range trade.Participants{participant:=trade.Participants[i];player:=s.playersForCharacter(participant.CharacterID);if err:=game.ApplyTradeOffer(&player,participant.Offer);err!=nil{return game.TradeSnapshot{},err};for owner,players:=range s.players{if _,ok:=players[player.ID];ok{s.players[owner][player.ID]=player}}}
 	trade.Status=game.TradeCancelled;s.trades[tradeID]=trade;delete(s.activeTrades,trade.Participants[0].CharacterID);delete(s.activeTrades,trade.Participants[1].CharacterID);return trade,nil
