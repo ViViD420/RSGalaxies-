@@ -49,7 +49,7 @@ An original sandbox MMORPG combining long-form skill progression and item gamepl
 - .devcontainer/ provides a GitHub Codespaces Go/Godot/PostgreSQL workspace with separate development and integration-test databases.
 - Codespaces setup installs Godot 4.3 and export templates, runs race-enabled Go tests, go vet, headless project import and Web export.
 - .env.example contains local-only sample settings; docs/API.md, docs/ACCOUNT_AUTH_DESIGN.md and docs/DEPLOYMENT.md describe routes, security boundaries and deployment.
-- Go server CI runs race-enabled unit/integration tests against PostgreSQL and go vet. Server run #179 passed the market catalog and account/economy suite. Run #181 is validating the equipment slot test correction.
+- Go server CI runs race-enabled unit/integration tests against PostgreSQL and go vet. Server run #187 passed the latest market/equipment/copper data changes with race-enabled Go tests and PostgreSQL integration. Client runs #45–#47 passed, including copper mining and forge interactions.
 - Godot client CI uses the official Godot 4.3 release and export templates. Client runs #42–#44 passed, including market catalog loading, character selection, merchant panel, equipment panel and gear request flows.
 
 ## Production safeguards and remaining launch gates
@@ -65,7 +65,7 @@ An original sandbox MMORPG combining long-form skill progression and item gamepl
 
 ## Next engineering tasks
 
-1. Finish validating the latest Go run #181; fix any new failure before extending equipment and combat.
+1. Add PostgreSQL integration coverage for the new copper gathering/smithing progression; then build the first server-authoritative PvE combat loop.
 2. Add merchant/bank usability improvements and a real-phone pass on the Godot Web client.
 3. Add email verification, password recovery, MFA, distributed abuse controls and administrative account operations before enabling public registration.
 4. Add equipment visuals, item instances/durability, combat calculations, currency sinks and player-to-player trade with escrow/transaction safety.
