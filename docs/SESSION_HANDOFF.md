@@ -42,6 +42,7 @@ An original sandbox MMORPG combining long-form skill progression and item gamepl
 - Account login/registration, multi-character selection and additional character creation.
 - Server-driven enemy visuals, combat attacks, damage/loot/XP feedback, health HUD, Rest recovery/respawn and a polling local-zone chat panel.
 - Client sends a presence heartbeat every five seconds, polls the current zone every three seconds and renders remote character avatars/nameplates with smoothed position updates; stale characters are removed.
+- All Godot API HTTPRequests use bounded timeouts and disable automatic redirects to prevent bearer-token forwarding to redirected hosts.
 - Live authenticated skills panel with all ten skills, per-skill XP progress bars and next-level XP remaining (including the 200M XP cap display at level 99); requests are cancelled when characters change or sign out.
 - Bearer-authenticated movement, gathering, crafting, bank transfers, merchant buy/sell panel, equipment panel and full inventory/bank contents panel with search, category filters, quantity sorting and selectable stack transfers.
 - Starter bank chest, merchant stall/NPC, copper vein, forge and enemy spawns in the test world; coin balance, health, attack/defense bonuses, bag and bank counts appear in the HUD. Equipped sword/armor pieces have simple client-side visuals.
@@ -55,7 +56,7 @@ An original sandbox MMORPG combining long-form skill progression and item gamepl
 - Codespaces setup installs Godot 4.3 and export templates, runs race-enabled Go tests, go vet, headless project import and Web export.
 - .env.example contains local-only sample settings; docs/API.md, docs/ACCOUNT_AUTH_DESIGN.md, docs/DEPLOYMENT.md, docs/COMBAT.md, docs/CHAT.md, docs/PRESENCE.md and refreshed docs/ARCHITECTURE.md describe routes, security boundaries, deployment and gameplay rules.
 - Go server CI runs race-enabled unit/integration tests against PostgreSQL and go vet. Server run #262 passed the latest presence persistence, privacy, heartbeat write-coalescing and account-scoped roster tests. Runs #260 and #261 also passed. Server runs #245–#253 also passed chat-history, readiness and rate-limiter hardening.
-- Godot client CI uses the official Godot 4.3 release and export templates. Client run #80 passed leased remote-player visuals and presence UI. Runs #81 and #82 are validating the latest client and documentation updates; runs #77–#80 passed presence and inventory UI changes.
+- Godot client CI uses the official Godot 4.3 release and export templates. Client run #82 passed leased remote-player visuals, presence UI and inventory search/sort. Run #84 is validating bounded HTTP timeouts and redirect-safe authenticated requests.
 
 ## Production safeguards and remaining launch gates
 
