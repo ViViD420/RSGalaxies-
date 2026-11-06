@@ -32,7 +32,7 @@ An original sandbox MMORPG combining long-form skill progression and item gamepl
 - Authenticated routes cover login/register/logout/me, character list/create/read, skills/XP, movement, gathering, crafting, bank deposits/withdrawals, merchant trades, equipment equip/unequip, combat attacks, safe-spawn rest, local zone chat and account-scoped zone presence.
 - Legacy unscoped player-ID and development mutation routes remain disabled in production. Production registration is disabled unless explicitly enabled.
 - Auth routes have per-process IP/path throttling with bounded key memory. Production CORS uses an exact-origin allowlist. Security response headers and no-store responses are applied.
-- Public catalog routes include skills, world zones, gathering nodes, items, crafting definitions and merchant prices. `/healthz` is a liveness probe; `/readyz` performs a bounded PostgreSQL readiness check without exposing dependency errors.
+- Public catalog routes include skills, world zones, gathering nodes, items, crafting definitions and merchant prices.
 - `/healthz` is a dependency-independent liveness probe; `/readyz` performs a bounded two-second PostgreSQL ping and returns a generic 503 on dependency failure.
 - Zone presence uses a 20-second lease, account-owned heartbeat upserts, stale-entry cleanup, a 100-character roster cap and privacy-limited snapshots that never expose account IDs.
 
@@ -54,7 +54,7 @@ An original sandbox MMORPG combining long-form skill progression and item gamepl
 - .devcontainer/ provides a GitHub Codespaces Go/Godot/PostgreSQL workspace with separate development and integration-test databases.
 - Codespaces setup installs Godot 4.3 and export templates, runs race-enabled Go tests, go vet, headless project import and Web export.
 - .env.example contains local-only sample settings; docs/API.md, docs/ACCOUNT_AUTH_DESIGN.md, docs/DEPLOYMENT.md, docs/COMBAT.md and docs/CHAT.md describe routes, security boundaries, deployment and gameplay rules.
-- Go server CI runs race-enabled unit/integration tests against PostgreSQL and go vet. Server run #260 passed, including account-scoped presence API tests. Run #262 is validating the latest presence persistence and privacy changes. Server runs #245–#253 also passed chat-history, readiness and rate-limiter hardening.
+- Go server CI runs race-enabled unit/integration tests against PostgreSQL and go vet. Server runs #260 and #261 passed, including account-scoped presence API tests. Run #262 is validating the latest presence persistence and privacy changes. Server runs #245–#253 also passed chat-history, readiness and rate-limiter hardening.
 - Godot client CI uses the official Godot 4.3 release and export templates. Client run #80 passed the leased remote-player visuals and presence UI. Client runs #77–#79 also passed the inventory search/filter/sort UI and presence heartbeat/roster integration.
 
 ## Production safeguards and remaining launch gates
@@ -70,7 +70,7 @@ An original sandbox MMORPG combining long-form skill progression and item gamepl
 
 ## Next engineering tasks
 
-1. Finish validating the PostgreSQL presence/roster tests, then build reconnect recovery and authoritative remote-player movement snapshots.
+1. Finish validating server run #262 for PostgreSQL presence/roster tests, then build reconnect recovery and authoritative remote-player movement snapshots.
 2. Add player-to-player trade with escrow and transaction safety, then add a real-phone pass on the Godot Web client.
 3. Add email verification, password recovery, MFA, distributed abuse controls and administrative account operations before enabling public registration.
 4. Add unique item instances/durability, combat animations/AI, currency sinks and player-to-player trade with escrow/transaction safety.
