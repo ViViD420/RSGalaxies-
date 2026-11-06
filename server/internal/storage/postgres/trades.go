@@ -153,14 +153,17 @@ func (r *AccountRepository) CreateTradeInviteForAccount(ctx context.Context, acc
 // AcceptTradeInviteForAccount resolves the invited target character from the
 // account-scoped participant row and opens the trade with an empty initial offer.
 func (r *AccountRepository) AcceptTradeInviteForAccount(ctx context.Context, accountID, tradeID string, now time.Time) (game.TradeSnapshot, error) {
-	var targetID string
-	err := r.db.QueryRowContext(ctx, `SELECT character_id FROM player_trade_participants
-		WHERE trade_id=$1 AND account_id=$2 AND role='target'`, tradeID, accountID).Scan(&targetID)
+	var targetID, role string
+	err := r.db.QueryRowContext(ctx, `SELECT character_id,role FROM player_trade_participants
+		WHERE trade_id=$1 AND account_id=$2`, tradeID, accountID).Scan(&targetID,&role)
 	if errors.Is(err, sql.ErrNoRows) {
 		return game.TradeSnapshot{}, game.ErrTradeNotFound
 	}
 	if err != nil {
 		return game.TradeSnapshot{}, fmt.Errorf("resolve invited trade character: %w", err)
+	}
+	if role != "target" {
+		return game.TradeSnapshot{}, game.ErrTradeNotParticipant
 	}
 	return r.AcceptTradeForAccount(ctx, accountID, game.PlayerID(targetID), tradeID, game.TradeOffer{Items: map[string]int{}}, now)
 }
@@ -309,7 +312,15 @@ func (r *AccountRepository) GetActiveTradeForAccount(ctx context.Context,account
 
 func (r *AccountRepository) ExpireTrades(ctx context.Context,now time.Time,limit int)(int,error){
 	if limit<1{limit=50};if limit>500{limit=500}
-	rows,err:=r.db.QueryContext(ctx,`SELECT id FROM player_trades WHERE status IN ('pending','open') AND expires_at<=$1 ORDER BY expires_at,id LIMIT $2`,now.UTC(),limit)
+	// Account/character deletion cascades participant rows. Remove any resulting
+	// orphaned trade parents instead of letting one stale row block the worker.
+	if _,err:=r.db.ExecContext(ctx,`DELETE FROM player_trades t
+		WHERE t.status IN ('pending','open') AND t.expires_at<=$1
+		AND (SELECT COUNT(*) FROM player_trade_participants p WHERE p.trade_id=t.id)<>2`,now.UTC());err!=nil{return 0,fmt.Errorf("clean orphaned expired trades: %w",err)}
+	rows,err:=r.db.QueryContext(ctx,`SELECT t.id FROM player_trades t
+		WHERE t.status IN ('pending','open') AND t.expires_at<=$1
+		AND (SELECT COUNT(*) FROM player_trade_participants p WHERE p.trade_id=t.id)=2
+		ORDER BY t.expires_at,t.id LIMIT $2`,now.UTC(),limit)
 	if err!=nil{return 0,fmt.Errorf("find expired trades: %w",err)}
 	var ids []string;for rows.Next(){var id string;if err:=rows.Scan(&id);err!=nil{rows.Close();return 0,err};ids=append(ids,id)}
 	if err:=rows.Err();err!=nil{rows.Close();return 0,err};if err:=rows.Close();err!=nil{return 0,err}
