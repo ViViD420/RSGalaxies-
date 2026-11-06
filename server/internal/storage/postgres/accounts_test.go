@@ -402,8 +402,11 @@ func TestPostgresTradeInviteAcceptAndAccountPrivacy(t *testing.T) {
 	if trade.Status!=game.TradeStatusPending||trade.Revision!=1||len(trade.Participants)!=2{t.Fatalf("trade invite snapshot=%+v",trade)}
 	if _,err:=repo.GetTradeForAccount(ctx,outsider.ID,trade.ID);!errors.Is(err,game.ErrTradeNotFound){t.Fatalf("outsider read error=%v",err)}
 	targetView,err:=repo.GetTradeForAccount(ctx,second.ID,trade.ID);if err!=nil||targetView.ID!=trade.ID{t.Fatalf("target trade read=%+v err=%v",targetView,err)}
-	accepted,err:=repo.AcceptTradeInviteForAccount(ctx,second.ID,trade.ID,now.Add(time.Second));if err!=nil{t.Fatalf("accept invite: %v",err)}
+	if _,err:=db.ExecContext(ctx,"UPDATE players SET position_x=20 WHERE id=$1",string(target.ID));err!=nil{t.Fatal(err)}
+	if _,err:=repo.AcceptTradeInviteForAccount(ctx,second.ID,trade.ID,now.Add(time.Second));!errors.Is(err,game.ErrTradeOutOfRange){t.Fatalf("accept after moving out of range error=%v",err)}
+	if _,err:=db.ExecContext(ctx,"UPDATE players SET position_x=0 WHERE id=$1",string(target.ID));err!=nil{t.Fatal(err)}
+	accepted,err:=repo.AcceptTradeInviteForAccount(ctx,second.ID,trade.ID,now.Add(2*time.Second));if err!=nil{t.Fatalf("accept invite after returning to range: %v",err)}
 	if accepted.Status!=game.TradeStatusOpen{t.Fatalf("accepted trade status=%s",accepted.Status)}
-	if _,err:=repo.AcceptTradeInviteForAccount(ctx,first.ID,trade.ID,now.Add(2*time.Second));!errors.Is(err,game.ErrTradeNotParticipant){t.Fatalf("initiator accept error=%v",err)}
+	if _,err:=repo.AcceptTradeInviteForAccount(ctx,first.ID,trade.ID,now.Add(3*time.Second));!errors.Is(err,game.ErrTradeNotParticipant){t.Fatalf("initiator accept error=%v",err)}
 	if _,err:=repo.GetTradeForAccount(ctx,first.ID,trade.ID);err!=nil{t.Fatalf("initiator read after acceptance: %v",err)}
 }
