@@ -25,6 +25,7 @@ An original sandbox MMORPG combining long-form skill progression and item gamepl
 - One bounded world zone, spawn point and server-time-based movement speed/bounds validation.
 - Starter item definitions and stack-count inventory.
 - Two gathering nodes (tree and stone) with interaction range, three charges, timed respawn and atomic inventory/XP rewards.
+- One frontier workbench and a basic plank recipe: consume two softwood logs, create one wooden plank and award Crafting XP. Crafting checks station range, skill level, ingredient counts and output stack capacity atomically.
 - HTTP routes expose skills, world zones, gathering nodes, items, players and player skills. Development-only XP, movement and gathering routes are disabled when RS_GALAXIES_ENV=production.
 - Domain, API, movement, gathering and repository concurrency tests.
 - Go CI runs tests with the race detector and go vet.
@@ -32,7 +33,7 @@ An original sandbox MMORPG combining long-form skill progression and item gamepl
 ### Client
 - Godot 4.3 provisional client prototype.
 - Procedurally generated test floor, placeholder character, third-person orbit camera, keyboard movement, touchscreen D-pad, USE and jump buttons.
-- Startup character creation, periodic movement synchronization, and tree/stone gathering interaction.
+- Startup character creation, periodic movement synchronization, and tree/stone gathering and workbench crafting interactions.
 - Inventory HUD shows collected starter resources.
 - Headless Godot validation and Web export workflow.
 - This is a movement/gathering proof of concept, not a fully server-authoritative or production client.
@@ -49,7 +50,7 @@ An original sandbox MMORPG combining long-form skill progression and item gamepl
 - Go is the server language. Godot is provisional pending real-phone validation of camera, movement and Web export.
 - Storage is in memory; player, inventory and node state are lost when the server stops.
 - XP award, movement and gathering shortcuts are development-only. They must not be exposed publicly.
-- PostgreSQL, authentication, secure sessions, realtime replication, production persistence, NPCs, combat, crafting, player trading and production inventory persistence are not implemented.
+- PostgreSQL, authentication, secure sessions, realtime replication, production persistence, NPCs, combat, additional recipes, player trading and production inventory persistence are not implemented.
 - Code and tests are committed. GitHub Actions execution results have not yet been inspected in this session; do not claim CI passes until verified.
 
 ## Next engineering tasks
@@ -58,7 +59,7 @@ An original sandbox MMORPG combining long-form skill progression and item gamepl
 2. Validate the auto-launched browser build and gathering loop on a real phone; refine touch controls and camera feel.
 3. Add PostgreSQL schema/migrations and transactional player, inventory and world persistence.
 4. Add authenticated sessions and ownership checks; retire development-only movement/gather/XP routes before public deployment.
-5. Expand the playable loop with tools, crafting recipes, NPCs and combat.
+5. Expand the playable loop with more recipes, tools, resource tiers, NPCs and combat.
 
 ## Continuation instruction
 
