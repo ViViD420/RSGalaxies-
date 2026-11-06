@@ -11,6 +11,11 @@ var auth_status_label: Label
 var character_status_label: Label
 var logout_button: Button
 var character_button: Button
+var equipment_button: Button
+var equipment_panel: PanelContainer
+var equipment_item_select: OptionButton
+var equipment_slot_select: OptionButton
+var equipment_status_label: Label
 var character_panel: PanelContainer
 var character_select: OptionButton
 var character_name_input: LineEdit
@@ -22,6 +27,9 @@ var auth_token := ""
 var current_inventory: Dictionary = {}
 var current_bank: Dictionary = {}
 var current_coins := 0
+var current_equipment: Dictionary = {}
+var current_attack_bonus := 0
+var current_defense_bonus := 0
 var market_catalog: Array = []
 var api_request: HTTPRequest
 var movement_request: HTTPRequest
@@ -266,6 +274,17 @@ func _build_hud() -> void:
 	column.add_child(inventory_label)
 
 	_build_auth_panel(layer)
+	equipment_button = Button.new()
+	equipment_button.text = "Gear"
+	equipment_button.anchor_left = 1.0
+	equipment_button.anchor_right = 1.0
+	equipment_button.offset_left = -358
+	equipment_button.offset_top = 18
+	equipment_button.offset_right = -248
+	equipment_button.offset_bottom = 62
+	equipment_button.visible = false
+	equipment_button.pressed.connect(_show_equipment_panel)
+	layer.add_child(equipment_button)
 	character_button = Button.new()
 	character_button.text = "Characters"
 	character_button.anchor_left = 1.0
@@ -343,6 +362,7 @@ func _on_api_request_completed(result: int, response_code: int, _headers: Packed
 			auth_panel.visible = true
 			logout_button.visible = false
 			character_button.visible = false
+			equipment_button.visible = false
 			if character_panel != null:
 				character_panel.visible = false
 			if market_panel != null:
@@ -534,7 +554,7 @@ func _on_gather_completed(result: int, response_code: int, _headers: PackedStrin
 	if interaction_type == "market_buy" or interaction_type == "market_sell":
 		var trade: Dictionary = payload.get("trade", {})
 		var trade_action := "Bought" if interaction_type == "market_buy" else "Sold"
-		_update_inventory(payload.get("inventory", player_data.get("inventory", {})), player_data.get("bank", {}), payload.get("coins", player_data.get("coins", current_coins)))
+		_update_inventory(payload.get("inventory", player_data.get("inventory", {})), player_data.get("bank", {}), payload.get("coins", player_data.get("coins", current_coins)), player_data.get("equipment", {}))
 		var trade_message := trade_action + " " + str(trade.get("quantity", 1)) + " " + str(trade.get("itemId", "item")).replace("_", " ") + " for " + str(trade.get("coins", 0)) + " coins"
 		status_label.text = "Trader: " + trade_message
 		market_status_label.text = trade_message + " • Balance: " + str(current_coins)
@@ -542,7 +562,7 @@ func _on_gather_completed(result: int, response_code: int, _headers: PackedStrin
 	if interaction_type == "bank_deposit" or interaction_type == "bank_withdraw":
 		var bank_action := "Deposited" if interaction_type == "bank_deposit" else "Withdrew"
 		var item_bank: Variant = payload.get("bank", player_data.get("bank", {}))
-		_update_inventory(payload.get("inventory", player_data.get("inventory", {})), item_bank, player_data.get("coins", current_coins))
+		_update_inventory(payload.get("inventory", player_data.get("inventory", {})), item_bank, player_data.get("coins", current_coins), player_data.get("equipment", {}))
 		status_label.text = "Bank: " + bank_action + " one item"
 		return
 	if interaction_type == "craft":
@@ -552,17 +572,25 @@ func _on_gather_completed(result: int, response_code: int, _headers: PackedStrin
 		var gathering: Dictionary = payload.get("gathering", {})
 		var item_name := "Softwood Log" if gathering.get("itemId") == "softwood_log" else "Rough Stone"
 		status_label.text = "Gathered " + item_name + "  •  +" + str(gathering.get("experience", 0)) + " " + str(gathering.get("skillId", "")) + " XP"
-	_update_inventory(player_data.get("inventory", {}), player_data.get("bank", {}), player_data.get("coins", current_coins))
+	_update_inventory(player_data.get("inventory", {}), player_data.get("bank", {}), player_data.get("coins", current_coins), player_data.get("equipment", {}))
 
-func _update_inventory(inventory_data: Variant, bank_data: Variant = {}, coins_data: Variant = null) -> void:
+func _update_inventory(inventory_data: Variant, bank_data: Variant = {}, coins_data: Variant = null, equipment_data: Variant = {}) -> void:
 	if not inventory_data is Dictionary:
 		return
 	current_inventory = inventory_data.duplicate()
 	current_bank = bank_data.duplicate() if bank_data is Dictionary else {}
 	if coins_data != null:
 		current_coins = int(coins_data)
-	inventory_label.text = "Coins %d • Bag L:%d P:%d S:%d • Bank L:%d P:%d S:%d" % [
-		current_coins,
+	current_equipment = equipment_data.duplicate() if equipment_data is Dictionary else {}
+	current_attack_bonus = 0
+	current_defense_bonus = 0
+	for item_id in current_equipment.values():
+		for item in market_catalog:
+			if item is Dictionary and str(item.get("id", "")) == str(item_id):
+				current_attack_bonus += int(item.get("attackBonus", 0))
+				current_defense_bonus += int(item.get("defenseBonus", 0))
+	inventory_label.text = "Coins %d • ATK %d DEF %d • Bag L:%d P:%d S:%d • Bank L:%d P:%d S:%d" % [
+			current_coins, current_attack_bonus, current_defense_bonus,
 		int(current_inventory.get("softwood_log", 0)),
 		int(current_inventory.get("wooden_plank", 0)),
 		int(current_inventory.get("rough_stone", 0)),
@@ -674,6 +702,7 @@ func _activate_character(character_data: Dictionary) -> void:
 		market_panel.visible = false
 	logout_button.visible = true
 	character_button.visible = true
+	equipment_button.visible = true
 	_start_movement_sync()
 	_start_gathering()
 
@@ -737,6 +766,7 @@ func _show_character_selection(characters: Array) -> void:
 	auth_panel.visible = false
 	logout_button.visible = true
 	character_button.visible = false
+	equipment_button.visible = false
 	var column := VBoxContainer.new()
 	character_panel.add_child(column)
 	var heading := Label.new()
