@@ -412,7 +412,6 @@ func _request_interaction() -> void:
 			JSON.stringify({"itemId": selected_item, "quantity": 1})
 		)
 	elif bench_distance <= 3.0 and bench_distance <= tree_distance and bench_distance <= stone_distance:
-	if bench_distance <= 3.0 and bench_distance <= tree_distance and bench_distance <= stone_distance:
 		interaction_type = "craft"
 		status_label.text = "Using frontier workbench..."
 		error = gather_request.request(
