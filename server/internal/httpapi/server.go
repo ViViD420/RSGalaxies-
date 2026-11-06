@@ -8,6 +8,7 @@ import (
 	"io"
 	"log"
 	"net/http"
+	"os"
 	"strings"
 	"time"
 
@@ -25,8 +26,10 @@ func (s *Server) Routes() http.Handler {
 	mux.HandleFunc("POST /api/v1/players", s.createPlayer)
 	mux.HandleFunc("GET /api/v1/players/{id}", s.getPlayer)
 	mux.HandleFunc("GET /api/v1/players/{id}/skills", s.getPlayerSkills)
-	// Development-only: replace with validated gameplay actions before public deployment.
-	mux.HandleFunc("POST /api/v1/players/{id}/skills/{skill}/experience", s.awardExperience)
+	// This shortcut is disabled in production; real XP must come from validated gameplay actions.
+	if os.Getenv("RS_GALAXIES_ENV") != "production" {
+		mux.HandleFunc("POST /api/v1/players/{id}/skills/{skill}/experience", s.awardExperience)
+	}
 	return securityHeaders(mux)
 }
 
@@ -67,7 +70,7 @@ func (s *Server) awardExperience(w http.ResponseWriter,r *http.Request) {
 		case errors.Is(err,game.ErrExperienceOverflow):writeError(w,409,"experience_cap_reached")
 		default:log.Printf("award experience: %v",err);writeError(w,500,"internal_error")};return
 	}
-	writeJSON(w,200,map[string]any{"player":player,"skill":player.Skills[strings.ToLower(r.PathValue("skill"))],"leveledUp":leveled})
+	writeJSON(w,200,map[string]any{"player":player,"skill":player.Skills[strings.ToLower(strings.TrimSpace(r.PathValue("skill")))],"leveledUp":leveled})
 }
 func(s *Server)writePlayerError(w http.ResponseWriter,err error){if errors.Is(err,game.ErrPlayerNotFound){writeError(w,404,"player_not_found");return};log.Printf("player lookup: %v",err);writeError(w,500,"internal_error")}
 func newID()(string,error){var b [16]byte;if _,err:=rand.Read(b[:]);err!=nil{return "",err};return hex.EncodeToString(b[:]),nil}
