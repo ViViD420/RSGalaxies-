@@ -668,13 +668,13 @@ func _request_interaction() -> void:
 	elif bank_distance <= 3.0 and bank_distance <= bench_distance and bank_distance <= tree_distance and bank_distance <= stone_distance and bank_distance <= copper_distance and bank_distance <= forge_distance and bank_distance <= enemy_distance:
 		var selected_item := ""
 		interaction_type = "bank_deposit"
-		for item_id in ["softwood_log", "rough_stone", "copper_ore", "copper_bar", "wooden_plank"]:
+		for item_id in ["softwood_log", "rough_stone", "copper_ore", "copper_bar", "wooden_plank", "rat_pelt", "boar_hide", "minor_healing_potion", "training_sword", "leather_cap", "leather_tunic", "leather_boots"]:
 			if int(current_inventory.get(item_id, 0)) > 0:
 				selected_item = item_id
 				break
 		if selected_item.is_empty():
 			interaction_type = "bank_withdraw"
-			for item_id in ["softwood_log", "rough_stone", "copper_ore", "copper_bar", "wooden_plank"]:
+			for item_id in ["softwood_log", "rough_stone", "copper_ore", "copper_bar", "wooden_plank", "rat_pelt", "boar_hide", "minor_healing_potion", "training_sword", "leather_cap", "leather_tunic", "leather_boots"]:
 				if int(current_bank.get(item_id, 0)) > 0:
 					selected_item = item_id
 					break
