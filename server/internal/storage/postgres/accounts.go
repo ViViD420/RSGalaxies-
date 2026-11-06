@@ -196,6 +196,7 @@ func (r *AccountRepository) lockOwnedPlayer(ctx context.Context, tx *sql.Tx, acc
 }
 
 func updateOwnedPlayer(ctx context.Context, tx *sql.Tx, accountID string, player game.Player) error {
+	if err := validateTradeReservations(ctx, tx, accountID, player); err != nil { return err }
 	skills,err:=json.Marshal(player.Skills)
 	if err!=nil{return fmt.Errorf("encode owned player skills: %w",err)}
 	inventory,err:=json.Marshal(player.Inventory)
