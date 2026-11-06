@@ -17,7 +17,7 @@
 
 ## Client behavior
 
-- The Godot prototype sends a heartbeat and then polls the roster every five seconds.
+- The Godot prototype sends a heartbeat every five seconds and polls the roster every three seconds.
 - Remote characters are rendered as simple non-colliding placeholder avatars with nameplates.
 - When a character is no longer in the active roster, its placeholder is removed.
 - This is a polling prototype, not realtime replication. Movement is still periodically validated through the separate movement endpoint; interpolation, prediction correction, disconnect recovery and zone handoff remain future work.
