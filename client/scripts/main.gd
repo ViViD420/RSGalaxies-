@@ -1976,7 +1976,7 @@ func _send_trade_action(action: String) -> void:
 		var active_id := str(current_trade.get("id", ""))
 		if active_id.is_empty():
 			return
-		url += "/" + active_id + "/" + action
+		url += "/" + active_id + ("/offer" if action == "update" else "/" + action)
 		if action == "update":
 			method = HTTPClient.METHOD_PUT
 	else:
