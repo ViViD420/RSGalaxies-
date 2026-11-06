@@ -75,12 +75,12 @@ func EscrowTradeOffer(player *Player, offer TradeOffer) error {
 // ApplyTradeOffer checks all destination limits before mutating the character.
 // This makes it safe to apply the two sides of a trade within one transaction.
 func ApplyTradeOffer(player *Player, offer TradeOffer) error {
-	if player == nil || offer.Coins < 0 || offer.Coins > math.MaxInt64-player.Coins {
+	if player == nil || player.Coins < 0 || offer.Coins < 0 || offer.Coins > math.MaxInt64-player.Coins {
 		return ErrTradeOfferCapacity
 	}
 	for itemID, quantity := range offer.Items {
 		item, ok := FindItem(itemID)
-		if !ok || quantity <= 0 || quantity > item.MaxStack || player.Inventory[itemID] > item.MaxStack-quantity {
+		if !ok || quantity <= 0 || quantity > item.MaxStack || player.Inventory[itemID] < 0 || player.Inventory[itemID] > item.MaxStack-quantity {
 			return ErrTradeOfferCapacity
 		}
 	}
