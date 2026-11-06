@@ -89,3 +89,19 @@ func TestTradeOfferCloneOwnsItsItemMap(t *testing.T) {
 		t.Fatalf("clone mutated original offer: %+v", original)
 	}
 }
+
+func TestTradeInviteRequiresAvailableNearbyCharactersInSameZone(t *testing.T) {
+	now:=time.Now().UTC()
+	initiator,err:=NewPlayer("invite-a","InviteA",now);if err!=nil{t.Fatal(err)}
+	target,err:=NewPlayer("invite-b","InviteB",now);if err!=nil{t.Fatal(err)}
+	if err:=ValidateTradeInvite(initiator,target);err!=nil{t.Fatalf("valid invite rejected: %v",err)}
+	if err:=ValidateTradeInvite(initiator,initiator);!errors.Is(err,ErrTradeSelf){t.Fatalf("self-trade error=%v",err)}
+	target.Position.X=TradeInteractionRange+1
+	if err:=ValidateTradeInvite(initiator,target);!errors.Is(err,ErrTradeOutOfRange){t.Fatalf("out-of-range invite error=%v",err)}
+	target.Position=initiator.Position
+	target.Position.ZoneID="another-zone"
+	if err:=ValidateTradeInvite(initiator,target);!errors.Is(err,ErrTradeDifferentZone){t.Fatalf("cross-zone invite error=%v",err)}
+	target.Position=initiator.Position
+	target.Health=0
+	if err:=ValidateTradeInvite(initiator,target);!errors.Is(err,ErrTradeParticipantUnavailable){t.Fatalf("defeated target invite error=%v",err)}
+}
