@@ -2168,6 +2168,13 @@ func _render_trade_snapshot() -> void:
 		return
 	if current_trade.is_empty():
 		trade_status_label.text = "No active trade. Invite a nearby player to begin."
+		trade_offer_items.clear()
+		trade_editor_trade_id = ""
+		trade_editor_revision = -1
+		if trade_coins_input != null:
+			trade_coins_input.text = "0"
+		_update_trade_offer_items_label()
+		_refresh_trade_items()
 		trade_accept_button.visible = false
 		trade_update_button.visible = false
 		trade_confirm_button.visible = false
@@ -2175,7 +2182,25 @@ func _render_trade_snapshot() -> void:
 		return
 	var status := str(current_trade.get("status", "unknown"))
 	var revision := int(current_trade.get("revision", 0))
+	var trade_id := str(current_trade.get("id", ""))
 	var participants: Variant = current_trade.get("participants", [])
+	if trade_id != trade_editor_trade_id or revision != trade_editor_revision:
+		trade_editor_trade_id = trade_id
+		trade_editor_revision = revision
+		trade_offer_items.clear()
+		if trade_coins_input != null:
+			trade_coins_input.text = "0"
+		for participant in participants:
+			if participant is Dictionary and str(participant.get("characterId", "")) == player_id:
+				var own_offer: Variant = participant.get("offer", {})
+				if own_offer is Dictionary:
+					var staged: Variant = own_offer.get("items", {})
+					if staged is Dictionary:
+						trade_offer_items = staged.duplicate()
+					if trade_coins_input != null:
+						trade_coins_input.text = str(int(own_offer.get("coins", 0)))
+		_update_trade_offer_items_label()
+		_refresh_trade_items()
 	var own_role := ""
 	var other_name := "another player"
 	var own_offer := ""
