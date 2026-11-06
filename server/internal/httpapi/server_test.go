@@ -294,6 +294,21 @@ func TestAuthenticatedCharacterLifecycleAndOwnership(t *testing.T) {
 	if create.Code!=http.StatusCreated{t.Fatalf("create character status=%d body=%s",create.Code,create.Body.String())}
 	var player game.Player
 	if err:=json.Unmarshal(create.Body.Bytes(),&player);err!=nil{t.Fatal(err)}
+	sendChat:=httptest.NewRecorder()
+	sendChatRequest:=httptest.NewRequest(http.MethodPost,"/api/v1/account/characters/"+string(player.ID)+"/chat/local",bytes.NewBufferString(`{"message":"Hello, frontier!"}`))
+	sendChatRequest.Header.Set("Authorization","Bearer "+registration.AccessToken)
+	handler.ServeHTTP(sendChat,sendChatRequest)
+	if sendChat.Code!=http.StatusCreated{t.Fatalf("send chat status=%d body=%s",sendChat.Code,sendChat.Body.String())}
+	listChat:=httptest.NewRecorder()
+	listChatRequest:=httptest.NewRequest(http.MethodGet,"/api/v1/account/characters/"+string(player.ID)+"/chat/local?after=0",nil)
+	listChatRequest.Header.Set("Authorization","Bearer "+registration.AccessToken)
+	handler.ServeHTTP(listChat,listChatRequest)
+	if listChat.Code!=http.StatusOK||!strings.Contains(listChat.Body.String(),"Hello, frontier!"){t.Fatalf("list chat status=%d body=%s",listChat.Code,listChat.Body.String())}
+	cooldownChat:=httptest.NewRecorder()
+	cooldownChatRequest:=httptest.NewRequest(http.MethodPost,"/api/v1/account/characters/"+string(player.ID)+"/chat/local",bytes.NewBufferString(`{"message":"Too soon"}`))
+	cooldownChatRequest.Header.Set("Authorization","Bearer "+registration.AccessToken)
+	handler.ServeHTTP(cooldownChat,cooldownChatRequest)
+	if cooldownChat.Code!=http.StatusTooManyRequests{t.Fatalf("chat cooldown status=%d body=%s",cooldownChat.Code,cooldownChat.Body.String())}
 	characters.players[registration.Account.ID][player.ID].Inventory["softwood_log"]=3
 	buy:=httptest.NewRecorder()
 	buyRequest:=httptest.NewRequest(http.MethodPost,"/api/v1/account/characters/"+string(player.ID)+"/market/buy/rough_stone",bytes.NewBufferString(`{"quantity":2}`))
