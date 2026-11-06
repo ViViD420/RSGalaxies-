@@ -963,8 +963,6 @@ func _activate_character(character_data: Dictionary) -> void:
 		inventory_panel.visible = false
 	if market_panel != null:
 		market_panel.visible = false
-	if inventory_panel != null:
-		inventory_panel.visible = false
 	logout_button.visible = true
 	character_button.visible = true
 	equipment_button.visible = true
@@ -1021,6 +1019,7 @@ func _expire_session() -> void:
 		equipment_panel.visible = false
 	if inventory_panel != null:
 		inventory_panel.visible = false
+	bag_button.visible = false
 	status_label.text = "Server: session expired"
 	auth_status_label.text = "Your session expired. Please sign in again."
 
@@ -1087,6 +1086,8 @@ func _show_character_selection(characters: Array) -> void:
 
 
 func _show_market_panel() -> void:
+	if inventory_panel != null:
+		inventory_panel.visible = false
 	if equipment_panel != null:
 		equipment_panel.visible = false
 	if market_panel != null:
@@ -1440,7 +1441,7 @@ func _show_inventory_panel() -> void:
 		inventory_panel.queue_free()
 	inventory_panel = PanelContainer.new()
 	inventory_panel.position = Vector2(18, 155)
-	inventory_panel.custom_minimum_size = Vector2(360, 300)
+	inventory_panel.custom_minimum_size = Vector2(360, 245)
 	var column := VBoxContainer.new()
 	inventory_panel.add_child(column)
 	var heading := Label.new()
@@ -1451,7 +1452,7 @@ func _show_inventory_panel() -> void:
 	summary.text = "Health %d/%d  •  Coins %d" % [current_health, game_max_health, current_coins]
 	column.add_child(summary)
 	var scroll := ScrollContainer.new()
-	scroll.custom_minimum_size = Vector2(330, 190)
+	scroll.custom_minimum_size = Vector2(330, 130)
 	scroll.size_flags_vertical = Control.SIZE_EXPAND_FILL
 	column.add_child(scroll)
 	var items_column := VBoxContainer.new()
