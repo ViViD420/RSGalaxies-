@@ -1177,6 +1177,8 @@ func _update_inventory(inventory_data: Variant, bank_data: Variant = {}, coins_d
 	]
 	if inventory_panel != null and inventory_panel.visible:
 		_show_inventory_panel()
+	if trade_item_select != null:
+		_refresh_trade_items()
 
 func _apply_server_position(position_data: Dictionary, force: bool) -> void:
 	var target := Vector3(
@@ -1741,6 +1743,8 @@ func _on_presence_roster_completed(result: int, response_code: int, _headers: Pa
 			remote_player_names.erase(character_id)
 	if presence_label != null:
 		presence_label.text = "Nearby players: " + str(remote_player_nodes.size())
+	if trade_target_select != null:
+		_refresh_trade_targets()
 
 
 func _create_remote_player_visual(character_id: String, display_name: String, at: Vector3) -> void:
