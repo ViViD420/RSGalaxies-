@@ -28,6 +28,7 @@
 - [x] Authenticated live skills panel with per-skill XP progress and next-level thresholds.
 - [x] Tree, stone, copper and wild-herb gathering with range, skill, charge and respawn rules.
 - [x] Godot selects gathering targets and builds resource props from the server node catalog.
+- [x] Consolidated public world catalog reduces startup round trips and keeps client definitions server-owned.
 - [x] Godot builds and selects workbench/forge stations from the server crafting-station catalog.
 - [x] Workbench plank, herbal-bundle and herbal-tea recipes plus forge copper smelting/training-sword recipes.
 - [x] Cooking profession progression through crafting a server-defined healing tea consumable.
