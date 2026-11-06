@@ -9,6 +9,16 @@ var (
 	ErrInvalidTradeOffer = errors.New("invalid trade offer")
 	ErrTradeItemEquipped = errors.New("equipped items cannot be traded")
 	ErrTradeOfferCapacity = errors.New("trade offer exceeds inventory or currency capacity")
+	ErrTradeSelf = errors.New("cannot trade with the same character")
+	ErrTradeOutOfRange = errors.New("trade partner is out of range")
+	ErrTradeDifferentZone = errors.New("trade partners are in different zones")
+	ErrTradeParticipantUnavailable = errors.New("trade partner is unavailable")
+	ErrTradeAlreadyActive = errors.New("character already has an active trade")
+	ErrTradeNotFound = errors.New("trade not found")
+	ErrTradeNotParticipant = errors.New("character is not a trade participant")
+	ErrTradeNotAccepted = errors.New("trade invitation has not been accepted")
+	ErrTradeExpired = errors.New("trade invitation expired")
+	ErrTradeRevisionConflict = errors.New("trade revision conflict")
 )
 
 // TradeOffer is a server-validated snapshot of the items and coins escrowed
@@ -91,5 +101,47 @@ func ApplyTradeOffer(player *Player, offer TradeOffer) error {
 		player.Inventory[itemID] += quantity
 	}
 	player.Coins += offer.Coins
+	return nil
+}
+
+const (
+	TradeInteractionRange = 5.0
+	TradeLifetime = 10 * time.Minute
+)
+
+type TradeStatus string
+
+const (
+	TradeStatusPending TradeStatus = "pending"
+	TradeStatusOpen TradeStatus = "open"
+	TradeStatusCompleted TradeStatus = "completed"
+	TradeStatusCancelled TradeStatus = "cancelled"
+	TradeStatusExpired TradeStatus = "expired"
+)
+
+type TradeParticipant struct {
+	CharacterID PlayerID `json:"characterId"`
+	Name string `json:"name"`
+	Role string `json:"role"`
+	Offer TradeOffer `json:"offer"`
+	Confirmed bool `json:"confirmed"`
+}
+
+type TradeSnapshot struct {
+	ID string `json:"id"`
+	Status TradeStatus `json:"status"`
+	Revision int64 `json:"revision"`
+	CreatedAt time.Time `json:"createdAt"`
+	ExpiresAt time.Time `json:"expiresAt"`
+	Participants []TradeParticipant `json:"participants"`
+}
+
+func ValidateTradeInvite(initiator,target Player) error {
+	if initiator.ID==""||target.ID=="" { return ErrTradeParticipantUnavailable }
+	if initiator.ID==target.ID { return ErrTradeSelf }
+	if err:=initiator.CanAct();err!=nil{return err}
+	if err:=target.CanAct();err!=nil{return ErrTradeParticipantUnavailable}
+	if initiator.Position.ZoneID!=target.Position.ZoneID{return ErrTradeDifferentZone}
+	if math.Hypot(initiator.Position.X-target.Position.X,initiator.Position.Z-target.Position.Z)>TradeInteractionRange{return ErrTradeOutOfRange}
 	return nil
 }
