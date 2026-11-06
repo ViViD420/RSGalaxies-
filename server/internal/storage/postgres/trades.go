@@ -283,3 +283,16 @@ func (r *AccountRepository) GetTradeForAccount(ctx context.Context,accountID,tra
 	if !allowed{return game.TradeSnapshot{},game.ErrTradeNotFound}
 	return loadTradeSnapshot(ctx,r.db,tradeID)
 }
+
+func (r *AccountRepository) CreateTradeInviteForAccount(ctx context.Context,accountID string,initiatorID,targetID game.PlayerID,now time.Time)(game.TradeSnapshot,error){
+	return r.CreateTradeForAccount(ctx,accountID,initiatorID,targetID,game.TradeOffer{Items:map[string]int{}},now)
+}
+
+func (r *AccountRepository) AcceptTradeInviteForAccount(ctx context.Context,accountID,tradeID string,now time.Time)(game.TradeSnapshot,error){
+	var targetID string
+	err:=r.db.QueryRowContext(ctx,`SELECT character_id FROM player_trade_participants WHERE trade_id=$1 AND account_id=$2 AND role='target'`,tradeID,accountID).Scan(&targetID)
+	if errors.Is(err,sql.ErrNoRows){return game.TradeSnapshot{},game.ErrTradeNotFound}
+	if err!=nil{return game.TradeSnapshot{},fmt.Errorf("resolve accepting trade character: %w",err)}
+	return r.AcceptTradeForAccount(ctx,accountID,game.PlayerID(targetID),tradeID,game.TradeOffer{Items:map[string]int{}},now)
+}
+
