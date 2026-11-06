@@ -21,6 +21,7 @@ func TestConsumableRejectsInvalidUseWithoutConsumingItem(t *testing.T) {
 	if _,err:=player.UseItem("minor_healing_potion");err!=nil{t.Fatal(err)}
 	if _,err:=player.UseItem("minor_healing_potion");!errors.Is(err,ErrInsufficientItems){t.Fatalf("empty potion stack error=%v",err)}
 	player.Inventory["minor_healing_potion"]=1
+	player.Health=MaxPlayerHealth
 	if _,err:=player.UseItem("minor_healing_potion");!errors.Is(err,ErrHealthFull){t.Fatalf("full health error=%v",err)}
 	if player.Inventory["minor_healing_potion"]!=1{t.Fatal("failed potion use consumed item")}
 }
