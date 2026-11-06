@@ -67,12 +67,12 @@ Send `Authorization: Bearer <accessToken>`:
 - `POST /api/v1/account/characters/{characterId}/presence/heartbeat` — refresh this owned character's 20-second zone-presence lease; returns 204.
 - `GET /api/v1/account/characters/{characterId}/presence` — list up to 100 other active characters in the same zone, exposing only character ID, display name, zone and position.
 - `POST /api/v1/account/characters/{characterId}/trades/invite/{targetCharacterId}` with `{"offer":{"items":{"softwood_log":2},"coins":10}}` — create a nearby-player invitation and escrow the initiator's offer.
-- `POST /api/v1/account/trades/{tradeId}/characters/{characterId}/accept` with `{"offer":{"items":{"rough_stone":1},"coins":5}}` — accept and escrow the target's offer.
+- `POST /api/v1/account/characters/{characterId}/trades/accept/{tradeId}` with `{"offer":{"items":{"rough_stone":1},"coins":5}}` — accept and escrow the target's offer.
 - `GET /api/v1/account/characters/{characterId}/trades/active` — recover the character's current trade after reconnect.
 - `GET /api/v1/account/trades/{tradeId}` — read a trade only when the authenticated account owns one of its participants.
-- `PUT /api/v1/account/trades/{tradeId}/characters/{characterId}/offer` with `{"revision":2,"offer":{"items":{},"coins":0}}` — replace the caller's escrowed offer; invalidates both confirmations.
-- `POST /api/v1/account/trades/{tradeId}/characters/{characterId}/confirm` with `{"revision":3}` — confirm the exact offer revision; the second confirmation settles atomically.
-- `POST /api/v1/account/trades/{tradeId}/characters/{characterId}/cancel` — cancel and return both participants' escrow.
+- `PUT /api/v1/account/characters/{characterId}/trades/offer/{tradeId}` with `{"revision":2,"offer":{"items":{},"coins":0}}` — replace the caller's escrowed offer; invalidates both confirmations.
+- `POST /api/v1/account/characters/{characterId}/trades/confirm/{tradeId}` with `{"revision":3}` — confirm the exact offer revision; the second confirmation settles atomically.
+- `POST /api/v1/account/characters/{characterId}/trades/cancel/{tradeId}` — cancel and return both participants' escrow.
 
 Trade invitations require a fresh target presence lease and both characters to be active in the same zone within six world units. Each trade expires after five minutes; escrow is returned atomically on cancellation or expiry. Offers are limited to 20 distinct catalog items, and the server reserves inventory-stack and currency capacity so escrow can always be refunded.
 
