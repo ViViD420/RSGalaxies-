@@ -34,6 +34,7 @@ var current_defense_bonus := 0
 var current_health := 100
 const game_max_health := 100
 var market_catalog: Array = []
+var enemy_catalog: Array = []
 var api_request: HTTPRequest
 var movement_request: HTTPRequest
 var gather_request: HTTPRequest
@@ -172,6 +173,49 @@ func _add_workbench(at: Vector3) -> void:
 
 
 
+
+
+func _build_enemy_spawns() -> void:
+	for enemy in enemy_catalog:
+		if not enemy is Dictionary:
+			continue
+		var position_data: Variant = enemy.get("position", {})
+		if not position_data is Dictionary:
+			continue
+		_add_enemy_visual(
+			Vector3(float(position_data.get("x", 0.0)), 0.0, float(position_data.get("z", 0.0))),
+			str(enemy.get("name", "Frontier Creature")),
+			int(enemy.get("maxHealth", 10))
+		)
+
+func _add_enemy_visual(at: Vector3, enemy_name: String, max_health: int) -> void:
+	var creature := Node3D.new()
+	creature.position = at
+	var hide_material := StandardMaterial3D.new()
+	hide_material.albedo_color = Color(0.48, 0.30, 0.18) if max_health < 20 else Color(0.32, 0.25, 0.18)
+	var body := MeshInstance3D.new()
+	var body_mesh := CapsuleMesh.new()
+	body_mesh.radius = 0.42 if max_health < 20 else 0.7
+	body_mesh.height = 0.9 if max_health < 20 else 1.5
+	body.mesh = body_mesh
+	body.position.y = body_mesh.height * 0.5
+	body.material_override = hide_material
+	creature.add_child(body)
+	var head := MeshInstance3D.new()
+	var head_mesh := SphereMesh.new()
+	head_mesh.radius = 0.28 if max_health < 20 else 0.42
+	head_mesh.height = head_mesh.radius * 2.0
+	head.mesh = head_mesh
+	head.position = Vector3(0.0, body_mesh.height * 0.75, -0.35)
+	head.material_override = hide_material
+	creature.add_child(head)
+	var label := Label3D.new()
+	label.text = enemy_name
+	label.position.y = body_mesh.height + 0.45
+	label.billboard = BaseMaterial3D.BILLBOARD_ENABLED
+	label.font_size = 32
+	creature.add_child(label)
+	add_child(creature)
 
 func _add_copper_vein(at: Vector3) -> void:
 	var deposit := Node3D.new()
@@ -475,6 +519,17 @@ func _on_api_request_completed(result: int, response_code: int, _headers: Packed
 		var catalog_items: Variant = payload.get("items", [])
 		if catalog_items is Array:
 			market_catalog = catalog_items
+		api_stage = "enemy_catalog"
+		var enemy_error := api_request.request(api_base_url + "/api/v1/combat/enemies")
+		if enemy_error != OK:
+			auth_panel.visible = true
+			status_label.text = "Server: ready • enemy catalog unavailable"
+		return
+	if api_stage == "enemy_catalog":
+		var enemies: Variant = payload.get("enemies", [])
+		if enemies is Array:
+			enemy_catalog = enemies
+			_build_enemy_spawns()
 		auth_panel.visible = true
 		status_label.text = "Server: ready • sign in to continue"
 		return
