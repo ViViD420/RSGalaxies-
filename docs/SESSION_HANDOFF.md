@@ -32,7 +32,7 @@ An original sandbox MMORPG combining long-form skill progression and item gamepl
 - Authenticated routes cover login/register/logout/me, character list/create/read, skills/XP, movement, gathering, crafting, bank deposits/withdrawals, merchant trades, equipment equip/unequip, combat attacks, safe-spawn rest, local zone chat and account-scoped zone presence.
 - Legacy unscoped player-ID and development mutation routes remain disabled in production. Production registration is disabled unless explicitly enabled.
 - Auth routes have per-process IP/path throttling with bounded key memory. Production CORS uses an exact-origin allowlist. Security response headers and no-store responses are applied.
-- Public catalog routes include skills, world zones, gathering nodes, items, crafting definitions and merchant prices.
+- Public catalog routes include skills, world zones, gathering nodes, crafting stations and recipes, items, enemy spawns and merchant prices.
 - `/healthz` is a dependency-independent liveness probe; `/readyz` performs a bounded two-second PostgreSQL ping and returns a generic 503 on dependency failure.
 - Zone presence uses a 20-second lease, account-owned heartbeat upserts, stale-entry cleanup, a 100-character roster cap and privacy-limited snapshots that never expose account IDs.
 
@@ -42,6 +42,7 @@ An original sandbox MMORPG combining long-form skill progression and item gamepl
 - Account login/registration, multi-character selection and additional character creation.
 - Server-driven enemy visuals, combat attacks, damage/loot/XP feedback, health HUD, Rest recovery/respawn and a polling local-zone chat panel.
 - Gathering node target selection and resource-node visuals are driven by the public server node catalog rather than duplicated node coordinates in the client.
+- Workbench and forge positions, visuals and interaction selection are driven by the server crafting-station catalog.
 - Client sends a presence heartbeat every five seconds, polls the current zone every three seconds and renders remote character avatars/nameplates with smoothed position updates; stale characters are removed.
 - All Godot API HTTPRequests use bounded timeouts and disable automatic redirects to prevent bearer-token forwarding to redirected hosts.
 - Live authenticated skills panel with all ten skills, per-skill XP progress bars and next-level XP remaining (including the 200M XP cap display at level 99); requests are cancelled when characters change or sign out.
@@ -56,8 +57,8 @@ An original sandbox MMORPG combining long-form skill progression and item gamepl
 - .devcontainer/ provides a GitHub Codespaces Go/Godot/PostgreSQL workspace with separate development and integration-test databases.
 - Codespaces setup installs Godot 4.3 and export templates, runs race-enabled Go tests, go vet, headless project import and Web export.
 - .env.example contains local-only sample settings; docs/API.md, docs/ACCOUNT_AUTH_DESIGN.md, docs/DEPLOYMENT.md, docs/COMBAT.md, docs/CHAT.md, docs/PRESENCE.md and refreshed docs/ARCHITECTURE.md describe routes, security boundaries, deployment and gameplay rules.
-- Go server CI runs race-enabled unit/integration tests against PostgreSQL and go vet. Server run #263 passed after the production-route comment cleanup; run #262 passed the latest presence persistence, privacy, heartbeat write-coalescing and account-scoped roster tests. Runs #260 and #261 also passed. Server runs #245–#253 passed chat-history, readiness and rate-limiter hardening.
-- Godot client CI uses the official Godot 4.3 release and export templates. Client runs #83–#87 passed presence, inventory search/sort, gathering catalog visuals and bounded HTTP timeouts/redirect-safe requests. Run #88 is validating the latest client documentation and catalog updates.
+- Go server CI runs race-enabled unit/integration tests against PostgreSQL and go vet. Server run #263 passed after the production-route comment cleanup; run #262 passed the latest presence persistence, privacy, heartbeat write-coalescing and account-scoped roster tests. Runs #264–#269 are validating the foraging/herbal recipe and server-catalog station changes. Runs #260 and #261 also passed. Server runs #245–#253 passed chat-history, readiness and rate-limiter hardening.
+- Godot client CI uses the official Godot 4.3 release and export templates. Client run #90 passed data-driven crafting-station visuals and target selection; runs #89–#90 passed the client catalog changes. Runs #83–#88 also passed presence, inventory search/sort, gathering visuals and bounded HTTP timeouts/redirect-safe requests.
 
 ## Production safeguards and remaining launch gates
 
@@ -72,7 +73,7 @@ An original sandbox MMORPG combining long-form skill progression and item gamepl
 
 ## Next engineering tasks
 
-1. Finish validating client run #88, then build reconnect recovery and authoritative remote-player movement snapshots.
+1. Finish validating the foraging/herbal server test runs, then build reconnect recovery and authoritative remote-player movement snapshots.
 2. Add player-to-player trade with escrow and transaction safety, then add a real-phone pass on the Godot Web client.
 3. Add email verification, password recovery, MFA, distributed abuse controls and administrative account operations before enabling public registration.
 4. Add unique item instances/durability, combat animations/AI, currency sinks and player-to-player trade with escrow/transaction safety.
