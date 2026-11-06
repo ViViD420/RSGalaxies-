@@ -27,7 +27,7 @@ Status: implemented foundation. PostgreSQL accounts/sessions, bearer authenticat
 - `GET/POST /api/v1/account/characters` and `GET /api/v1/account/characters/{id}` are account-scoped. Gameplay endpoints are nested under `/api/v1/account/characters/{id}` for skills, XP, movement, gathering and crafting.
 - All authenticated account routes require `Authorization: Bearer <token>`. Player ownership is part of each SQL query/transaction.
 - Registration is available in development; production registration is disabled unless `RS_GALAXIES_ENABLE_REGISTRATION=true`. Keep it disabled until email verification and edge-level abuse controls are configured.
-- The API applies a small per-process IP/path auth throttle (5 registration attempts and 10 login attempts per minute). Its in-process key map is capped at 10,000 active keys and evicts the oldest window under high-cardinality traffic. This is only a local safety net; public deployments still need a trusted edge rate limiter and monitoring.
+- The API applies a small per-process IP/path auth throttle (5 registration attempts and 10 login attempts per minute). Its in-process key map is capped at 10,000 active keys; when full, new keys are temporarily rejected rather than evicting existing active throttles. This is only a local safety net; public deployments still need a trusted edge rate limiter and monitoring.
 - Development CORS is permissive. Production CORS is opt-in per exact origin via comma-separated `RS_GALAXIES_ALLOWED_ORIGINS`; do not use `*` for production.
 - Account recovery, email verification, MFA, administrative account disable tooling and distributed rate limiting are not implemented.
 
