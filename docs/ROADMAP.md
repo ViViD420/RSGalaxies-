@@ -18,14 +18,14 @@
 
 ## Milestone 3: Skills and progression
 - [x] Data-driven starting skill definitions and XP curve prototype.
-- [ ] Gathering nodes and depletion / respawn.
+- [x] Starter gathering nodes with charges, depletion and timed respawn.
 - [ ] Crafting recipes, requirements and output quality.
 - [ ] Combat attributes, abilities, damage and death / recovery loop.
 - [ ] Award XP only through validated gameplay actions.
 - [x] Deterministic progression boundary and repository concurrency tests.
 
 ## Milestone 4: Inventory and economy
-- [ ] Item definitions, instances, stack rules and equipment.
+- [x] Starter item definitions and stack-count inventory.\n- [ ] Item instances, equipment, ownership rules and full stack management.
 - [ ] Bank storage and item ownership.
 - [ ] Atomic player-to-player trades.
 - [ ] Currency ledger and NPC/player shops.
