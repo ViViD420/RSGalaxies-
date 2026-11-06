@@ -138,3 +138,34 @@ func TestWorldZonesAndValidatedMovement(t *testing.T) {
 	}
 }
 
+
+func TestGatheringCreatesInventoryAndAwardsSkillExperience(t *testing.T) {
+	repository := game.NewMemoryPlayerRepository()
+	handler := New(repository).Routes()
+	created := httptest.NewRecorder()
+	handler.ServeHTTP(created, httptest.NewRequest(http.MethodPost, "/api/v1/players", bytes.NewBufferString(`{"name":"Wayfarer"}`)))
+	if created.Code != http.StatusCreated { t.Fatalf("create status = %d", created.Code) }
+	var player game.Player
+	if err := json.Unmarshal(created.Body.Bytes(), &player); err != nil { t.Fatal(err) }
+
+	nodes := httptest.NewRecorder()
+	handler.ServeHTTP(nodes, httptest.NewRequest(http.MethodGet, "/api/v1/world/nodes", nil))
+	if nodes.Code != http.StatusOK { t.Fatalf("nodes status = %d", nodes.Code) }
+	items := httptest.NewRecorder()
+	handler.ServeHTTP(items, httptest.NewRequest(http.MethodGet, "/api/v1/items", nil))
+	if items.Code != http.StatusOK { t.Fatalf("items status = %d", items.Code) }
+
+	path := "/api/v1/players/" + string(player.ID) + "/gather/tree-001"
+	gathered := httptest.NewRecorder()
+	handler.ServeHTTP(gathered, httptest.NewRequest(http.MethodPost, path, nil))
+	if gathered.Code != http.StatusOK { t.Fatalf("gather status = %d body = %s", gathered.Code, gathered.Body.String()) }
+	var result struct {
+		Player game.Player `json:"player"`
+		Gathering game.GatheringResult `json:"gathering"`
+	}
+	if err := json.Unmarshal(gathered.Body.Bytes(), &result); err != nil { t.Fatal(err) }
+	if result.Player.Inventory["softwood_log"] != 1 || result.Player.Skills["woodcutting"].Experience != 25 {
+		t.Fatalf("gather transaction incomplete: inventory=%v skill=%+v", result.Player.Inventory, result.Player.Skills["woodcutting"])
+	}
+}
+
