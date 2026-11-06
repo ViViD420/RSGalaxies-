@@ -122,13 +122,15 @@ func (s *Server) Routes() http.Handler {
 		mux.HandleFunc("POST /api/v1/account/characters/{id}/inventory/use/{itemID}", s.useOwnedItem)
 		mux.HandleFunc("POST /api/v1/account/characters/{id}/presence/heartbeat", s.heartbeatOwnedPresence)
 		mux.HandleFunc("GET /api/v1/account/characters/{id}/presence", s.listOwnedPresence)
-		mux.HandleFunc("POST /api/v1/account/characters/{id}/trades/invite/{targetID}", s.createOwnedTradeInvite)
-		mux.HandleFunc("POST /api/v1/account/characters/{id}/trades/accept/{tradeID}", s.acceptOwnedTradeInvite)
-		mux.HandleFunc("PUT /api/v1/account/characters/{id}/trades/offer/{tradeID}", s.updateOwnedTradeOffer)
-		mux.HandleFunc("POST /api/v1/account/characters/{id}/trades/confirm/{tradeID}", s.confirmOwnedTrade)
-		mux.HandleFunc("POST /api/v1/account/characters/{id}/trades/cancel/{tradeID}", s.cancelOwnedTrade)
-		mux.HandleFunc("GET /api/v1/account/characters/{id}/trades/active", s.getActiveOwnedTrade)
-		mux.HandleFunc("GET /api/v1/account/trades/{tradeID}", s.getOwnedTrade)
+		if os.Getenv("RS_GALAXIES_ENV") != "production" || os.Getenv("RS_GALAXIES_ENABLE_TRADING") == "true" {
+			mux.HandleFunc("POST /api/v1/account/characters/{id}/trades/invite/{targetID}", s.createOwnedTradeInvite)
+			mux.HandleFunc("POST /api/v1/account/characters/{id}/trades/accept/{tradeID}", s.acceptOwnedTradeInvite)
+			mux.HandleFunc("PUT /api/v1/account/characters/{id}/trades/offer/{tradeID}", s.updateOwnedTradeOffer)
+			mux.HandleFunc("POST /api/v1/account/characters/{id}/trades/confirm/{tradeID}", s.confirmOwnedTrade)
+			mux.HandleFunc("POST /api/v1/account/characters/{id}/trades/cancel/{tradeID}", s.cancelOwnedTrade)
+			mux.HandleFunc("GET /api/v1/account/characters/{id}/trades/active", s.getActiveOwnedTrade)
+			mux.HandleFunc("GET /api/v1/account/trades/{tradeID}", s.getOwnedTrade)
+		}
 	}
 	return securityHeaders(mux)
 }
