@@ -49,7 +49,5 @@ func _physics_process(delta: float) -> void:
 	velocity.x = direction.x * move_speed
 	velocity.z = direction.z * move_speed
 
-	if direction.length_squared() > 0.001:
-		look_at(global_position + direction, Vector3.UP)
 
 	move_and_slide()
