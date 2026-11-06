@@ -39,12 +39,13 @@ func TestPostgresRepositoryPersistsPlayerAndCraftingTransaction(t *testing.T) {
 	player.Inventory["softwood_log"] = 2
 	player.Bank["rough_stone"] = 4
 	player.Coins = 777
+	player.Equipment["main_hand"] = "training_sword"
 	if err := repository.Create(ctx, player); err != nil { t.Fatalf("create player: %v", err) }
 	t.Cleanup(func() { _, _ = db.ExecContext(context.Background(), "DELETE FROM players WHERE id=$1", string(id)) })
 
 	loaded, err := repository.Get(ctx, id)
 	if err != nil { t.Fatalf("get player: %v", err) }
-	if loaded.Inventory["softwood_log"] != 2 || loaded.Bank["rough_stone"] != 4 || loaded.Coins != 777 || loaded.Position.Z != 2 {
+	if loaded.Inventory["softwood_log"] != 2 || loaded.Bank["rough_stone"] != 4 || loaded.Coins != 777 || loaded.Equipment["main_hand"] != "training_sword" || loaded.Position.Z != 2 {
 		t.Fatalf("loaded player state mismatch: %+v", loaded)
 	}
 
