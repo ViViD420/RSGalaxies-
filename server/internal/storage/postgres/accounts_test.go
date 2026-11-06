@@ -353,3 +353,24 @@ func TestPostgresPlayerTradeEscrowSchemaEnforcesReservationsAndPositiveBalances(
 		t.Fatal("zero-quantity escrow item was accepted")
 	}
 }
+
+func TestPostgresTradeInviteAcceptAndAccountPrivacy(t *testing.T) {
+	db:=integrationDatabase(t);repo:=NewAccountRepository(db);ctx:=context.Background();now:=time.Now().UTC()
+	first,_,err:=repo.Register(ctx,fmt.Sprintf("trade-invite-a-%d@example.test",now.UnixNano()),"correct-horse-battery-staple",now);if err!=nil{t.Fatal(err)}
+	second,_,err:=repo.Register(ctx,fmt.Sprintf("trade-invite-b-%d@example.test",now.UnixNano()),"correct-horse-battery-staple",now);if err!=nil{t.Fatal(err)}
+	outsider,_,err:=repo.Register(ctx,fmt.Sprintf("trade-invite-c-%d@example.test",now.UnixNano()),"correct-horse-battery-staple",now);if err!=nil{t.Fatal(err)}
+	t.Cleanup(func(){cleanupTestAccounts(db,first.ID,second.ID,outsider.ID)})
+	initiator,err:=game.NewPlayer(game.PlayerID(fmt.Sprintf("trade-invite-a-%d",now.UnixNano())),"TradeInviteA",now);if err!=nil{t.Fatal(err)}
+	target,err:=game.NewPlayer(game.PlayerID(fmt.Sprintf("trade-invite-b-%d",now.UnixNano())),"TradeInviteB",now);if err!=nil{t.Fatal(err)}
+	if err:=repo.CreateCharacter(ctx,first.ID,initiator);err!=nil{t.Fatal(err)}
+	if err:=repo.CreateCharacter(ctx,second.ID,target);err!=nil{t.Fatal(err)}
+	if err:=repo.HeartbeatPresenceForAccount(ctx,second.ID,target.ID,now);err!=nil{t.Fatal(err)}
+	trade,err:=repo.CreateTradeInviteForAccount(ctx,first.ID,initiator.ID,target.ID,now);if err!=nil{t.Fatalf("create invite: %v",err)}
+	if trade.Status!=game.TradeStatusPending||trade.Revision!=1||len(trade.Participants)!=2{t.Fatalf("trade invite snapshot=%+v",trade)}
+	if _,err:=repo.GetTradeForAccount(ctx,outsider.ID,trade.ID);!errors.Is(err,game.ErrTradeNotFound){t.Fatalf("outsider read error=%v",err)}
+	targetView,err:=repo.GetTradeForAccount(ctx,second.ID,trade.ID);if err!=nil||targetView.ID!=trade.ID{t.Fatalf("target trade read=%+v err=%v",targetView,err)}
+	accepted,err:=repo.AcceptTradeInviteForAccount(ctx,second.ID,trade.ID,now.Add(time.Second));if err!=nil{t.Fatalf("accept invite: %v",err)}
+	if accepted.Status!=game.TradeStatusOpen{t.Fatalf("accepted trade status=%s",accepted.Status)}
+	if _,err:=repo.AcceptTradeInviteForAccount(ctx,first.ID,trade.ID,now.Add(2*time.Second));!errors.Is(err,game.ErrTradeNotParticipant){t.Fatalf("initiator accept error=%v",err)}
+	if _,err:=repo.GetTradeForAccount(ctx,first.ID,trade.ID);err!=nil{t.Fatalf("initiator read after acceptance: %v",err)}
+}
