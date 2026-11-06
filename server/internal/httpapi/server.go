@@ -30,6 +30,8 @@ type characterStore interface {
 	CraftForAccount(context.Context, string, game.PlayerID, string, time.Time) (game.Player, game.CraftingResult, error)
 	TransferBankItemForAccount(context.Context, string, game.PlayerID, string, int, bool) (game.Player, error)
 	TradeItemForAccount(context.Context, string, game.PlayerID, string, int, bool) (game.Player, int64, error)
+	EquipItemForAccount(context.Context, string, game.PlayerID, string) (game.Player, error)
+	UnequipItemForAccount(context.Context, string, game.PlayerID, string) (game.Player, error)
 }
 
 type authAttemptWindow struct { started time.Time; count int }
@@ -91,6 +93,8 @@ func (s *Server) Routes() http.Handler {
 		mux.HandleFunc("POST /api/v1/account/characters/{id}/bank/withdraw", s.withdrawOwnedBankItem)
 		mux.HandleFunc("POST /api/v1/account/characters/{id}/market/buy/{itemID}", s.buyOwnedMarketItem)
 		mux.HandleFunc("POST /api/v1/account/characters/{id}/market/sell/{itemID}", s.sellOwnedMarketItem)
+		mux.HandleFunc("POST /api/v1/account/characters/{id}/equipment/equip/{itemID}", s.equipOwnedItem)
+		mux.HandleFunc("POST /api/v1/account/characters/{id}/equipment/unequip/{slot}", s.unequipOwnedItem)
 	}
 	return securityHeaders(mux)
 }
@@ -598,4 +602,33 @@ func (s *Server) tradeOwnedMarketItem(w http.ResponseWriter,r *http.Request,buy 
 	}
 	action:="bought";if !buy{action="sold"}
 	writeJSON(w,200,map[string]any{"character":player,"trade":map[string]any{"action":action,"itemId":r.PathValue("itemID"),"quantity":request.Quantity,"coins":amount},"coins":player.Coins,"inventory":player.Inventory})
+}
+
+func (s *Server) equipOwnedItem(w http.ResponseWriter,r *http.Request) {
+	account,_,ok:=s.authenticatedAccount(w,r);if !ok{return}
+	player,err:=s.characters.EquipItemForAccount(r.Context(),account.ID,game.PlayerID(strings.TrimSpace(r.PathValue("id"))),r.PathValue("itemID"))
+	s.writeEquipmentResult(w,player,err)
+}
+
+func (s *Server) unequipOwnedItem(w http.ResponseWriter,r *http.Request) {
+	account,_,ok:=s.authenticatedAccount(w,r);if !ok{return}
+	player,err:=s.characters.UnequipItemForAccount(r.Context(),account.ID,game.PlayerID(strings.TrimSpace(r.PathValue("id"))),r.PathValue("slot"))
+	s.writeEquipmentResult(w,player,err)
+}
+
+func (s *Server) writeEquipmentResult(w http.ResponseWriter,player game.Player,err error) {
+	if err!=nil {
+		switch {
+		case errors.Is(err,game.ErrPlayerNotFound):writeError(w,404,"character_not_found")
+		case errors.Is(err,game.ErrItemNotEquippable):writeError(w,422,"item_not_equippable")
+		case errors.Is(err,game.ErrEquipmentSlotEmpty):writeError(w,409,"equipment_slot_empty")
+		case errors.Is(err,game.ErrInvalidEquipmentSlot):writeError(w,422,"invalid_equipment_slot")
+		case errors.Is(err,game.ErrInsufficientItems):writeError(w,409,"item_not_in_inventory")
+		case errors.Is(err,game.ErrInventoryStackFull):writeError(w,409,"inventory_stack_full")
+		default:log.Printf("change character equipment: %v",err);writeError(w,500,"internal_error")
+		}
+		return
+	}
+	attack,defense:=player.EquipmentBonuses()
+	writeJSON(w,200,map[string]any{"character":player,"equipment":player.Equipment,"bonuses":map[string]int{"attack":attack,"defense":defense}})
 }
