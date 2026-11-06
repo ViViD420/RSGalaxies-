@@ -2086,8 +2086,8 @@ func _send_trade_action(action: String) -> void:
 			trade_status_label.text = "Enter a whole-number coin offer."
 			return
 		var coins := int(coins_text)
-		if coins < 0 or coins > current_coins:
-			trade_status_label.text = "Coin offer exceeds your available balance."
+		if coins < 0:
+			trade_status_label.text = "Coin offers cannot be negative."
 			return
 		var currently_offered := _current_own_trade_offer()
 		var available_coins := current_coins + int(currently_offered.get("coins", 0))
