@@ -29,7 +29,8 @@
 - [x] Tree, stone, copper and wild-herb gathering with range, skill, charge and respawn rules.
 - [x] Godot selects gathering targets and builds resource props from the server node catalog.
 - [x] Godot builds and selects workbench/forge stations from the server crafting-station catalog.
-- [x] Workbench plank and herbal-bundle recipes plus forge copper smelting/training-sword recipes.
+- [x] Workbench plank, herbal-bundle and herbal-tea recipes plus forge copper smelting/training-sword recipes.
+- [x] Cooking profession progression through crafting a server-defined healing tea consumable.
 - [x] Transactional crafting with ingredient consumption, output capacity and skill XP.
 - [x] Basic PvE enemy definitions, server-calculated damage, cooldowns, retaliation, combat XP, loot and respawns.
 - [x] Player health, defeated-state action restrictions and safe-spawn recovery.
