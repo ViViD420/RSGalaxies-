@@ -29,6 +29,7 @@ type characterStore interface {
 	GatherForAccount(context.Context, string, game.PlayerID, string, time.Time) (game.Player, game.GatheringResult, error)
 	CraftForAccount(context.Context, string, game.PlayerID, string, time.Time) (game.Player, game.CraftingResult, error)
 	TransferBankItemForAccount(context.Context, string, game.PlayerID, string, int, bool) (game.Player, error)
+	TradeItemForAccount(context.Context, string, game.PlayerID, string, int, bool) (game.Player, int64, error)
 }
 
 type authAttemptWindow struct { started time.Time; count int }
@@ -57,6 +58,7 @@ func (s *Server) Routes() http.Handler {
 	mux.HandleFunc("GET /api/v1/world/zones", s.listWorldZones)
 	mux.HandleFunc("GET /api/v1/world/nodes", s.listGatheringNodes)
 	mux.HandleFunc("GET /api/v1/items", s.listItems)
+	mux.HandleFunc("GET /api/v1/market/items", s.listMarketItems)
 	mux.HandleFunc("GET /api/v1/crafting/recipes", s.listCraftingRecipes)
 	mux.HandleFunc("GET /api/v1/crafting/stations", s.listCraftingStations)
 	// Player APIs are development-only until account authentication and character ownership are implemented.
@@ -87,6 +89,8 @@ func (s *Server) Routes() http.Handler {
 		mux.HandleFunc("POST /api/v1/account/characters/{id}/craft/{recipeID}", s.craftOwnedCharacter)
 		mux.HandleFunc("POST /api/v1/account/characters/{id}/bank/deposit", s.depositOwnedBankItem)
 		mux.HandleFunc("POST /api/v1/account/characters/{id}/bank/withdraw", s.withdrawOwnedBankItem)
+		mux.HandleFunc("POST /api/v1/account/characters/{id}/market/buy/{itemID}", s.buyOwnedMarketItem)
+		mux.HandleFunc("POST /api/v1/account/characters/{id}/market/sell/{itemID}", s.sellOwnedMarketItem)
 	}
 	return securityHeaders(mux)
 }
@@ -560,4 +564,38 @@ func (s *Server) transferOwnedBankItem(w http.ResponseWriter,r *http.Request,dep
 		return
 	}
 	writeJSON(w,200,map[string]any{"character":player,"bank":player.Bank,"inventory":player.Inventory})
+}
+
+func (s *Server) listMarketItems(w http.ResponseWriter,r *http.Request) {
+	writeJSON(w,http.StatusOK,map[string]any{"items":game.ItemDefinitions(),"startingCoins":game.StartingCoins})
+}
+
+func (s *Server) buyOwnedMarketItem(w http.ResponseWriter,r *http.Request) {
+	s.tradeOwnedMarketItem(w,r,true)
+}
+
+func (s *Server) sellOwnedMarketItem(w http.ResponseWriter,r *http.Request) {
+	s.tradeOwnedMarketItem(w,r,false)
+}
+
+func (s *Server) tradeOwnedMarketItem(w http.ResponseWriter,r *http.Request,buy bool) {
+	account,_,ok:=s.authenticatedAccount(w,r);if !ok{return}
+	var request struct { Quantity int `json:"quantity"` }
+	if !decodeStrictJSON(w,r,1<<10,&request){return}
+	player,amount,err:=s.characters.TradeItemForAccount(r.Context(),account.ID,game.PlayerID(strings.TrimSpace(r.PathValue("id"))),r.PathValue("itemID"),request.Quantity,buy)
+	if err!=nil {
+		switch {
+		case errors.Is(err,game.ErrPlayerNotFound):writeError(w,404,"character_not_found")
+		case errors.Is(err,game.ErrUnknownMerchantItem):writeError(w,404,"item_not_traded")
+		case errors.Is(err,game.ErrInvalidItemQuantity):writeError(w,422,"invalid_quantity")
+		case errors.Is(err,game.ErrInsufficientCurrency):writeError(w,409,"insufficient_coins")
+		case errors.Is(err,game.ErrInsufficientItems):writeError(w,409,"insufficient_items")
+		case errors.Is(err,game.ErrInventoryStackFull),errors.Is(err,game.ErrMerchantStackFull):writeError(w,409,"stack_capacity_reached")
+		case errors.Is(err,game.ErrCurrencyOverflow):writeError(w,409,"currency_limit_reached")
+		default:log.Printf("trade with owned character: %v",err);writeError(w,500,"internal_error")
+		}
+		return
+	}
+	action:="bought";if !buy{action="sold"}
+	writeJSON(w,200,map[string]any{"character":player,"trade":map[string]any{"action":action,"itemId":r.PathValue("itemID"),"quantity":request.Quantity,"coins":amount},"coins":player.Coins,"inventory":player.Inventory})
 }
