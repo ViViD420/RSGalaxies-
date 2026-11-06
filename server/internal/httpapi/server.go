@@ -78,6 +78,43 @@ func (s *Server) awardExperience(w http.ResponseWriter,r *http.Request) {
 	}
 	writeJSON(w,200,map[string]any{"player":player,"skill":player.Skills[strings.ToLower(strings.TrimSpace(r.PathValue("skill")))],"leveledUp":leveled})
 }
+func (s *Server) movePlayer(w http.ResponseWriter, r *http.Request) {
+	r.Body = http.MaxBytesReader(w, r.Body, 1<<10)
+	defer r.Body.Close()
+	var request struct {
+		X float64 `json:"x"`
+		Z float64 `json:"z"`
+	}
+	decoder := json.NewDecoder(r.Body)
+	decoder.DisallowUnknownFields()
+	if err := decoder.Decode(&request); err != nil {
+		writeError(w, http.StatusBadRequest, "invalid_json")
+		return
+	}
+	if err := decoder.Decode(&struct{}{}); err != io.EOF {
+		writeError(w, http.StatusBadRequest, "invalid_json")
+		return
+	}
+	player, err := s.players.MovePlayer(r.Context(), game.PlayerID(strings.TrimSpace(r.PathValue("id"))), request.X, request.Z, s.now())
+	if err != nil {
+		switch {
+		case errors.Is(err, game.ErrPlayerNotFound):
+			writeError(w, http.StatusNotFound, "player_not_found")
+		case errors.Is(err, game.ErrMovementTooFast):
+			writeError(w, http.StatusUnprocessableEntity, "movement_too_fast")
+		case errors.Is(err, game.ErrOutsideWorld):
+			writeError(w, http.StatusUnprocessableEntity, "outside_world_bounds")
+		case errors.Is(err, game.ErrInvalidMovement), errors.Is(err, game.ErrUnknownWorldZone):
+			writeError(w, http.StatusUnprocessableEntity, "invalid_movement")
+		default:
+			log.Printf("move player: %v", err)
+			writeError(w, http.StatusInternalServerError, "internal_error")
+		}
+		return
+	}
+	writeJSON(w, http.StatusOK, map[string]any{"player": player, "position": player.Position})
+}
+
 func(s *Server)writePlayerError(w http.ResponseWriter,err error){if errors.Is(err,game.ErrPlayerNotFound){writeError(w,404,"player_not_found");return};log.Printf("player lookup: %v",err);writeError(w,500,"internal_error")}
 func newID()(string,error){var b [16]byte;if _,err:=rand.Read(b[:]);err!=nil{return "",err};return hex.EncodeToString(b[:]),nil}
 func writeJSON(w http.ResponseWriter,status int,value any){w.Header().Set("Content-Type","application/json; charset=utf-8");w.WriteHeader(status);if err:=json.NewEncoder(w).Encode(value);err!=nil{log.Printf("write response: %v",err)}}
