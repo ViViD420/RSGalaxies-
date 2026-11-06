@@ -43,8 +43,11 @@ func TestCraftingRejectsMissingIngredientsAndOutOfRange(t *testing.T) {
 }
 
 func TestCraftingDefinitionsAreDefensive(t *testing.T) {
+	recipe, ok := FindCraftingRecipe("basic-plank")
+	if !ok { t.Fatal("recipe missing") }
+	recipe.Ingredients[0].Quantity = 999
 	recipes := CraftingRecipes()
-	recipes[0].Ingredients[0].Quantity = 999
+	recipes[0].Outputs[0].Quantity = 999
 	again, ok := FindCraftingRecipe("basic-plank")
 	if !ok || again.Ingredients[0].Quantity != 2 {
 		t.Fatal("recipe definitions were mutated through returned slice")
