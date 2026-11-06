@@ -1986,6 +1986,63 @@ func _refresh_trade_items() -> void:
 	_update_trade_offer_items_label()
 
 
+func _current_own_trade_offer() -> Dictionary:
+	var participants: Variant = current_trade.get("participants", [])
+	if participants is Array:
+		for participant in participants:
+			if participant is Dictionary and str(participant.get("characterId", "")) == player_id:
+				var offer: Variant = participant.get("offer", {})
+				if offer is Dictionary:
+					return offer
+	return {"items": {}, "coins": 0}
+
+
+func _add_trade_offer_item() -> void:
+	if trade_item_select == null or trade_quantity_input == null:
+		return
+	var item_id := str(trade_item_select.get_selected_metadata())
+	var quantity_text := trade_quantity_input.text.strip_edges()
+	if item_id.is_empty():
+		trade_status_label.text = "Select an item stack to add."
+		return
+	if not quantity_text.is_valid_int() or int(quantity_text) < 1:
+		trade_status_label.text = "Enter a positive whole-number item quantity."
+		return
+	var quantity := int(quantity_text)
+	if quantity > int(current_inventory.get(item_id, 0)):
+		trade_status_label.text = "You can only add items currently in your bag."
+		return
+	trade_offer_items[item_id] = int(trade_offer_items.get(item_id, 0)) + quantity
+	_update_trade_offer_items_label()
+	_refresh_trade_items()
+
+
+func _remove_trade_offer_item() -> void:
+	if trade_item_select == null:
+		return
+	var item_id := str(trade_item_select.get_selected_metadata())
+	if item_id.is_empty() or not trade_offer_items.has(item_id):
+		trade_status_label.text = "Select an item already in your offer to remove it."
+		return
+	trade_offer_items.erase(item_id)
+	_update_trade_offer_items_label()
+	_refresh_trade_items()
+
+
+func _update_trade_offer_items_label() -> void:
+	if trade_offer_items_label == null:
+		return
+	if trade_offer_items.is_empty():
+		trade_offer_items_label.text = "Staged items: none"
+		return
+	var item_ids: Array = trade_offer_items.keys()
+	item_ids.sort()
+	var parts: PackedStringArray = []
+	for item_id in item_ids:
+		parts.append(str(item_id).replace("_", " ") + " ×" + str(trade_offer_items[item_id]))
+	trade_offer_items_label.text = "Staged items: " + ", ".join(parts)
+
+
 func _send_trade_action(action: String) -> void:
 	if trade_request == null or trade_pending or player_id.is_empty():
 		return
@@ -2017,12 +2074,10 @@ func _send_trade_action(action: String) -> void:
 		return
 
 	if action == "invite" or action == "accept" or action == "update":
-		var quantity_text := trade_quantity_input.text.strip_edges()
 		var coins_text := trade_coins_input.text.strip_edges()
-		if not quantity_text.is_valid_int() or not coins_text.is_valid_int():
-			trade_status_label.text = "Enter whole-number quantities and coins."
+		if not coins_text.is_valid_int():
+			trade_status_label.text = "Enter a whole-number coin offer."
 			return
-		var quantity := int(quantity_text)
 		var coins := int(coins_text)
 		if coins < 0 or coins > current_coins:
 			trade_status_label.text = "Coin offer exceeds your available balance."
