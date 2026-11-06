@@ -3,6 +3,7 @@ extends Node3D
 const PLAYER_SCENE := preload("res://scenes/player.tscn")
 
 var status_label: Label
+var presence_label: Label
 var inventory_label: Label
 var auth_panel: PanelContainer
 var auth_email_input: LineEdit
@@ -450,6 +451,9 @@ func _build_hud() -> void:
 	status_label = Label.new()
 	status_label.text = "Server: connecting..."
 	column.add_child(status_label)
+	presence_label = Label.new()
+	presence_label.text = "Nearby players: offline"
+	column.add_child(presence_label)
 
 	inventory_label = Label.new()
 	inventory_label.text = "Inventory: empty"
@@ -1513,6 +1517,8 @@ func _stop_presence() -> void:
 			remote.queue_free()
 	remote_player_nodes.clear()
 	remote_player_targets.clear()
+	if presence_label != null:
+		presence_label.text = "Nearby players: offline"
 
 
 func _send_presence_heartbeat() -> void:
@@ -1584,7 +1590,8 @@ func _on_presence_roster_completed(result: int, response_code: int, _headers: Pa
 			remote_player_nodes.erase(character_id)
 			remote_player_targets.erase(character_id)
 	if status_label != null:
-		status_label.text = "Server: connected • " + str(remote_player_nodes.size()) + " nearby player(s)"
+		if presence_label != null:
+		presence_label.text = "Nearby players: " + str(remote_player_nodes.size())
 
 
 func _create_remote_player_visual(character_id: String, display_name: String, at: Vector3) -> void:
