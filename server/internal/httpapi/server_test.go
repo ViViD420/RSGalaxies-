@@ -757,3 +757,7 @@ func TestAuthenticatedTradeInvitationAcceptanceAndPrivacy(t *testing.T) {
 	selfRequest.Header.Set("Authorization","Bearer "+firstToken);handler.ServeHTTP(self,selfRequest)
 	if self.Code!=http.StatusConflict{t.Fatalf("self invite status=%d body=%s",self.Code,self.Body.String())}
 }
+
+func (s *testCharacterStore) UpdateTradeOfferForAccount(_ context.Context,_ string,_ game.PlayerID,_ string,_ int64,_ game.TradeOffer,_ time.Time)(game.TradeSnapshot,error){return game.TradeSnapshot{},game.ErrTradeNotFound}
+func (s *testCharacterStore) ConfirmTradeForAccount(_ context.Context,_ string,_ game.PlayerID,_ string,_ int64,_ time.Time)(game.TradeSnapshot,error){return game.TradeSnapshot{},game.ErrTradeNotFound}
+func (s *testCharacterStore) CancelTradeForAccount(_ context.Context,_ string,_ game.PlayerID,_ string,_ time.Time)(game.TradeSnapshot,error){return game.TradeSnapshot{},game.ErrTradeNotFound}
