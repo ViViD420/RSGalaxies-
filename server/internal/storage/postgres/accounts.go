@@ -267,3 +267,14 @@ func (r *AccountRepository) TransferBankItemForAccount(ctx context.Context, acco
 	if err := tx.Commit(); err != nil { return game.Player{}, fmt.Errorf("commit owned bank transfer: %w", err) }
 	return player, nil
 }
+
+func (r *AccountRepository) TradeItemForAccount(ctx context.Context,accountID string,id game.PlayerID,itemID string,quantity int,buy bool)(game.Player,int64,error){
+	tx,err:=r.db.BeginTx(ctx,nil);if err!=nil{return game.Player{},0,err};defer tx.Rollback()
+	player,err:=r.lockOwnedPlayer(ctx,tx,accountID,id);if err!=nil{return game.Player{},0,err}
+	var amount int64
+	if buy { amount,err=player.BuyItem(itemID,quantity) } else { amount,err=player.SellItem(itemID,quantity) }
+	if err!=nil{return player,0,err}
+	if err:=updateOwnedPlayer(ctx,tx,accountID,player);err!=nil{return game.Player{},0,err}
+	if err:=tx.Commit();err!=nil{return game.Player{},0,fmt.Errorf("commit owned market trade: %w",err)}
+	return player,amount,nil
+}
