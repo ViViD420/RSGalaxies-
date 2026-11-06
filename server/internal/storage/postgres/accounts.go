@@ -434,3 +434,115 @@ func (r *AccountRepository) ListZonePresenceForAccount(ctx context.Context,accou
 	if err:=rows.Err();err!=nil{return nil,fmt.Errorf("iterate zone presence: %w",err)}
 	return result,nil
 }
+
+type tradeQueryer interface {
+	QueryRowContext(context.Context,string,...any)*sql.Row
+	QueryContext(context.Context,string,...any)(*sql.Rows,error)
+}
+
+func (r *AccountRepository) CreateTradeInviteForAccount(ctx context.Context,accountID string,initiatorID,targetID game.PlayerID,now time.Time)(game.TradeSnapshot,error){
+	if initiatorID==targetID{return game.TradeSnapshot{},game.ErrTradeSelf}
+	tx,err:=r.db.BeginTx(ctx,nil);if err!=nil{return game.TradeSnapshot{},err};defer tx.Rollback()
+	var targetAccountID string
+	var targetLastSeen time.Time
+	err=tx.QueryRowContext(ctx,`SELECT p.account_id,zp.last_seen_at FROM players p JOIN zone_presence zp ON zp.character_id=p.id
+		WHERE p.id=$1 AND zp.last_seen_at>$2`,string(targetID),now.UTC().Add(-game.PresenceLease)).Scan(&targetAccountID,&targetLastSeen)
+	if errors.Is(err,sql.ErrNoRows){return game.TradeSnapshot{},game.ErrTradeParticipantUnavailable}
+	if err!=nil{return game.TradeSnapshot{},fmt.Errorf("resolve trade target presence: %w",err)}
+	if targetAccountID==accountID{return game.TradeSnapshot{},game.ErrTradeSelf}
+	var initiator,target game.Player
+	if string(initiatorID)<string(targetID){
+		initiator,err=r.lockOwnedPlayer(ctx,tx,accountID,initiatorID);if err!=nil{return game.TradeSnapshot{},err}
+		target,err=r.lockOwnedPlayer(ctx,tx,targetAccountID,targetID);if err!=nil{return game.TradeSnapshot{},game.ErrTradeParticipantUnavailable}
+	}else{
+		target,err=r.lockOwnedPlayer(ctx,tx,targetAccountID,targetID);if err!=nil{return game.TradeSnapshot{},game.ErrTradeParticipantUnavailable}
+		initiator,err=r.lockOwnedPlayer(ctx,tx,accountID,initiatorID);if err!=nil{return game.TradeSnapshot{},err}
+	}
+	if err:=game.ValidateTradeInvite(initiator,target);err!=nil{return game.TradeSnapshot{},err}
+	if targetLastSeen.Before(now.UTC().Add(-game.PresenceLease)){return game.TradeSnapshot{},game.ErrTradeParticipantUnavailable}
+	idBytes:=make([]byte,16);if _,err:=rand.Read(idBytes);err!=nil{return game.TradeSnapshot{},fmt.Errorf("generate trade ID: %w",err)}
+	tradeID:="trade-"+hex.EncodeToString(idBytes)
+	expires:=now.UTC().Add(game.TradeLifetime)
+	if _,err:=tx.ExecContext(ctx,`INSERT INTO player_trades(id,status,revision,created_at,updated_at,expires_at)
+		VALUES($1,'pending',1,$2,$2,$3)`,tradeID,now.UTC(),expires);err!=nil{return game.TradeSnapshot{},fmt.Errorf("create trade invitation: %w",err)}
+	for _,participant:=range []struct{player game.Player;owner,role string}{{initiator,accountID,"initiator"},{target,targetAccountID,"target"}}{
+		if _,err:=tx.ExecContext(ctx,`INSERT INTO player_trade_participants(trade_id,character_id,account_id,role)
+			VALUES($1,$2,$3,$4)`,tradeID,string(participant.player.ID),participant.owner,participant.role);err!=nil{return game.TradeSnapshot{},fmt.Errorf("add trade participant: %w",err)}
+		if _,err:=tx.ExecContext(ctx,`INSERT INTO player_trade_offers(trade_id,character_id,offered_coins)
+			VALUES($1,$2,0)`,tradeID,string(participant.player.ID));err!=nil{return game.TradeSnapshot{},fmt.Errorf("create trade offer: %w",err)}
+		if _,err:=tx.ExecContext(ctx,`INSERT INTO player_trade_active_characters(character_id,trade_id,account_id)
+			VALUES($1,$2,$3)`,string(participant.player.ID),tradeID,participant.owner);err!=nil{
+			var pgErr *pgconn.PgError
+			if errors.As(err,&pgErr)&&pgErr.Code=="23505"{return game.TradeSnapshot{},game.ErrTradeAlreadyActive}
+			return game.TradeSnapshot{},fmt.Errorf("reserve active trade participant: %w",err)
+		}
+	}
+	if err:=tx.Commit();err!=nil{
+		var pgErr *pgconn.PgError
+		if errors.As(err,&pgErr)&&pgErr.Code=="23505"{return game.TradeSnapshot{},game.ErrTradeAlreadyActive}
+		return game.TradeSnapshot{},fmt.Errorf("commit trade invitation: %w",err)
+	}
+	return readTradeSnapshot(ctx,r.db,accountID,tradeID)
+}
+
+func (r *AccountRepository) AcceptTradeInviteForAccount(ctx context.Context,accountID,tradeID string,now time.Time)(game.TradeSnapshot,error){
+	tx,err:=r.db.BeginTx(ctx,nil);if err!=nil{return game.TradeSnapshot{},err};defer tx.Rollback()
+	var status string
+	var expires time.Time
+	err=tx.QueryRowContext(ctx,`SELECT status,expires_at FROM player_trades WHERE id=$1 FOR UPDATE`,tradeID).Scan(&status,&expires)
+	if errors.Is(err,sql.ErrNoRows){return game.TradeSnapshot{},game.ErrTradeNotFound}
+	if err!=nil{return game.TradeSnapshot{},fmt.Errorf("lock trade invitation: %w",err)}
+	var role string
+	err=tx.QueryRowContext(ctx,`SELECT role FROM player_trade_participants WHERE trade_id=$1 AND account_id=$2`,tradeID,accountID).Scan(&role)
+	if errors.Is(err,sql.ErrNoRows){return game.TradeSnapshot{},game.ErrTradeNotFound}
+	if err!=nil{return game.TradeSnapshot{},fmt.Errorf("verify trade participant: %w",err)}
+	if role!="target"{return game.TradeSnapshot{},game.ErrTradeNotParticipant}
+	if status!=string(game.TradeStatusPending){return game.TradeSnapshot{},game.ErrTradeNotAccepted}
+	if !now.UTC().Before(expires){
+		if _,err:=tx.ExecContext(ctx,`UPDATE player_trades SET status='expired',updated_at=$2,terminal_at=$2 WHERE id=$1`,tradeID,now.UTC());err!=nil{return game.TradeSnapshot{},err}
+		if _,err:=tx.ExecContext(ctx,`DELETE FROM player_trade_active_characters WHERE trade_id=$1`,tradeID);err!=nil{return game.TradeSnapshot{},err}
+		if err:=tx.Commit();err!=nil{return game.TradeSnapshot{},err}
+		return game.TradeSnapshot{},game.ErrTradeExpired
+	}
+	if _,err:=tx.ExecContext(ctx,`UPDATE player_trades SET status='open',updated_at=$2 WHERE id=$1 AND status='pending'`,tradeID,now.UTC());err!=nil{return game.TradeSnapshot{},fmt.Errorf("accept trade invitation: %w",err)}
+	if err:=tx.Commit();err!=nil{return game.TradeSnapshot{},fmt.Errorf("commit trade acceptance: %w",err)}
+	return readTradeSnapshot(ctx,r.db,accountID,tradeID)
+}
+
+func (r *AccountRepository) GetTradeForAccount(ctx context.Context,accountID,tradeID string)(game.TradeSnapshot,error){
+	return readTradeSnapshot(ctx,r.db,accountID,tradeID)
+}
+
+func readTradeSnapshot(ctx context.Context,q tradeQueryer,accountID,tradeID string)(game.TradeSnapshot,error){
+	var snapshot game.TradeSnapshot
+	var status string
+	err:=q.QueryRowContext(ctx,`SELECT t.id,t.status,t.revision,t.created_at,t.expires_at
+		FROM player_trades t WHERE t.id=$1 AND EXISTS(SELECT 1 FROM player_trade_participants p WHERE p.trade_id=t.id AND p.account_id=$2)`,tradeID,accountID).
+		Scan(&snapshot.ID,&status,&snapshot.Revision,&snapshot.CreatedAt,&snapshot.ExpiresAt)
+	if errors.Is(err,sql.ErrNoRows){return game.TradeSnapshot{},game.ErrTradeNotFound}
+	if err!=nil{return game.TradeSnapshot{},fmt.Errorf("read trade snapshot: %w",err)}
+	snapshot.Status=game.TradeStatus(status)
+	snapshot.CreatedAt=snapshot.CreatedAt.UTC();snapshot.ExpiresAt=snapshot.ExpiresAt.UTC()
+	rows,err:=q.QueryContext(ctx,`SELECT p.character_id,players.name,p.role,p.confirmed_revision,o.offered_coins
+		FROM player_trade_participants p JOIN players ON players.id=p.character_id
+		JOIN player_trade_offers o ON o.trade_id=p.trade_id AND o.character_id=p.character_id
+		WHERE p.trade_id=$1 ORDER BY p.role`,tradeID)
+	if err!=nil{return game.TradeSnapshot{},fmt.Errorf("read trade participants: %w",err)}
+	defer rows.Close()
+	snapshot.Participants=make([]game.TradeParticipant,0,2)
+	for rows.Next(){
+		var participant game.TradeParticipant
+		var confirmed sql.NullInt64
+		if err:=rows.Scan(&participant.CharacterID,&participant.Name,&participant.Role,&confirmed,&participant.Offer.Coins);err!=nil{return game.TradeSnapshot{},fmt.Errorf("scan trade participant: %w",err)}
+		participant.Offer.Items=make(map[string]int)
+		participant.Confirmed=confirmed.Valid&&confirmed.Int64==snapshot.Revision
+		itemRows,itemErr:=q.QueryContext(ctx,`SELECT item_id,quantity FROM player_trade_escrow_items WHERE trade_id=$1 AND owner_character_id=$2 ORDER BY item_id`,tradeID,string(participant.CharacterID))
+		if itemErr!=nil{return game.TradeSnapshot{},fmt.Errorf("read trade escrow items: %w",itemErr)}
+		for itemRows.Next(){var itemID string;var quantity int;if itemErr:=itemRows.Scan(&itemID,&quantity);itemErr!=nil{itemRows.Close();return game.TradeSnapshot{},itemErr};participant.Offer.Items[itemID]=quantity}
+		if itemErr:=itemRows.Err();itemErr!=nil{itemRows.Close();return game.TradeSnapshot{},itemErr}
+		itemRows.Close()
+		snapshot.Participants=append(snapshot.Participants,participant)
+	}
+	if err:=rows.Err();err!=nil{return game.TradeSnapshot{},fmt.Errorf("iterate trade participants: %w",err)}
+	return snapshot,nil
+}
