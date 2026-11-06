@@ -20,6 +20,7 @@ unzip -oq "$GODOT_DIR/templates.tpz" -d "$GODOT_DIR/templates"
 cp -a "$GODOT_DIR/templates/templates/." "$TEMPLATE_DIR/"
 
 cd server
+go mod tidy
 go mod download
 go test ./...
 go vet ./...
