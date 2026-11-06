@@ -294,6 +294,10 @@ func _on_api_request_completed(result: int, response_code: int, _headers: Packed
 		"create_character":
 			_activate_character(payload)
 func _start_movement_sync() -> void:
+	if movement_request != null:
+		movement_request.queue_free()
+	if movement_timer != null:
+		movement_timer.queue_free()
 	movement_request = HTTPRequest.new()
 	add_child(movement_request)
 	movement_request.request_completed.connect(_on_movement_completed)
