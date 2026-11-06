@@ -691,7 +691,7 @@ func (s *testCharacterStore) CreateTradeInviteForAccount(_ context.Context,accou
 	if s.activeTrades[initiatorID]!=""||s.activeTrades[targetID]!=""{return game.TradeSnapshot{},game.ErrTradeAlreadyActive}
 	s.nextTradeID++
 	id:=fmt.Sprintf("test-trade-%d",s.nextTradeID)
-	trade:=game.TradeSnapshot{ID:id,Status:game.TradeStatusPending,Revision:1,CreatedAt:now,ExpiresAt:now.Add(game.TradeLifetime),Participants:[]game.TradeParticipant{{CharacterID:initiatorID,CharacterName:initiator.Name,Role:"initiator",Offer:game.TradeOffer{Items:map[string]int{}}},{CharacterID:targetID,CharacterName:target.Name,Role:"target",Offer:game.TradeOffer{Items:map[string]int{}}}}}
+	trade:=game.TradeSnapshot{ID:id,Status:game.TradeStatusPending,Revision:1,CreatedAt:now,ExpiresAt:now.Add(game.TradeLifetime),Participants:[]game.TradeParticipant{{CharacterID:initiatorID,Name:initiator.Name,Role:"initiator",Offer:game.TradeOffer{Items:map[string]int{}}},{CharacterID:targetID,Name:target.Name,Role:"target",Offer:game.TradeOffer{Items:map[string]int{}}}}}
 	s.trades[id]=trade;s.activeTrades[initiatorID]=id;s.activeTrades[targetID]=id
 	return trade,nil
 }
@@ -704,6 +704,22 @@ func (s *testCharacterStore) AcceptTradeInviteForAccount(_ context.Context,accou
 	if !now.Before(trade.ExpiresAt){trade.Status=game.TradeStatusExpired;s.trades[tradeID]=trade;delete(s.activeTrades,trade.Participants[0].CharacterID);delete(s.activeTrades,trade.Participants[1].CharacterID);return game.TradeSnapshot{},game.ErrTradeExpired}
 	trade.Status=game.TradeStatusOpen;s.trades[tradeID]=trade;return trade,nil
 }
+func (s *testCharacterStore) GetActiveTradeForAccount(_ context.Context,accountID string,id game.PlayerID,now time.Time)(game.TradeSnapshot,error){
+	player,ok:=s.players[accountID][id]
+	if !ok{return game.TradeSnapshot{},game.ErrPlayerNotFound}
+	_ = player
+	tradeID:=s.activeTrades[id]
+	if tradeID==""{return game.TradeSnapshot{},game.ErrTradeNotFound}
+	trade,ok:=s.trades[tradeID]
+	if !ok{return game.TradeSnapshot{},game.ErrTradeNotFound}
+	if !now.Before(trade.ExpiresAt){
+		trade.Status=game.TradeStatusExpired;s.trades[tradeID]=trade
+		delete(s.activeTrades,trade.Participants[0].CharacterID);delete(s.activeTrades,trade.Participants[1].CharacterID)
+		return trade,nil
+	}
+	return trade,nil
+}
+
 func (s *testCharacterStore) GetTradeForAccount(_ context.Context,accountID,tradeID string)(game.TradeSnapshot,error){
 	trade,ok:=s.trades[tradeID];if !ok{return game.TradeSnapshot{},game.ErrTradeNotFound}
 	for _,participant:=range trade.Participants{for _,player:=range s.players[accountID]{if player.ID==participant.CharacterID{return trade,nil}}}
