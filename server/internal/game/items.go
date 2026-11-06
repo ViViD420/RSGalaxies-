@@ -20,6 +20,8 @@ var itemDefinitions = []ItemDefinition{
 	{ID: "leather_cap", Name: "Leather Cap", Description: "A simple leather cap offering light protection.", MaxStack: 1, BuyPrice: 30, SellPrice: 12, EquipmentSlot: "head", DefenseBonus: 1},
 	{ID: "leather_tunic", Name: "Leather Tunic", Description: "A fitted leather tunic for frontier travel.", MaxStack: 1, BuyPrice: 60, SellPrice: 25, EquipmentSlot: "body", DefenseBonus: 2},
 	{ID: "leather_boots", Name: "Leather Boots", Description: "Sturdy boots for long journeys.", MaxStack: 1, BuyPrice: 25, SellPrice: 10, EquipmentSlot: "feet", DefenseBonus: 1},
+	{ID: "copper_ore", Name: "Copper Ore", Description: "A rough copper-bearing mineral from frontier deposits.", MaxStack: 100, BuyPrice: 3, SellPrice: 1},
+	{ID: "copper_bar", Name: "Copper Bar", Description: "A refined copper ingot ready for smithing.", MaxStack: 100, BuyPrice: 10, SellPrice: 4},
 }
 
 func ItemDefinitions() []ItemDefinition {
