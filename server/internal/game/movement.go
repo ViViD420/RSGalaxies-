@@ -45,6 +45,6 @@ func (p *Player) MoveTo(x, z float64, now time.Time) error {
 	}
 	p.Position.X = x
 	p.Position.Z = z
-	p.lastMoveAt = now
+	p.LastMoveAt = now
 	return nil
 }
