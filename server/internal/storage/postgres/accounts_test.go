@@ -29,6 +29,7 @@ func TestPostgresAccountRegistrationLoginAndSessionRevocation(t *testing.T) {
 	if err:=repo.RevokeSession(ctx,token,now.Add(3*time.Minute));err!=nil{t.Fatal(err)}
 	if _,err:=repo.AuthenticateSession(ctx,token,now.Add(4*time.Minute));!errors.Is(err,ErrSessionNotFound){t.Fatalf("revoked session error=%v",err)}
 	if _,err:=repo.AuthenticateSession(ctx,loginToken,now.Add(4*time.Minute));err!=nil{t.Fatalf("second session should remain valid: %v",err)}
+	if _,err:=repo.AuthenticateSession(ctx,loginToken,now.Add(SessionLifetime+time.Minute));!errors.Is(err,ErrSessionNotFound){t.Fatalf("expired session error=%v",err)}
 }
 
 func TestPostgresAccountEmailUniquenessAndValidation(t *testing.T) {
@@ -81,4 +82,13 @@ func TestPostgresOwnedGameplayMutationsEnforceOwnership(t *testing.T) {
  if result.Experience!=30||crafted.Inventory["wooden_plank"]!=1||crafted.Inventory["softwood_log"]!=0{t.Fatalf("owner craft result=%+v player=%+v",result,crafted)}
  persisted,err:=repo.GetCharacter(ctx,first.ID,player.ID);if err!=nil{t.Fatal(err)}
  if persisted.Skills["crafting"].Experience!=30{t.Fatalf("owned crafting XP not persisted: %+v",persisted.Skills["crafting"])}
+}
+
+func TestPostgresMigrationsAreIdempotent(t *testing.T) {
+ db:=integrationDatabase(t)
+ ctx:=context.Background()
+ if err:=Migrate(ctx,db);err!=nil{t.Fatalf("second migration: %v",err)}
+ var count int
+ if err:=db.QueryRowContext(ctx,"SELECT COUNT(*) FROM schema_migrations WHERE version IN (1,2)").Scan(&count);err!=nil{t.Fatal(err)}
+ if count!=2{t.Fatalf("migration versions applied=%d want=2",count)}
 }
