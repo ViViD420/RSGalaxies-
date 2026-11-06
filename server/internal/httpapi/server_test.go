@@ -254,8 +254,8 @@ func (s *testAccountStore) AuthenticateSession(_ context.Context,token string,_ 
 }
 func (s *testAccountStore) RevokeSession(_ context.Context,token string,_ time.Time)error{s.revoked[token]=true;return nil}
 
-type testCharacterStore struct { players map[string]map[game.PlayerID]game.Player; enemies map[string]game.EnemyState; messages []game.ChatMessage; lastChat map[game.PlayerID]time.Time; nextChatID int64 }
-func newTestCharacterStore()*testCharacterStore{return &testCharacterStore{players:map[string]map[game.PlayerID]game.Player{},enemies:map[string]game.EnemyState{},lastChat:map[game.PlayerID]time.Time{}}}
+type testCharacterStore struct { players map[string]map[game.PlayerID]game.Player; enemies map[string]game.EnemyState; messages []game.ChatMessage; lastChat map[game.PlayerID]time.Time; nextChatID int64; presence map[game.PlayerID]game.RemotePlayer }
+func newTestCharacterStore()*testCharacterStore{return &testCharacterStore{players:map[string]map[game.PlayerID]game.Player{},enemies:map[string]game.EnemyState{},lastChat:map[game.PlayerID]time.Time{},presence:map[game.PlayerID]game.RemotePlayer{}}}
 func (s *testCharacterStore) CreateCharacter(_ context.Context,accountID string,player game.Player)error{
 	if s.players[accountID]==nil{s.players[accountID]=map[game.PlayerID]game.Player{}}
 	if _,ok:=s.players[accountID][player.ID];ok{return game.ErrPlayerAlreadyExists}
@@ -594,4 +594,46 @@ func TestReadinessSeparatesLivenessFromDependencyHealth(t *testing.T) {
 	stillLive:=httptest.NewRecorder()
 	handler.ServeHTTP(stillLive,httptest.NewRequest(http.MethodGet,"/healthz",nil))
 	if stillLive.Code!=http.StatusOK{t.Fatalf("liveness should stay healthy during DB outage: status=%d",stillLive.Code)}
+}
+
+func (s *testCharacterStore) HeartbeatPresenceForAccount(_ context.Context,accountID string,id game.PlayerID,now time.Time)error {
+	player,ok:=s.players[accountID][id];if !ok{return game.ErrPlayerNotFound}
+	s.presence[id]=game.RemotePlayer{CharacterID:id,Name:player.Name,ZoneID:player.Position.ZoneID,X:player.Position.X,Z:player.Position.Z,LastSeenAt:now}
+	return nil
+}
+func (s *testCharacterStore) ListZonePresenceForAccount(_ context.Context,accountID string,id game.PlayerID,now time.Time)([]game.RemotePlayer,error) {
+	player,ok:=s.players[accountID][id];if !ok{return nil,game.ErrPlayerNotFound}
+	result:=make([]game.RemotePlayer,0)
+	for otherID,remote:=range s.presence{if otherID!=id&&remote.ZoneID==player.Position.ZoneID&&now.Sub(remote.LastSeenAt)<=game.PresenceLease{result=append(result,remote)}}
+	return result,nil
+}
+
+func TestAuthenticatedZonePresenceHeartbeatAndRoster(t *testing.T) {
+	t.Setenv("RS_GALAXIES_ENV","development")
+	characters:=newTestCharacterStore()
+	handler:=NewWithAccounts(game.NewMemoryPlayerRepository(),newTestAccountStore(),characters).Routes()
+	first:=registerTestAccount(t,handler,"presence-one@example.test")
+	second:=registerTestAccount(t,handler,"presence-two@example.test")
+	firstPlayer:=createTestCharacter(t,handler,first.AccessToken,"PresenceOne")
+	secondPlayer:=createTestCharacter(t,handler,second.AccessToken,"PresenceTwo")
+	heartbeat:=httptest.NewRecorder()
+	heartbeatRequest:=httptest.NewRequest(http.MethodPost,"/api/v1/account/characters/"+string(secondPlayer.ID)+"/presence/heartbeat",nil)
+	heartbeatRequest.Header.Set("Authorization","Bearer "+second.AccessToken)
+	handler.ServeHTTP(heartbeat,heartbeatRequest)
+	if heartbeat.Code!=http.StatusNoContent{t.Fatalf("presence heartbeat status=%d body=%s",heartbeat.Code,heartbeat.Body.String())}
+	roster:=httptest.NewRecorder()
+	rosterRequest:=httptest.NewRequest(http.MethodGet,"/api/v1/account/characters/"+string(firstPlayer.ID)+"/presence",nil)
+	rosterRequest.Header.Set("Authorization","Bearer "+first.AccessToken)
+	handler.ServeHTTP(roster,rosterRequest)
+	if roster.Code!=http.StatusOK{t.Fatalf("presence roster status=%d body=%s",roster.Code,roster.Body.String())}
+	var payload struct{Players []game.RemotePlayer `json:"players"`;LeaseSeconds int `json:"leaseSeconds"`}
+	if err:=json.Unmarshal(roster.Body.Bytes(),&payload);err!=nil{t.Fatal(err)}
+	if len(payload.Players)!=1||payload.Players[0].CharacterID!=secondPlayer.ID||payload.Players[0].Name!="PresenceTwo"{t.Fatalf("presence roster=%+v",payload)}
+	if payload.LeaseSeconds!=int(game.PresenceLease.Seconds()){t.Fatalf("lease seconds=%d",payload.LeaseSeconds)}
+	if strings.Contains(roster.Body.String(),first.Account.ID)||strings.Contains(roster.Body.String(),second.Account.ID){t.Fatal("presence roster leaked account identifiers")}
+	foreign:=httptest.NewRecorder()
+	foreignRequest:=httptest.NewRequest(http.MethodGet,"/api/v1/account/characters/"+string(secondPlayer.ID)+"/presence",nil)
+	foreignRequest.Header.Set("Authorization","Bearer "+first.AccessToken)
+	handler.ServeHTTP(foreign,foreignRequest)
+	if foreign.Code!=http.StatusNotFound{t.Fatalf("foreign presence status=%d body=%s",foreign.Code,foreign.Body.String())}
 }
