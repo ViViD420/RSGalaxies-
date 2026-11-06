@@ -72,11 +72,6 @@ var presence_heartbeat_pending := false
 var presence_roster_pending := false
 var remote_player_nodes: Dictionary = {}
 var remote_player_targets: Dictionary = {}
-var presence_request: HTTPRequest
-var presence_timer: Timer
-var presence_pending := false
-var presence_stage := "heartbeat"
-var remote_player_nodes: Dictionary = {}
 const game_max_health := 100
 var market_catalog: Array = []
 var enemy_catalog: Array = []
@@ -589,8 +584,7 @@ func _on_api_request_completed(result: int, response_code: int, _headers: Packed
 			skills_button.visible = false
 			if character_panel != null:
 				character_panel.visible = false
-			_stop_presence_sync()
-			_stop_chat()
+					_stop_chat()
 			_stop_skills_request()
 			if skills_panel != null:
 				skills_panel.visible = false
@@ -1147,7 +1141,6 @@ func _activate_character(character_data: Dictionary) -> void:
 	bag_button.visible = true
 	skills_button.visible = true
 	_start_movement_sync()
-	_start_presence_sync()
 	_start_gathering()
 	_start_chat()
 	_start_presence()
@@ -2141,119 +2134,3 @@ func _submit_bank_transfer(deposit: bool) -> void:
 		inventory_status_label.text = "Transferring " + str(quantity) + " × " + item_id.replace("_", " ") + "..."
 	else:
 		inventory_status_label.text = "Could not send bank request."
-
-func _start_presence_sync() -> void:
-	_stop_presence_sync()
-	presence_request = HTTPRequest.new()
-	add_child(presence_request)
-	presence_request.request_completed.connect(_on_presence_completed)
-	presence_timer = Timer.new()
-	presence_timer.wait_time = 5.0
-	presence_timer.timeout.connect(_poll_zone_presence)
-	add_child(presence_timer)
-	presence_timer.start()
-	_poll_zone_presence()
-
-func _stop_presence_sync() -> void:
-	if presence_timer != null:
-		presence_timer.stop()
-		presence_timer.queue_free()
-		presence_timer = null
-	if presence_request != null:
-		if presence_request.get_http_client_status() != HTTPClient.STATUS_DISCONNECTED:
-			presence_request.cancel_request()
-		presence_request.queue_free()
-		presence_request = null
-	presence_pending = false
-	for remote in remote_player_nodes.values():
-		if is_instance_valid(remote):
-			remote.queue_free()
-	remote_player_nodes.clear()
-
-func _poll_zone_presence() -> void:
-	if player_id.is_empty() or presence_pending or presence_request == null:
-		return
-	presence_stage = "heartbeat"
-	var error := presence_request.request(
-		api_base_url + "/api/v1/account/characters/" + player_id + "/presence/heartbeat",
-		_api_headers(),
-		HTTPClient.METHOD_POST,
-		""
-	)
-	if error == OK:
-		presence_pending = true
-
-func _on_presence_completed(result: int, response_code: int, _headers: PackedStringArray, body: PackedByteArray) -> void:
-	if result != HTTPRequest.RESULT_SUCCESS:
-		presence_pending = false
-		return
-	if response_code == 401:
-		presence_pending = false
-		_expire_session()
-		return
-	if presence_stage == "heartbeat":
-		if response_code != 204:
-			presence_pending = false
-			return
-		presence_stage = "roster"
-		var error := presence_request.request(
-			api_base_url + "/api/v1/account/characters/" + player_id + "/presence",
-			_api_headers(),
-			HTTPClient.METHOD_GET
-		)
-		if error != OK:
-			presence_pending = false
-		return
-	presence_pending = false
-	if response_code != 200:
-		return
-	var payload: Variant = JSON.parse_string(body.get_string_from_utf8())
-	if not payload is Dictionary:
-		return
-	var players: Variant = payload.get("players", [])
-	if players is Array:
-		_render_remote_players(players)
-
-func _render_remote_players(players: Array) -> void:
-	var visible_ids: Dictionary = {}
-	for entry in players:
-		if not entry is Dictionary:
-			continue
-		var remote_id := str(entry.get("characterId", ""))
-		if remote_id.is_empty() or remote_id == player_id:
-			continue
-		visible_ids[remote_id] = true
-		var remote: Node3D = remote_player_nodes.get(remote_id)
-		if not is_instance_valid(remote):
-			remote = _create_remote_player_visual(str(entry.get("name", "Wayfarer")))
-			remote_player_nodes[remote_id] = remote
-		var target := Vector3(float(entry.get("x", 0.0)), 0.0, float(entry.get("z", 0.0)))
-		remote.position = remote.position.lerp(target, 0.45)
-	for remote_id in remote_player_nodes.keys():
-		if not visible_ids.has(remote_id):
-			var stale: Node3D = remote_player_nodes[remote_id]
-			if is_instance_valid(stale):
-				stale.queue_free()
-			remote_player_nodes.erase(remote_id)
-
-func _create_remote_player_visual(character_name: String) -> Node3D:
-	var remote := Node3D.new()
-	remote.name = "Remote_" + character_name.validate_node_name()
-	var body := MeshInstance3D.new()
-	var capsule := CapsuleMesh.new()
-	capsule.radius = 0.34
-	capsule.height = 1.7
-	body.mesh = capsule
-	body.position.y = 0.85
-	var material := StandardMaterial3D.new()
-	material.albedo_color = Color(0.24, 0.48, 0.78)
-	body.material_override = material
-	remote.add_child(body)
-	var label := Label3D.new()
-	label.text = character_name
-	label.position.y = 2.0
-	label.billboard = BaseMaterial3D.BILLBOARD_ENABLED
-	label.font_size = 28
-	remote.add_child(label)
-	add_child(remote)
-	return remote
