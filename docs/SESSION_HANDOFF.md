@@ -23,9 +23,9 @@ An original sandbox MMORPG combining long-form skill progression and item gamepl
 - Starter zone, spawn point, server-time movement validation and world bounds.
 - Tree and stone gathering nodes with range checks, charges, respawn and atomic inventory/XP rewards.
 - Starter workbench and basic plank recipe; crafting validates range, level, ingredients and stack capacity.
-- Player inventory, 100-slot bank storage and coin wallet. New characters start with 100 coins.
+- Player inventory, 100-slot bank storage, coin wallet and persistent equipment slots. New characters start with 100 coins.
 - Starter merchant catalog with server-defined buy/sell prices. Buy/sell operations update coins and inventory atomically.
-- PostgreSQL migrations 0001–0004 cover player state, gathering, accounts/sessions, character ownership, bank storage and currency.
+- PostgreSQL migrations 0001–0005 cover player state, gathering, accounts/sessions, character ownership, bank storage, currency and equipment.
 - PostgreSQL transactions and row locks protect XP, movement, gathering, crafting, bank transfers and market trades.
 - Account authentication: PBKDF2-HMAC-SHA-256 with 600,000 iterations and random salts; opaque 256-bit bearer tokens stored only as SHA-256 digests; fixed 30-day expiry; logout revocation; last-used updates; maximum 10 active sessions per account; old-session pruning; dummy PBKDF2 work for unknown/disabled login accounts.
 - Account-owned character CRUD and gameplay operations use account ownership in SQL predicates and row-locked transactions.
@@ -38,8 +38,8 @@ An original sandbox MMORPG combining long-form skill progression and item gamepl
 
 - Godot 4.3 third-person 3D prototype with keyboard, mouse, touch movement and jump.
 - Account login/registration, multi-character selection and additional character creation.
-- Bearer-authenticated movement, gathering, crafting, bank transfers and merchant buy/sell panel.
-- Starter bank chest and merchant stall in the test world; coin, bag and bank counts appear in the HUD.
+- Bearer-authenticated movement, gathering, crafting, bank transfers, merchant buy/sell panel and equipment panel.
+- Starter bank chest and merchant stall in the test world; coin balance, attack/defense bonuses, bag and bank counts appear in the HUD.
 - Market panel loads item names and prices from the server catalog.
 - Sign-out and session-expiry recovery. Access tokens are held in memory only; the user signs in again after restarting the client.
 - This remains a small gameplay prototype, not a full multiplayer client or final art direction.
@@ -49,8 +49,8 @@ An original sandbox MMORPG combining long-form skill progression and item gamepl
 - .devcontainer/ provides a GitHub Codespaces Go/Godot/PostgreSQL workspace with separate development and integration-test databases.
 - Codespaces setup installs Godot 4.3 and export templates, runs race-enabled Go tests, go vet, headless project import and Web export.
 - .env.example contains local-only sample settings; docs/API.md, docs/ACCOUNT_AUTH_DESIGN.md and docs/DEPLOYMENT.md describe routes, security boundaries and deployment.
-- Go server CI runs race-enabled unit/integration tests against PostgreSQL and go vet. Server runs #161 and #162 passed; run #163 is validating the latest currency-overflow test.
-- Godot client CI uses the official Godot 4.3 release and export templates. Client runs #40 and #41 passed, including market catalog loading and character-panel lifecycle updates.
+- Go server CI runs race-enabled unit/integration tests against PostgreSQL and go vet. Server run #179 passed the market catalog and account/economy suite. Run #181 is validating the latest equipment slot test correction.
+- Godot client CI uses the official Godot 4.3 release and export templates. Client runs #42–#44 passed, including market catalog loading, character selection, merchant panel, equipment panel and gear request flows.
 
 ## Production safeguards and remaining launch gates
 
@@ -68,7 +68,7 @@ An original sandbox MMORPG combining long-form skill progression and item gamepl
 1. Finish validating the latest Go run #163; fix any new failure before extending the economy.
 2. Add merchant/bank usability improvements and a real-phone pass on the Godot Web client.
 3. Add email verification, password recovery, MFA, distributed abuse controls and administrative account operations before enabling public registration.
-4. Add equipment slots, item instances, currency sinks and player-to-player trade with escrow/transaction safety.
+4. Add equipment visuals, item instances/durability, combat calculations, currency sinks and player-to-player trade with escrow/transaction safety.
 5. Expand professions, gathering tiers, recipes, NPCs, combat, housing and settlements.
 6. Plan remote-player replication and scalable world/zone ownership.
 
