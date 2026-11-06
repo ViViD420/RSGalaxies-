@@ -126,8 +126,8 @@ func TestPostgresMigrationsAreIdempotent(t *testing.T) {
  ctx:=context.Background()
  if err:=Migrate(ctx,db);err!=nil{t.Fatalf("second migration: %v",err)}
  var count int
- if err:=db.QueryRowContext(ctx,"SELECT COUNT(*) FROM schema_migrations WHERE version IN (1,2,3,4,5,6,7,8)").Scan(&count);err!=nil{t.Fatal(err)}
- if count!=8{t.Fatalf("migration versions applied=%d want=8",count)}
+ if err:=db.QueryRowContext(ctx,"SELECT COUNT(*) FROM schema_migrations WHERE version IN (1,2,3,4,5,6,7,8,9)").Scan(&count);err!=nil{t.Fatal(err)}
+ if count!=9{t.Fatalf("migration versions applied=%d want=9",count)}
 }
 
 func TestPostgresOwnedGatheringLocksSharedNodeAndChecksOwner(t *testing.T) {
