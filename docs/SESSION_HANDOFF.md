@@ -39,8 +39,8 @@ An original sandbox MMORPG combining long-form skill progression and item gamepl
 - Godot 4.3 third-person 3D prototype with keyboard, mouse, touch movement and jump.
 - Account login/registration, multi-character selection and additional character creation.
 - Server-driven enemy visuals, combat attacks, damage/loot/XP feedback, health HUD, Rest recovery/respawn and a polling local-zone chat panel.
-- Bearer-authenticated movement, gathering, crafting, bank transfers, merchant buy/sell panel and equipment panel.
-- Starter bank chest and merchant stall in the test world; coin balance, attack/defense bonuses, bag and bank counts appear in the HUD.
+- Bearer-authenticated movement, gathering, crafting, bank transfers, merchant buy/sell panel, equipment panel and full inventory/bank contents panel.
+- Starter bank chest, merchant stall, copper vein, forge and enemy spawns in the test world; coin balance, health, attack/defense bonuses, bag and bank counts appear in the HUD. Equipped sword/armor pieces have simple client-side visuals.
 - Market panel loads item names and prices from the server catalog.
 - Sign-out and session-expiry recovery. Access tokens are held in memory only; the user signs in again after restarting the client.
 - Combat rules are documented in docs/COMBAT.md; local chat behavior is documented in docs/CHAT.md. This remains a small gameplay prototype, not a full multiplayer client or final art direction.
@@ -49,9 +49,9 @@ An original sandbox MMORPG combining long-form skill progression and item gamepl
 
 - .devcontainer/ provides a GitHub Codespaces Go/Godot/PostgreSQL workspace with separate development and integration-test databases.
 - Codespaces setup installs Godot 4.3 and export templates, runs race-enabled Go tests, go vet, headless project import and Web export.
-- .env.example contains local-only sample settings; docs/API.md, docs/ACCOUNT_AUTH_DESIGN.md and docs/DEPLOYMENT.md describe routes, security boundaries and deployment.
-- Go server CI runs race-enabled unit/integration tests against PostgreSQL and go vet. Server run #187 passed the latest market/equipment/copper data changes with race-enabled Go tests and PostgreSQL integration. Client runs #45–#47 passed, including copper mining and forge interactions.
-- Godot client CI uses the official Godot 4.3 release and export templates. Client run #57 passed, including authenticated combat interactions, enemy catalog visuals, health HUD, rest/respawn controls and the polling zone-chat panel.
+- .env.example contains local-only sample settings; docs/API.md, docs/ACCOUNT_AUTH_DESIGN.md, docs/DEPLOYMENT.md, docs/COMBAT.md and docs/CHAT.md describe routes, security boundaries, deployment and gameplay rules.
+- Go server CI runs race-enabled unit/integration tests against PostgreSQL and go vet. Server run #233 passed the full suite through migration 0007, including persistent local chat, combat, economy, equipment and copper progression.
+- Godot client CI uses the official Godot 4.3 release and export templates. Client run #61 passed with the equipment visuals and full inventory/bank panel. Run #62 is validating bounded chat history.
 
 ## Production safeguards and remaining launch gates
 
@@ -66,7 +66,7 @@ An original sandbox MMORPG combining long-form skill progression and item gamepl
 
 ## Next engineering tasks
 
-1. Validate local chat persistence, zone visibility, per-character cooldown and client polling in PostgreSQL/Godot CI.
+1. Finish validating bounded chat history in Godot CI, then add player-to-player trade with escrow and transaction safety.
 2. Add merchant/bank usability improvements and a real-phone pass on the Godot Web client.
 3. Add email verification, password recovery, MFA, distributed abuse controls and administrative account operations before enabling public registration.
 4. Add equipment visuals, item instances/durability, combat calculations, currency sinks and player-to-player trade with escrow/transaction safety.
