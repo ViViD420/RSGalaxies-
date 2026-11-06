@@ -39,6 +39,7 @@ An original sandbox MMORPG combining long-form skill progression and item gamepl
 - Godot 4.3 third-person 3D prototype with keyboard, mouse, touch movement and jump.
 - Account login/registration, multi-character selection and additional character creation.
 - Server-driven enemy visuals, combat attacks, damage/loot/XP feedback, health HUD, Rest recovery/respawn and a polling local-zone chat panel.
+- Live authenticated skills panel with all ten skills, per-skill XP progress bars and next-level XP remaining; requests are cancelled when characters change or sign out.
 - Bearer-authenticated movement, gathering, crafting, bank transfers, merchant buy/sell panel, equipment panel and full inventory/bank contents panel.
 - Starter bank chest, merchant stall/NPC, copper vein, forge and enemy spawns in the test world; coin balance, health, attack/defense bonuses, bag and bank counts appear in the HUD. Equipped sword/armor pieces have simple client-side visuals.
 - Market panel loads item names and prices from the server catalog.
@@ -51,7 +52,7 @@ An original sandbox MMORPG combining long-form skill progression and item gamepl
 - Codespaces setup installs Godot 4.3 and export templates, runs race-enabled Go tests, go vet, headless project import and Web export.
 - .env.example contains local-only sample settings; docs/API.md, docs/ACCOUNT_AUTH_DESIGN.md, docs/DEPLOYMENT.md, docs/COMBAT.md and docs/CHAT.md describe routes, security boundaries, deployment and gameplay rules.
 - Go server CI runs race-enabled unit/integration tests against PostgreSQL and go vet. Server run #244 passed the full suite, including persistent zone chat, combat, economy, equipment, copper progression and transactional consumable use.
-- Godot client CI uses the official Godot 4.3 release and export templates. Client run #63 passed with consumable use from the Bag panel. Run #64 is validating full bank item selection and run #65 is validating the frontier trader NPC visual.
+- Godot client CI uses the official Godot 4.3 release and export templates. Client run #68 passed, including the trader NPC, full bank item selection, consumable use, character panel lifecycle and live skills panel. Run #71 is validating the latest XP progress-bar rendering.
 
 ## Production safeguards and remaining launch gates
 
@@ -61,15 +62,15 @@ An original sandbox MMORPG combining long-form skill progression and item gamepl
 - Email verification, password reset/recovery, MFA, distributed rate limiting, admin account tools and security/load review remain incomplete.
 - The current in-process auth throttle is only a local safety net; production still needs trusted edge controls.
 - The Godot client does not persist access tokens across launches. Secure platform-specific persistence is a future decision.
-- No remote-player replication, enemy AI/movement, combat animations/abilities, equipment visuals/item instances/durability, housing, settlements, player-to-player trading or large-scale world streaming yet.
+- No remote-player replication, enemy AI/movement, combat animations/abilities, unique equipment instances/durability, housing, settlements, player-to-player trading or large-scale world streaming yet.
 - The account APIs require PostgreSQL. The server's in-memory-only development mode does not register account routes.
 
 ## Next engineering tasks
 
-1. Finish validating bounded chat history in Godot CI, then add player-to-player trade with escrow and transaction safety.
+1. Finish validating the new per-skill XP progress UI in Godot CI, then add player-to-player trade with escrow and transaction safety.
 2. Add merchant/bank usability improvements and a real-phone pass on the Godot Web client.
 3. Add email verification, password recovery, MFA, distributed abuse controls and administrative account operations before enabling public registration.
-4. Add equipment visuals, item instances/durability, combat calculations, currency sinks and player-to-player trade with escrow/transaction safety.
+4. Add unique item instances/durability, combat animations/AI, currency sinks and player-to-player trade with escrow/transaction safety.
 5. Expand professions, gathering tiers, recipes, NPCs, combat, housing and settlements.
 6. Plan remote-player replication and scalable world/zone ownership.
 
