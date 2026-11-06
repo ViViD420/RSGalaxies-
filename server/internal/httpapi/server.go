@@ -872,8 +872,18 @@ func (s *Server) writeTradeError(w http.ResponseWriter,err error) {
 		writeError(w,409,"trade_not_open")
 	case errors.Is(err,game.ErrInvalidTradeOffer):
 		writeError(w,422,"invalid_trade_offer")
-	case errors.Is(err,game.ErrTradeItemEquipped),errors.Is(err,game.ErrTradeSelf),errors.Is(err,game.ErrTradeOutOfRange),errors.Is(err,game.ErrTradeDifferentZone),errors.Is(err,game.ErrTradeParticipantUnavailable),errors.Is(err,game.ErrTradeAlreadyActive):
+	case errors.Is(err,game.ErrTradeItemEquipped):
 		writeError(w,409,"equipped_item_not_tradable")
+	case errors.Is(err,game.ErrTradeSelf):
+		writeError(w,409,"self_trade_not_allowed")
+	case errors.Is(err,game.ErrTradeOutOfRange):
+		writeError(w,409,"trade_partner_out_of_range")
+	case errors.Is(err,game.ErrTradeDifferentZone):
+		writeError(w,409,"trade_partner_in_different_zone")
+	case errors.Is(err,game.ErrTradeParticipantUnavailable):
+		writeError(w,409,"trade_partner_unavailable")
+	case errors.Is(err,game.ErrTradeAlreadyActive):
+		writeError(w,409,"trade_already_active")
 	case errors.Is(err,game.ErrTradeOfferCapacity):
 		writeError(w,409,"trade_offer_capacity")
 	case errors.Is(err,game.ErrInsufficientItems):
