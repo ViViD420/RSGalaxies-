@@ -50,9 +50,10 @@ An original sandbox MMORPG combining long-form skill progression and item gamepl
 
 - Go is the server language. Godot is provisional pending real-phone validation of camera, movement and Web export.
 - PostgreSQL persistence is implemented and used in Codespaces. Standalone local runs fall back to in-memory storage unless RS_GALAXIES_DATABASE_URL is configured.
-- XP award, movement, gathering and crafting shortcuts are development-only. They must not be exposed publicly.
+- All player-specific APIs and XP/movement/gathering/crafting shortcuts are disabled in production until authentication and character ownership are implemented.
+- Production startup fails closed if RS_GALAXIES_DATABASE_URL is missing; PostgreSQL connection and migrations must succeed before the HTTP service starts.
 - Authentication, secure sessions, realtime replication, production operations, NPCs, combat, additional recipes, player trading and production hardening remain incomplete.
-- Code and tests are committed. Recent GitHub Actions runs are being checked; verify the latest run against the current HEAD before claiming CI passes.
+- Code and PostgreSQL integration tests are committed. GitHub Actions runs #74–#76 passed; run #77 (commit 6e9ca12) is validating persisted movement timestamps and remains pending at the last check. Verify the latest run against current HEAD before claiming the newest commit passes.
 
 ## Next engineering tasks
 
