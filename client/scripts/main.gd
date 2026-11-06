@@ -3,13 +3,16 @@ extends Node3D
 const PLAYER_SCENE := preload("res://scenes/player.tscn")
 
 var status_label: Label
+var inventory_label: Label
 var api_request: HTTPRequest
 var movement_request: HTTPRequest
+var gather_request: HTTPRequest
 var movement_timer: Timer
 var player_node: CharacterBody3D
 var player_id := ""
 var api_stage := "health"
 var movement_pending := false
+var gather_pending := false
 var api_base_url := "http://127.0.0.1:8080"
 
 func _ready() -> void:
@@ -18,12 +21,17 @@ func _ready() -> void:
 	_build_hud()
 	_connect_api()
 
+func _process(_delta: float) -> void:
+	if Input.is_action_just_pressed("interact") and not player_id.is_empty() and not gather_pending:
+		_request_gather()
+
 func _setup_input_actions() -> void:
 	_register_key_action("move_forward", KEY_W)
 	_register_key_action("move_back", KEY_S)
 	_register_key_action("move_left", KEY_A)
 	_register_key_action("move_right", KEY_D)
 	_register_key_action("jump", KEY_SPACE)
+	_register_key_action("interact", KEY_E)
 
 func _register_key_action(action_name: String, key: int) -> void:
 	if not InputMap.has_action(action_name):
@@ -68,15 +76,59 @@ func _build_world() -> void:
 	floor_body.add_child(floor_collision)
 	add_child(floor_body)
 
+	_add_tree(Vector3(5.0, 0.0, 0.0))
+	_add_stone_deposit(Vector3(-5.0, 0.0, 0.0))
+
 	player_node = PLAYER_SCENE.instantiate() as CharacterBody3D
 	player_node.position = Vector3(0.0, 0.05, 0.0)
 	add_child(player_node)
+
+func _add_tree(at: Vector3) -> void:
+	var tree := Node3D.new()
+	tree.position = at
+	var trunk := MeshInstance3D.new()
+	var trunk_mesh := CylinderMesh.new()
+	trunk_mesh.top_radius = 0.22
+	trunk_mesh.bottom_radius = 0.35
+	trunk_mesh.height = 2.2
+	trunk.mesh = trunk_mesh
+	trunk.position.y = 1.1
+	var trunk_material := StandardMaterial3D.new()
+	trunk_material.albedo_color = Color(0.25, 0.15, 0.08)
+	trunk.material_override = trunk_material
+	tree.add_child(trunk)
+
+	var canopy := MeshInstance3D.new()
+	var canopy_mesh := SphereMesh.new()
+	canopy_mesh.radius = 1.25
+	canopy_mesh.height = 2.5
+	canopy.mesh = canopy_mesh
+	canopy.position.y = 2.7
+	var canopy_material := StandardMaterial3D.new()
+	canopy_material.albedo_color = Color(0.12, 0.32, 0.16)
+	canopy.material_override = canopy_material
+	tree.add_child(canopy)
+	add_child(tree)
+
+func _add_stone_deposit(at: Vector3) -> void:
+	var rock := MeshInstance3D.new()
+	var rock_mesh := SphereMesh.new()
+	rock_mesh.radius = 1.0
+	rock_mesh.height = 1.5
+	rock.mesh = rock_mesh
+	rock.position = at + Vector3(0.0, 0.55, 0.0)
+	rock.scale = Vector3(1.3, 0.75, 1.0)
+	var material := StandardMaterial3D.new()
+	material.albedo_color = Color(0.34, 0.36, 0.38)
+	material.roughness = 1.0
+	rock.material_override = material
+	add_child(rock)
 
 func _build_hud() -> void:
 	var layer := CanvasLayer.new()
 	var panel := PanelContainer.new()
 	panel.position = Vector2(18, 18)
-	panel.custom_minimum_size = Vector2(360, 90)
+	panel.custom_minimum_size = Vector2(390, 120)
 	layer.add_child(panel)
 
 	var column := VBoxContainer.new()
@@ -87,18 +139,23 @@ func _build_hud() -> void:
 	column.add_child(heading)
 
 	var instructions := Label.new()
-	instructions.text = "WASD / touch pad: move  •  Space / jump: jump  •  Drag / mouse: look"
+	instructions.text = "WASD / touch pad: move  •  E / USE: gather  •  Drag / mouse: look"
 	column.add_child(instructions)
 
 	status_label = Label.new()
 	status_label.text = "Server: connecting..."
 	column.add_child(status_label)
 
+	inventory_label = Label.new()
+	inventory_label.text = "Inventory: empty"
+	column.add_child(inventory_label)
+
 	if DisplayServer.is_touchscreen_available():
 		_add_hold_button(layer, "▲", "move_forward", 95, -230, 165, -160)
 		_add_hold_button(layer, "◀", "move_left", 20, -155, 90, -85)
 		_add_hold_button(layer, "▼", "move_back", 95, -155, 165, -85)
 		_add_hold_button(layer, "▶", "move_right", 170, -155, 240, -85)
+		_add_hold_button(layer, "USE", "interact", -125, -230, -25, -130, true)
 		_add_hold_button(layer, "JUMP", "jump", -125, -120, -25, -25, true)
 
 	add_child(layer)
@@ -165,8 +222,10 @@ func _on_api_request_completed(result: int, response_code: int, _headers: Packed
 		var spawn: Variant = payload.get("position", {})
 		if spawn is Dictionary:
 			_apply_server_position(spawn, true)
-		status_label.text = "Server: connected • character saved in this session"
+		status_label.text = "Server: connected • character ready"
+		_update_inventory(payload.get("inventory", {}))
 		_start_movement_sync()
+		_start_gathering()
 
 func _start_movement_sync() -> void:
 	movement_request = HTTPRequest.new()
@@ -207,8 +266,54 @@ func _on_movement_completed(result: int, response_code: int, _headers: PackedStr
 		_apply_server_position(authoritative_position, response_code != 200)
 	if response_code != 200:
 		status_label.text = "Server: movement corrected by world rules"
-	else:
-		status_label.text = "Server: connected • character synchronized"
+
+func _start_gathering() -> void:
+	gather_request = HTTPRequest.new()
+	add_child(gather_request)
+	gather_request.request_completed.connect(_on_gather_completed)
+
+func _request_gather() -> void:
+	var tree_distance := Vector2(player_node.global_position.x - 5.0, player_node.global_position.z).length()
+	var stone_distance := Vector2(player_node.global_position.x + 5.0, player_node.global_position.z).length()
+	var node_id := "tree-001" if tree_distance <= stone_distance else "stone-001"
+	var nearest_distance := minf(tree_distance, stone_distance)
+	if nearest_distance > 3.0:
+		status_label.text = "Move closer to a tree or stone deposit to gather"
+		return
+	var error := gather_request.request(
+		api_base_url + "/api/v1/players/" + player_id + "/gather/" + node_id,
+		PackedStringArray(),
+		HTTPClient.METHOD_POST,
+		""
+	)
+	if error == OK:
+		gather_pending = true
+
+func _on_gather_completed(result: int, response_code: int, _headers: PackedStringArray, body: PackedByteArray) -> void:
+	gather_pending = false
+	if result != HTTPRequest.RESULT_SUCCESS:
+		status_label.text = "Gathering: server connection lost"
+		return
+	var payload: Variant = JSON.parse_string(body.get_string_from_utf8())
+	if not payload is Dictionary:
+		return
+	if response_code != 200:
+		var error_code := str(payload.get("error", "gathering_failed"))
+		status_label.text = "Gathering: " + error_code.replace("_", " ")
+		return
+	var gathering: Dictionary = payload.get("gathering", {})
+	var player_data: Dictionary = payload.get("player", {})
+	var item_name := "Softwood Log" if gathering.get("itemId") == "softwood_log" else "Rough Stone"
+	status_label.text = "Gathered " + item_name + "  •  +" + str(gathering.get("experience", 0)) + " " + str(gathering.get("skillId", "")) + " XP"
+	_update_inventory(player_data.get("inventory", {}))
+
+func _update_inventory(inventory_data: Variant) -> void:
+	if not inventory_data is Dictionary:
+		return
+	inventory_label.text = "Inventory: Logs %d  •  Stone %d" % [
+		int(inventory_data.get("softwood_log", 0)),
+		int(inventory_data.get("rough_stone", 0))
+	]
 
 func _apply_server_position(position_data: Dictionary, force: bool) -> void:
 	var target := Vector3(
