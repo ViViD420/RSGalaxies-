@@ -11,10 +11,10 @@
 ## Milestone 2: Character and world slice
 - [x] Basic character identity and in-memory development storage.
 - [ ] Durable character persistence and migrations.
-- [ ] World zones, coordinates, movement validation and spawn points.
+- [x] First world zone, coordinates, spawn point and server-validated movement prototype.
 - [ ] Interactable objects and NPC definitions.
 - [ ] Session lifecycle and basic presence.
-- [ ] Client displays authoritative character state.
+- [ ] Client displays fully authoritative character state (current movement sync is development-only).
 
 ## Milestone 3: Skills and progression
 - [x] Data-driven starting skill definitions and XP curve prototype.
