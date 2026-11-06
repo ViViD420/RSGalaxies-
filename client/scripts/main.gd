@@ -513,6 +513,8 @@ func _on_api_request_completed(result: int, response_code: int, _headers: Packed
 			_stop_chat()
 			if market_panel != null:
 				market_panel.visible = false
+			if inventory_panel != null:
+				inventory_panel.visible = false
 			status_label.text = "Server: signed out"
 			auth_status_label.text = "You have been signed out."
 		else:
