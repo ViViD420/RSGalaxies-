@@ -20,13 +20,19 @@
     }
   },
   "forwardPorts": [
+    8000,
     8080
   ],
   "portsAttributes": {
+    "8000": {
+      "label": "RS Galaxies browser prototype",
+      "onAutoForward": "openBrowser"
+    },
     "8080": {
       "label": "RS Galaxies development API",
-      "onAutoForward": "notify"
+      "onAutoForward": "silent"
     }
   },
-  "postCreateCommand": "bash .devcontainer/setup.sh"
+  "postCreateCommand": "bash .devcontainer/setup.sh",
+  "postStartCommand": "bash .devcontainer/start.sh"
 }
