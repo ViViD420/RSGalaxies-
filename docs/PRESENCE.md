@@ -11,7 +11,7 @@
 ## Persistence and concurrency
 
 - Migration 0008 creates the zone_presence table and indexes by active zone and account.
-- Heartbeat locks the owned character row and updates its presence in the same transaction.
+- Heartbeat locks the owned character row and updates its presence in the same transaction. Repeated writes are coalesced to at most one persisted update per character per second.
 - Presence is one row per character. A reconnect refreshes the same row instead of creating duplicate sessions or avatars.
 - Roster lookup verifies ownership of the requesting character and never returns account IDs, emails, inventory, skills or session details.
 
