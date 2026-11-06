@@ -12,6 +12,13 @@ import (
 	"github.com/ViViD420/RSGalaxies-/server/internal/auth"
 )
 
+func cleanupTestAccounts(db *sql.DB, accountIDs ...string) {
+	for _, accountID := range accountIDs {
+		_, _ = db.ExecContext(context.Background(), "DELETE FROM players WHERE account_id=$1", accountID)
+		_, _ = db.ExecContext(context.Background(), "DELETE FROM accounts WHERE id=$1", accountID)
+	}
+}
+
 func TestPostgresAccountRegistrationLoginAndSessionRevocation(t *testing.T) {
 	db:=integrationDatabase(t)
 	repo:=NewAccountRepository(db)
@@ -21,7 +28,7 @@ func TestPostgresAccountRegistrationLoginAndSessionRevocation(t *testing.T) {
 	account,token,err:=repo.Register(ctx,email,"correct-horse-battery-staple",now)
 	if err!=nil{t.Fatalf("register: %v",err)}
 	if account.ID=="" || account.Email!=email || token==""{t.Fatalf("invalid registration result: %+v",account)}
-	t.Cleanup(func(){_,_=db.ExecContext(context.Background(),"DELETE FROM accounts WHERE id=$1",account.ID)})
+	t.Cleanup(func(){cleanupTestAccounts(db,account.ID)})
 
 	authenticated,err:=repo.AuthenticateSession(ctx,token,now.Add(time.Minute))
 	if err!=nil || authenticated.ID!=account.ID{t.Fatalf("authenticate registration session: account=%+v err=%v",authenticated,err)}
@@ -56,7 +63,7 @@ func TestPostgresCharactersAreScopedToOwningAccount(t *testing.T) {
 	if err!=nil{t.Fatal(err)}
 	second,_,err:=repo.Register(ctx,fmt.Sprintf("owner-b-%d@example.test",now.UnixNano()),"correct-horse-battery-staple",now)
 	if err!=nil{t.Fatal(err)}
-	t.Cleanup(func(){_,_=db.ExecContext(context.Background(),"DELETE FROM accounts WHERE id IN ($1,$2)",first.ID,second.ID)})
+	t.Cleanup(func(){cleanupTestAccounts(db,first.ID,second.ID)})
 	player,err:=game.NewPlayer(game.PlayerID(fmt.Sprintf("owned-%d",now.UnixNano())),"OwnedWayfarer",now)
 	if err!=nil{t.Fatal(err)}
 	if err:=repo.CreateCharacter(ctx,first.ID,player);err!=nil{t.Fatalf("create character: %v",err)}
