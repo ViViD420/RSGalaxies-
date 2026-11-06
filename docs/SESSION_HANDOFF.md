@@ -43,7 +43,7 @@ An original sandbox MMORPG combining long-form skill progression and item gamepl
 - Starter bank chest and merchant stall in the test world; coin balance, attack/defense bonuses, bag and bank counts appear in the HUD.
 - Market panel loads item names and prices from the server catalog.
 - Sign-out and session-expiry recovery. Access tokens are held in memory only; the user signs in again after restarting the client.
-- This remains a small gameplay prototype, not a full multiplayer client or final art direction.
+- Combat rules are documented in docs/COMBAT.md. This remains a small gameplay prototype, not a full multiplayer client or final art direction.
 
 ### Development environment and CI
 
@@ -51,7 +51,7 @@ An original sandbox MMORPG combining long-form skill progression and item gamepl
 - Codespaces setup installs Godot 4.3 and export templates, runs race-enabled Go tests, go vet, headless project import and Web export.
 - .env.example contains local-only sample settings; docs/API.md, docs/ACCOUNT_AUTH_DESIGN.md and docs/DEPLOYMENT.md describe routes, security boundaries and deployment.
 - Go server CI runs race-enabled unit/integration tests against PostgreSQL and go vet. Server run #187 passed the latest market/equipment/copper data changes with race-enabled Go tests and PostgreSQL integration. Client runs #45–#47 passed, including copper mining and forge interactions.
-- Godot client CI uses the official Godot 4.3 release and export templates. Client runs #42–#44 passed, including market catalog loading, character selection, merchant panel, equipment panel and gear request flows.
+- Godot client CI uses the official Godot 4.3 release and export templates. Client run #55 passed, including authenticated combat interactions, enemy catalog visuals, health HUD and rest/respawn controls.
 
 ## Production safeguards and remaining launch gates
 
