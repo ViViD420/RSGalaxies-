@@ -445,3 +445,30 @@ func TestPostgresTradeInviteAcceptAndAccountPrivacy(t *testing.T) {
 	if finalTarget.Inventory["rough_stone"]!=2||finalTarget.Inventory["softwood_log"]!=2||finalTarget.Coins!=105{t.Fatalf("target settlement=%+v",finalTarget)}
 	if _,err:=repo.ConfirmTradeForAccount(ctx,second.ID,target.ID,trade.ID,updated.Revision,now.Add(10*time.Second));!errors.Is(err,game.ErrTradeNotAccepted){t.Fatalf("repeat confirmation after settlement error=%v",err)}
 }
+
+func TestPostgresExpiredTradeReturnsEscrowExactlyOnce(t *testing.T) {
+	db:=integrationDatabase(t);repo:=NewAccountRepository(db);ctx:=context.Background();now:=time.Now().UTC()
+	first,_,err:=repo.Register(ctx,fmt.Sprintf("trade-expire-a-%d@example.test",now.UnixNano()),"correct-horse-battery-staple",now);if err!=nil{t.Fatal(err)}
+	second,_,err:=repo.Register(ctx,fmt.Sprintf("trade-expire-b-%d@example.test",now.UnixNano()),"correct-horse-battery-staple",now);if err!=nil{t.Fatal(err)}
+	t.Cleanup(func(){cleanupTestAccounts(db,first.ID,second.ID)})
+	initiator,err:=game.NewPlayer(game.PlayerID(fmt.Sprintf("trade-expire-a-%d",now.UnixNano())),"TradeExpireA",now);if err!=nil{t.Fatal(err)}
+	target,err:=game.NewPlayer(game.PlayerID(fmt.Sprintf("trade-expire-b-%d",now.UnixNano())),"TradeExpireB",now);if err!=nil{t.Fatal(err)}
+	initiator.Inventory["softwood_log"]=4
+	if err:=repo.CreateCharacter(ctx,first.ID,initiator);err!=nil{t.Fatal(err)}
+	if err:=repo.CreateCharacter(ctx,second.ID,target);err!=nil{t.Fatal(err)}
+	if err:=repo.HeartbeatPresenceForAccount(ctx,second.ID,target.ID,now);err!=nil{t.Fatal(err)}
+	trade,err:=repo.CreateTradeForAccount(ctx,first.ID,initiator.ID,target.ID,game.TradeOffer{Items:map[string]int{"softwood_log":2},Coins:25},now)
+	if err!=nil{t.Fatalf("create escrow trade: %v",err)}
+	reserved,err:=repo.GetCharacter(ctx,first.ID,initiator.ID);if err!=nil{t.Fatal(err)}
+	if reserved.Inventory["softwood_log"]!=2||reserved.Coins!=game.StartingCoins-25{t.Fatalf("assets not escrowed: %+v",reserved)}
+	count,err:=repo.ExpireTrades(ctx,now.Add(game.TradeLifetime+time.Second),50)
+	if err!=nil||count!=1{t.Fatalf("expire trades count=%d err=%v",count,err)}
+	expired,err:=repo.GetTradeForAccount(ctx,first.ID,trade.ID)
+	if err!=nil||expired.Status!=game.TradeStatusExpired{t.Fatalf("expired trade snapshot=%+v err=%v",expired,err)}
+	restored,err:=repo.GetCharacter(ctx,first.ID,initiator.ID);if err!=nil{t.Fatal(err)}
+	if restored.Inventory["softwood_log"]!=4||restored.Coins!=game.StartingCoins{t.Fatalf("expired escrow not restored: %+v",restored)}
+	count,err=repo.ExpireTrades(ctx,now.Add(game.TradeLifetime+2*time.Second),50)
+	if err!=nil||count!=0{t.Fatalf("repeat expiry count=%d err=%v",count,err)}
+	stillRestored,err:=repo.GetCharacter(ctx,first.ID,initiator.ID);if err!=nil{t.Fatal(err)}
+	if stillRestored.Inventory["softwood_log"]!=4||stillRestored.Coins!=game.StartingCoins{t.Fatalf("escrow was restored more than once: %+v",stillRestored)}
+}
