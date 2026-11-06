@@ -534,7 +534,7 @@ func readTradeSnapshot(ctx context.Context,q tradeQueryer,accountID,tradeID stri
 	for rows.Next(){
 		var participant game.TradeParticipant
 		var confirmed sql.NullInt64
-		if err:=rows.Scan(&participant.CharacterID,&participant.Name,&participant.Role,&confirmed,&participant.Offer.Coins);err!=nil{return game.TradeSnapshot{},fmt.Errorf("scan trade participant: %w",err)}
+		if err:=rows.Scan(&participant.CharacterID,&participant.CharacterName,&participant.Role,&confirmed,&participant.Offer.Coins);err!=nil{return game.TradeSnapshot{},fmt.Errorf("scan trade participant: %w",err)}
 		participant.Offer.Items=make(map[string]int)
 		participant.Confirmed=confirmed.Valid&&confirmed.Int64==snapshot.Revision
 		snapshot.Participants=append(snapshot.Participants,participant)
