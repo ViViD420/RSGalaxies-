@@ -49,10 +49,13 @@ type CraftingResult struct {
 
 var craftingStations = []CraftingStationDefinition{
 	{ID: "frontier-workbench", Name: "Frontier Workbench", Position: WorldPosition{ZoneID: DefaultWorldZoneID, X: 0, Z: 4}, InteractionRange: 3},
+	{ID: "frontier-forge", Name: "Frontier Forge", Position: WorldPosition{ZoneID: DefaultWorldZoneID, X: 0, Z: 8}, InteractionRange: 3},
 }
 
 var craftingRecipes = []CraftingRecipeDefinition{
 	{ID: "basic-plank", Name: "Basic Wooden Plank", SkillID: "crafting", RequiredLevel: 1, StationID: "frontier-workbench", Ingredients: []ItemQuantity{{ItemID: "softwood_log", Quantity: 2}}, Outputs: []ItemQuantity{{ItemID: "wooden_plank", Quantity: 1}}, Experience: 30},
+	{ID: "copper-bar", Name: "Smelt Copper Bar", SkillID: "smithing", RequiredLevel: 1, StationID: "frontier-forge", Ingredients: []ItemQuantity{{ItemID: "copper_ore", Quantity: 2}}, Outputs: []ItemQuantity{{ItemID: "copper_bar", Quantity: 1}}, Experience: 35},
+	{ID: "copper-sword", Name: "Forge Training Sword", SkillID: "smithing", RequiredLevel: 1, StationID: "frontier-forge", Ingredients: []ItemQuantity{{ItemID: "copper_bar", Quantity: 3}, {ItemID: "wooden_plank", Quantity: 1}}, Outputs: []ItemQuantity{{ItemID: "training_sword", Quantity: 1}}, Experience: 60},
 }
 
 func CraftingStations() []CraftingStationDefinition {
