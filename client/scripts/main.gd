@@ -1173,7 +1173,6 @@ func _create_account_character(character_name: String) -> void:
 
 
 func _expire_session() -> void:
-	_stop_presence_sync()
 	_stop_chat()
 	_stop_skills_request()
 	auth_token = ""
@@ -1202,7 +1201,6 @@ func _expire_session() -> void:
 	auth_status_label.text = "Your session expired. Please sign in again."
 
 func _show_character_selection(characters: Array) -> void:
-	_stop_presence_sync()
 	_stop_chat()
 	_stop_skills_request()
 	if market_panel != null:
