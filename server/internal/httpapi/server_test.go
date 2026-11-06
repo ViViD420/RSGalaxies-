@@ -807,6 +807,10 @@ func TestAuthenticatedTradeInvitationAcceptanceAndPrivacy(t *testing.T) {
 	heartbeat:=httptest.NewRecorder();heartbeatRequest:=httptest.NewRequest(http.MethodPost,"/api/v1/account/characters/"+string(second.ID)+"/presence/heartbeat",nil)
 	heartbeatRequest.Header.Set("Authorization","Bearer "+secondToken);handler.ServeHTTP(heartbeat,heartbeatRequest)
 	if heartbeat.Code!=http.StatusNoContent{t.Fatalf("target heartbeat status=%d body=%s",heartbeat.Code,heartbeat.Body.String())}
+	probe := newTestCharacterStore()
+	probe.players = characters.players
+	probe.presence = characters.presence
+	if _,err:=probe.CreateTradeForAccount(context.Background(),"account-trade-first@example.test",first.ID,second.ID,game.TradeOffer{Items:map[string]int{}},time.Now());err!=nil{t.Fatalf("trade-store preflight failed: %v; stored accounts=%v",err,func()[]string{keys:=make([]string,0,len(characters.players));for key:=range characters.players{keys=append(keys,key)};return keys}())}
 	invite:=httptest.NewRecorder();inviteRequest:=httptest.NewRequest(http.MethodPost,"/api/v1/account/characters/"+string(first.ID)+"/trades/invite/"+string(second.ID),bytes.NewBufferString(`{"offer":{"items":{},"coins":0}}`))
 	inviteRequest.Header.Set("Authorization","Bearer "+firstToken);handler.ServeHTTP(invite,inviteRequest)
 	if invite.Code!=http.StatusCreated{t.Fatalf("invite status=%d body=%s",invite.Code,invite.Body.String())}
