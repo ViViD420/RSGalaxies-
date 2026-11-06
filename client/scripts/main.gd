@@ -826,6 +826,7 @@ func _on_gather_completed(result: int, response_code: int, _headers: PackedStrin
 			if movement_timer != null:
 				movement_timer.stop()
 		status_label.text = "Combat: " + combat_message
+		_refresh_skills_panel()
 		return
 	if interaction_type == "use_item":
 		var item_id := str(payload.get("itemId", "minor_healing_potion"))
@@ -881,6 +882,7 @@ func _on_gather_completed(result: int, response_code: int, _headers: PackedStrin
 				item_name = str(item.get("name", item_name))
 		status_label.text = "Gathered " + item_name + " • +" + str(gathering.get("experience", 0)) + " " + str(gathering.get("skillId", "")) + " XP"
 	_update_inventory(player_data.get("inventory", {}), player_data.get("bank", {}), player_data.get("coins", current_coins), player_data.get("equipment", {}), player_data.get("health", current_health))
+	_refresh_skills_panel()
 
 func _update_inventory(inventory_data: Variant, bank_data: Variant = {}, coins_data: Variant = null, equipment_data: Variant = {}, health_data: Variant = null) -> void:
 	if not inventory_data is Dictionary:
@@ -1062,6 +1064,7 @@ func _create_account_character(character_name: String) -> void:
 
 func _expire_session() -> void:
 	_stop_chat()
+	_stop_skills_request()
 	auth_token = ""
 	player_id = ""
 	movement_pending = false
@@ -1089,6 +1092,7 @@ func _expire_session() -> void:
 
 func _show_character_selection(characters: Array) -> void:
 	_stop_chat()
+	_stop_skills_request()
 	if market_panel != null:
 		market_panel.visible = false
 	if skills_panel != null:
@@ -1153,6 +1157,8 @@ func _show_character_selection(characters: Array) -> void:
 
 
 func _show_market_panel() -> void:
+	if skills_panel != null:
+		skills_panel.visible = false
 	if inventory_panel != null:
 		inventory_panel.visible = false
 	if equipment_panel != null:
@@ -1241,6 +1247,8 @@ func _submit_market_trade(buy: bool) -> void:
 
 
 func _show_equipment_panel(message: String = "") -> void:
+	if skills_panel != null:
+		skills_panel.visible = false
 	if market_panel != null:
 		market_panel.visible = false
 	if inventory_panel != null:
@@ -1500,6 +1508,8 @@ func _on_chat_send_completed(result: int, response_code: int, _headers: PackedSt
 
 
 func _show_inventory_panel() -> void:
+	if skills_panel != null:
+		skills_panel.visible = false
 	if market_panel != null:
 		market_panel.visible = false
 	if equipment_panel != null:
@@ -1735,4 +1745,13 @@ func _on_skills_completed(result: int, response_code: int, _headers: PackedStrin
 			skill_label.text = str(skill_id).capitalize() + "  •  Level " + str(progress.get("level", 1)) + "  •  " + str(progress.get("experience", 0)) + " XP"
 			skills_list.add_child(skill_label)
 	skills_status_label.text = str(skills.size()) + " skills • XP is awarded by server actions"
+
+
+func _stop_skills_request() -> void:
+	if skills_request != null:
+		if skills_request.get_http_client_status() != HTTPClient.STATUS_DISCONNECTED:
+			skills_request.cancel_request()
+		skills_request.queue_free()
+		skills_request = null
+	skills_pending = false
 
