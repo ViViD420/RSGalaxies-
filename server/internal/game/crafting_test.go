@@ -53,3 +53,19 @@ func TestCraftingDefinitionsAreDefensive(t *testing.T) {
 		t.Fatal("recipe definitions were mutated through returned slice")
 	}
 }
+
+func TestCopperSmithingRecipesProduceEquipmentMaterials(t *testing.T) {
+ player,err:=NewPlayer("smith","CopperSmith",time.Now());if err!=nil{t.Fatal(err)}
+ player.Position.Z=8
+ player.Inventory["copper_ore"]=2
+ barRecipe,ok:=FindCraftingRecipe("copper-bar");if !ok{t.Fatal("copper bar recipe missing")}
+ forge,ok:=FindCraftingStation("frontier-forge");if !ok{t.Fatal("frontier forge missing")}
+ result,err:=player.Craft(barRecipe,forge,time.Now());if err!=nil{t.Fatalf("smelt copper bar: %v",err)}
+ if result.Experience!=35||player.Inventory["copper_ore"]!=0||player.Inventory["copper_bar"]!=1{t.Fatalf("smelting result=%+v inventory=%v",result,player.Inventory)}
+ player.Inventory["copper_bar"]=3
+ player.Inventory["wooden_plank"]=1
+ swordRecipe,ok:=FindCraftingRecipe("copper-sword");if !ok{t.Fatal("copper sword recipe missing")}
+ sword,err:=player.Craft(swordRecipe,forge,time.Now());if err!=nil{t.Fatalf("forge training sword: %v",err)}
+ if sword.Experience!=60||player.Inventory["copper_bar"]!=0||player.Inventory["wooden_plank"]!=0||player.Inventory["training_sword"]!=1{t.Fatalf("sword crafting result=%+v inventory=%v",sword,player.Inventory)}
+ if player.Skills["smithing"].Experience!=95{t.Fatalf("smithing XP=%d want=95",player.Skills["smithing"].Experience)}
+}
