@@ -154,3 +154,36 @@ func TestPostgresConcurrentBankDepositsDoNotLoseItems(t *testing.T) {
  persisted,err:=repo.GetCharacter(ctx,account.ID,player.ID);if err!=nil{t.Fatal(err)}
  if persisted.Inventory["softwood_log"]!=0||persisted.Bank["softwood_log"]!=10{t.Fatalf("concurrent transfer lost updates: inventory=%v bank=%v",persisted.Inventory,persisted.Bank)}
 }
+
+func TestPostgresOwnedCopperMiningPersistsNodeAndRewards(t *testing.T) {
+ db:=integrationDatabase(t);repo:=NewAccountRepository(db);ctx:=context.Background();now:=time.Now().UTC()
+ account,_,err:=repo.Register(ctx,fmt.Sprintf("copper-miner-%d@example.test",now.UnixNano()),"correct-horse-battery-staple",now);if err!=nil{t.Fatal(err)}
+ t.Cleanup(func(){_,_=db.ExecContext(context.Background(),"DELETE FROM accounts WHERE id=$1",account.ID);_,_=db.ExecContext(context.Background(),"DELETE FROM gathering_node_state WHERE node_id=$1","copper-001")})
+ _,_=db.ExecContext(ctx,"DELETE FROM gathering_node_state WHERE node_id=$1","copper-001")
+ player,err:=game.NewPlayer(game.PlayerID(fmt.Sprintf("copper-miner-char-%d",now.UnixNano())),"CopperMiner",now);if err!=nil{t.Fatal(err)}
+ player.Position.Z=-5
+ if err:=repo.CreateCharacter(ctx,account.ID,player);err!=nil{t.Fatal(err)}
+ for i:=1;i<=2;i++{gathered,result,err:=repo.GatherForAccount(ctx,account.ID,player.ID,"copper-001",now.Add(time.Duration(i)*time.Second));if err!=nil{t.Fatalf("copper gather %d: %v",i,err)};if result.ItemID!="copper_ore"||gathered.Inventory["copper_ore"]!=i{t.Fatalf("copper gather %d result=%+v player=%+v",i,result,gathered)}}
+ persisted,err:=repo.GetCharacter(ctx,account.ID,player.ID);if err!=nil{t.Fatal(err)}
+ if persisted.Inventory["copper_ore"]!=2||persisted.Skills["mining"].Experience!=60{t.Fatalf("copper rewards not persisted: %+v",persisted)}
+ var charges int;var initialized bool
+ if err:=db.QueryRowContext(ctx,"SELECT charges,initialized FROM gathering_node_state WHERE node_id=$1","copper-001").Scan(&charges,&initialized);err!=nil{t.Fatal(err)}
+ if !initialized||charges!=0{t.Fatalf("copper node state initialized=%v charges=%d",initialized,charges)}
+}
+
+func TestPostgresOwnedCopperSmithingPersistsRecipes(t *testing.T) {
+ db:=integrationDatabase(t);repo:=NewAccountRepository(db);ctx:=context.Background();now:=time.Now().UTC()
+ account,_,err:=repo.Register(ctx,fmt.Sprintf("copper-smith-%d@example.test",now.UnixNano()),"correct-horse-battery-staple",now);if err!=nil{t.Fatal(err)}
+ t.Cleanup(func(){_,_=db.ExecContext(context.Background(),"DELETE FROM accounts WHERE id=$1",account.ID)})
+ player,err:=game.NewPlayer(game.PlayerID(fmt.Sprintf("copper-smith-char-%d",now.UnixNano())),"CopperSmith",now);if err!=nil{t.Fatal(err)}
+ player.Position.Z=8;player.Inventory["copper_ore"]=2
+ if err:=repo.CreateCharacter(ctx,account.ID,player);err!=nil{t.Fatal(err)}
+ smelted,_,err:=repo.CraftForAccount(ctx,account.ID,player.ID,"copper-bar",now.Add(time.Second));if err!=nil{t.Fatalf("smelt copper: %v",err)}
+ if smelted.Inventory["copper_ore"]!=0||smelted.Inventory["copper_bar"]!=1||smelted.Skills["smithing"].Experience!=35{t.Fatalf("smelting state=%+v",smelted)}
+ smelted.Inventory["copper_bar"]=3;smelted.Inventory["wooden_plank"]=1
+ // Seed the additional recipe inputs as an explicit test fixture.
+ if _,err:=db.ExecContext(ctx,"UPDATE players SET inventory=$3::jsonb WHERE account_id=$1 AND id=$2",account.ID,string(player.ID),`{"copper_bar":3,"wooden_plank":1}`);err!=nil{t.Fatal(err)}
+ forged,_,err:=repo.CraftForAccount(ctx,account.ID,player.ID,"copper-sword",now.Add(2*time.Second));if err!=nil{t.Fatalf("forge training sword: %v",err)}
+ persisted,err:=repo.GetCharacter(ctx,account.ID,player.ID);if err!=nil{t.Fatal(err)}
+ if forged.Inventory["training_sword"]!=1||persisted.Inventory["training_sword"]!=1||persisted.Skills["smithing"].Experience!=95{t.Fatalf("forged sword state=%+v persisted=%+v",forged,persisted)}
+}
