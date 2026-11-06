@@ -5,6 +5,7 @@ import (
 	"database/sql"
 	"errors"
 	"fmt"
+	"math"
 	"testing"
 	"sync"
 	"time"
@@ -333,6 +334,38 @@ func TestPostgresPlayerTradeEscrowSchemaEnforcesReservationsAndPositiveBalances(
 	}
 	if _, err := db.ExecContext(ctx, `INSERT INTO player_trade_escrow_items(trade_id,owner_character_id,item_id,quantity)
 		VALUES($1,$2,'softwood_log',2)`, tradeID, string(firstPlayer.ID)); err != nil { t.Fatal(err) }
+
+	if _, err := db.ExecContext(ctx, `UPDATE player_trade_offers SET offered_coins=50 WHERE trade_id=$1 AND character_id=$2`, tradeID, string(firstPlayer.ID)); err != nil { t.Fatal(err) }
+	overfilled := clonePlayer(firstPlayer)
+	overfilled.Inventory["softwood_log"] = 99
+	tx, err := db.BeginTx(ctx, nil)
+	if err != nil { t.Fatal(err) }
+	if err := updateOwnedPlayer(ctx, tx, first.ID, overfilled); !errors.Is(err, game.ErrTradeOfferCapacity) {
+		_ = tx.Rollback()
+		t.Fatalf("reserved inventory capacity error=%v", err)
+	}
+	_ = tx.Rollback()
+
+	overfunded := clonePlayer(firstPlayer)
+	overfunded.Coins = math.MaxInt64 - 25
+	tx, err = db.BeginTx(ctx, nil)
+	if err != nil { t.Fatal(err) }
+	if err := updateOwnedPlayer(ctx, tx, first.ID, overfunded); !errors.Is(err, game.ErrTradeOfferCapacity) {
+		_ = tx.Rollback()
+		t.Fatalf("reserved currency capacity error=%v", err)
+	}
+	_ = tx.Rollback()
+
+	atCapacity := clonePlayer(firstPlayer)
+	atCapacity.Inventory["softwood_log"] = 98
+	atCapacity.Coins = math.MaxInt64 - 50
+	tx, err = db.BeginTx(ctx, nil)
+	if err != nil { t.Fatal(err) }
+	if err := updateOwnedPlayer(ctx, tx, first.ID, atCapacity); err != nil {
+		_ = tx.Rollback()
+		t.Fatalf("valid reserved inventory/currency capacity rejected: %v", err)
+	}
+	if err := tx.Commit(); err != nil { t.Fatal(err) }
 
 	if _, err := db.ExecContext(ctx, `INSERT INTO player_trades(id,status,revision,created_at,updated_at,expires_at)
 		VALUES($1,'pending',1,$2,$2,$3)`, secondTradeID, now, now.Add(10*time.Minute)); err != nil { t.Fatal(err) }
