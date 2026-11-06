@@ -17,7 +17,9 @@
 - [x] Godot account UI, multi-character selection and authenticated gameplay requests.
 - [x] Interactable gathering nodes, workbench, forge, bank, merchant and enemy spawn points.
 - [x] Safe-spawn recovery and session-expiry recovery.
-- [ ] Remote-player presence, reconnect state and fully authoritative client replication.
+- [x] PostgreSQL-backed leased character presence and account-scoped zone roster API.
+- [x] Godot polling heartbeat and remote-character placeholder visuals with stale-lease cleanup.
+- [ ] Reconnect recovery, server-driven movement snapshots and fully authoritative client replication.
 - [ ] Email verification, password recovery, MFA and distributed abuse controls before public registration.
 
 ## Milestone 3: Skills and progression
