@@ -1971,12 +1971,12 @@ func _send_trade_action(action: String) -> void:
 		var trade_id := str(current_trade.get("id", ""))
 		if trade_id.is_empty():
 			return
-		url += "/" + trade_id + "/accept"
+		url = api_base_url + "/api/v1/account/trades/" + trade_id + "/characters/" + player_id + "/accept"
 	elif action == "update" or action == "confirm" or action == "cancel":
 		var active_id := str(current_trade.get("id", ""))
 		if active_id.is_empty():
 			return
-		url += "/" + active_id + ("/offer" if action == "update" else "/" + action)
+		url = api_base_url + "/api/v1/account/trades/" + active_id + "/characters/" + player_id + ("/offer" if action == "update" else "/" + action)
 		if action == "update":
 			method = HTTPClient.METHOD_PUT
 	else:
