@@ -22,6 +22,8 @@ var itemDefinitions = []ItemDefinition{
 	{ID: "leather_boots", Name: "Leather Boots", Description: "Sturdy boots for long journeys.", MaxStack: 1, BuyPrice: 25, SellPrice: 10, EquipmentSlot: "feet", DefenseBonus: 1},
 	{ID: "copper_ore", Name: "Copper Ore", Description: "A rough copper-bearing mineral from frontier deposits.", MaxStack: 100, BuyPrice: 3, SellPrice: 1},
 	{ID: "copper_bar", Name: "Copper Bar", Description: "A refined copper ingot ready for smithing.", MaxStack: 100, BuyPrice: 10, SellPrice: 4},
+	{ID: "rat_pelt", Name: "Rat Pelt", Description: "A small hide recovered from a frontier rat.", MaxStack: 100, BuyPrice: 6, SellPrice: 2},
+	{ID: "boar_hide", Name: "Boar Hide", Description: "A tough hide taken from a wild boar.", MaxStack: 100, BuyPrice: 15, SellPrice: 5},
 }
 
 func ItemDefinitions() []ItemDefinition {
