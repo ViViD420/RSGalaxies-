@@ -43,6 +43,7 @@ func NewPlayer(id PlayerID, name string, now time.Time) (Player, error) {
 }
 
 func (p *Player) AwardExperience(skillID string, amount int) (bool, error) {
+	if err:=p.CanAct();err!=nil{return false,err}
 	skillID = strings.TrimSpace(strings.ToLower(skillID))
 	if !IsKnownSkill(skillID) { return false, ErrUnknownSkill }
 	if amount <= 0 { return false, ErrInvalidExperience }
