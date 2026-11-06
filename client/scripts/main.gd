@@ -561,6 +561,9 @@ func _on_api_request_completed(result: int, response_code: int, _headers: Packed
 			if character_panel != null:
 				character_panel.visible = false
 			_stop_chat()
+			_stop_skills_request()
+			if skills_panel != null:
+				skills_panel.visible = false
 			if market_panel != null:
 				market_panel.visible = false
 			if inventory_panel != null:
@@ -1003,6 +1006,7 @@ func _logout() -> void:
 		status_label.text = "Sign out failed; try again."
 
 func _activate_character(character_data: Dictionary) -> void:
+	_stop_skills_request()
 	if movement_timer != null:
 		movement_timer.stop()
 	player_id = str(character_data.get("id", ""))
