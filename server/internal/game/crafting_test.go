@@ -69,3 +69,14 @@ func TestCopperSmithingRecipesProduceEquipmentMaterials(t *testing.T) {
  if sword.Experience!=60||player.Inventory["copper_bar"]!=0||player.Inventory["wooden_plank"]!=0||player.Inventory["training_sword"]!=1{t.Fatalf("sword crafting result=%+v inventory=%v",sword,player.Inventory)}
  if player.Skills["smithing"].Experience!=95{t.Fatalf("smithing XP=%d want=95",player.Skills["smithing"].Experience)}
 }
+
+func TestHerbalBundleRecipeConsumesForagedMaterials(t *testing.T) {
+	player,err:=NewPlayer("herbal-crafter","HerbalCrafter",time.Now());if err!=nil{t.Fatal(err)}
+	player.Position.Z=2
+	player.Inventory["wild_herb"]=3
+	player.Inventory["wooden_plank"]=1
+	recipe,ok:=FindCraftingRecipe("herbal-bundle");if !ok{t.Fatal("herbal bundle recipe missing")}
+	station,ok:=FindCraftingStation(recipe.StationID);if !ok{t.Fatal("herbal bundle station missing")}
+	result,err:=player.Craft(recipe,station,time.Now());if err!=nil{t.Fatalf("craft herbal bundle: %v",err)}
+	if result.Experience!=45||result.SkillID!="crafting"||player.Inventory["wild_herb"]!=0||player.Inventory["wooden_plank"]!=0||player.Inventory["herbal_bundle"]!=1{t.Fatalf("herbal bundle result=%+v inventory=%v",result,player.Inventory)}
+}
