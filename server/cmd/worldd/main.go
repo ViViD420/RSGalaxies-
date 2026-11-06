@@ -3,6 +3,7 @@ package main
 import (
 	"context"
 	"database/sql"
+		"database/sql"
 	"errors"
 	"log"
 	"net/http"
@@ -13,6 +14,8 @@ import (
 
 	"github.com/ViViD420/RSGalaxies-/server/internal/game"
 	"github.com/ViViD420/RSGalaxies-/server/internal/httpapi"
+	"github.com/ViViD420/RSGalaxies-/server/internal/storage/postgres"
+	_ "github.com/jackc/pgx/v5/stdlib"
 	"github.com/ViViD420/RSGalaxies-/server/internal/storage/postgres"
 	_ "github.com/jackc/pgx/v5/stdlib"
 )
@@ -41,6 +44,26 @@ func main() {
 		log.Printf("using PostgreSQL player/world persistence")
 	} else {
 		log.Printf("using in-memory development storage; set RS_GALAXIES_DATABASE_URL for PostgreSQL")
+	}
+
+	repository := game.PlayerRepository(game.NewMemoryPlayerRepository())
+	var database *sql.DB
+	if databaseURL := os.Getenv("RS_GALAXIES_DATABASE_URL"); databaseURL != "" {
+		var err error
+		database, err = sql.Open("pgx", databaseURL)
+		if err != nil { log.Fatalf("open PostgreSQL: %v", err) }
+		defer database.Close()
+		database.SetMaxOpenConns(20)
+		database.SetMaxIdleConns(5)
+		database.SetConnMaxLifetime(30 * time.Minute)
+		ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
+		defer cancel()
+		if err := database.PingContext(ctx); err != nil { log.Fatalf("connect PostgreSQL: %v", err) }
+		if err := postgres.Migrate(ctx, database); err != nil { log.Fatalf("migrate PostgreSQL: %v", err) }
+		repository = postgres.NewPlayerRepository(database)
+		log.Print("using PostgreSQL player and world persistence")
+	} else {
+		log.Print("using in-memory development storage; set RS_GALAXIES_DATABASE_URL for PostgreSQL")
 	}
 
 	server := &http.Server{
