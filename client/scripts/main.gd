@@ -919,7 +919,9 @@ func _request_interaction() -> void:
 		)
 	elif nearest_station_id == "frontier-workbench" and nearest_station_distance <= 3.0 and nearest_station_distance <= nearest_node_distance and nearest_station_distance <= enemy_distance:
 		var recipe_id := "basic-plank"
-		if int(current_inventory.get("wild_herb", 0)) >= 3 and int(current_inventory.get("wooden_plank", 0)) >= 1:
+		if int(current_inventory.get("herbal_bundle", 0)) >= 1 and int(current_inventory.get("wild_herb", 0)) >= 1:
+			recipe_id = "herbal-tea"
+		elif int(current_inventory.get("wild_herb", 0)) >= 3 and int(current_inventory.get("wooden_plank", 0)) >= 1:
 			recipe_id = "herbal-bundle"
 		interaction_type = "craft"
 		status_label.text = "Using frontier workbench..."
