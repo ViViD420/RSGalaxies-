@@ -12,6 +12,7 @@ import (
 	"github.com/ViViD420/RSGalaxies-/server/internal/game"
 	"github.com/ViViD420/RSGalaxies-/server/internal/auth"
 	"net/url"
+	"fmt"
 	"strings"
 )
 
@@ -269,6 +270,7 @@ func (s *testCharacterStore) ListCharacters(_ context.Context,accountID string)(
 
 func TestAuthenticatedCharacterLifecycleAndOwnership(t *testing.T) {
 	t.Setenv("RS_GALAXIES_ENV","production")
+	t.Setenv("RS_GALAXIES_ENABLE_REGISTRATION","true")
 	accounts:=newTestAccountStore()
 	characters:=newTestCharacterStore()
 	handler:=NewWithAccounts(game.NewMemoryPlayerRepository(),accounts,characters).Routes()
@@ -337,4 +339,25 @@ func (s *testCharacterStore) GatherForAccount(_ context.Context, accountID strin
 }
 func (s *testCharacterStore) CraftForAccount(_ context.Context, accountID string, id game.PlayerID, recipe string, now time.Time)(game.Player,game.CraftingResult,error){
  return game.Player{},game.CraftingResult{},game.ErrPlayerNotFound
+}
+
+func TestProductionRegistrationIsDisabledByDefault(t *testing.T) {
+ t.Setenv("RS_GALAXIES_ENV","production")
+ t.Setenv("RS_GALAXIES_ENABLE_REGISTRATION","")
+ handler:=NewWithAccounts(game.NewMemoryPlayerRepository(),newTestAccountStore(),newTestCharacterStore()).Routes()
+ response:=httptest.NewRecorder()
+ handler.ServeHTTP(response,httptest.NewRequest(http.MethodPost,"/api/v1/auth/register",bytes.NewBufferString(`{"email":"blocked@example.test","password":"long-enough-password"}`)))
+ if response.Code!=http.StatusNotFound&&response.Code!=http.StatusMethodNotAllowed{t.Fatalf("registration should be disabled by default in production, status=%d",response.Code)}
+}
+
+func TestAuthenticationRegistrationRateLimit(t *testing.T) {
+ t.Setenv("RS_GALAXIES_ENV","development")
+ handler:=NewWithAccounts(game.NewMemoryPlayerRepository(),newTestAccountStore(),newTestCharacterStore()).Routes()
+ for i:=0;i<6;i++ {
+  response:=httptest.NewRecorder()
+  body:=fmt.Sprintf(`{"email":"limit-%d@example.test","password":"long-enough-password"}`,i)
+  handler.ServeHTTP(response,httptest.NewRequest(http.MethodPost,"/api/v1/auth/register",bytes.NewBufferString(body)))
+  want:=http.StatusCreated;if i==5{want=http.StatusTooManyRequests}
+  if response.Code!=want{t.Fatalf("attempt %d status=%d want=%d body=%s",i+1,response.Code,want,response.Body.String())}
+ }
 }
