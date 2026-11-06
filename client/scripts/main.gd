@@ -76,6 +76,8 @@ const game_max_health := 100
 var market_catalog: Array = []
 var enemy_catalog: Array = []
 var gathering_catalog: Array = []
+var station_catalog: Array = []
+var gathering_catalog: Array = []
 var api_request: HTTPRequest
 var movement_request: HTTPRequest
 var gather_request: HTTPRequest
@@ -160,10 +162,8 @@ func _build_world() -> void:
 	floor_body.add_child(floor_collision)
 	add_child(floor_body)
 
-	_add_workbench(Vector3(0.0, 0.0, 4.0))
 	_add_bank_chest(Vector3(0.0, 0.0, -4.0))
 	_add_merchant_stall(Vector3(4.0, 0.0, 0.0))
-	_add_forge(Vector3(0.0, 0.0, 8.0))
 
 	player_node = PLAYER_SCENE.instantiate() as CharacterBody3D
 	player_node.position = Vector3(0.0, 0.05, 0.0)
@@ -224,6 +224,23 @@ func _add_workbench(at: Vector3) -> void:
 
 
 
+
+
+func _build_crafting_station_visuals() -> void:
+	for station in station_catalog:
+		if not station is Dictionary:
+			continue
+		var position_data: Variant = station.get("position", {})
+		if not position_data is Dictionary:
+			continue
+		var at := Vector3(float(position_data.get("x", 0.0)), 0.0, float(position_data.get("z", 0.0)))
+		match str(station.get("id", "")):
+			"frontier-workbench":
+				_add_workbench(at)
+			"frontier-forge":
+				_add_forge(at)
+			_:
+				_add_generic_gathering_node(at, str(station.get("name", "Crafting Station")))
 
 
 func _build_gathering_node_visuals() -> void:
@@ -691,6 +708,16 @@ func _on_api_request_completed(result: int, response_code: int, _headers: Packed
 		if nodes is Array:
 			gathering_catalog = nodes
 			_build_gathering_node_visuals()
+		api_stage = "station_catalog"
+		var station_error := api_request.request(api_base_url + "/api/v1/crafting/stations")
+		if station_error != OK:
+			status_label.text = "Server: ready • crafting station catalog unavailable"
+		return
+	if api_stage == "station_catalog":
+		var stations: Variant = payload.get("stations", [])
+		if stations is Array:
+			station_catalog = stations
+			_build_crafting_station_visuals()
 		auth_panel.visible = true
 		status_label.text = "Server: ready • sign in to continue"
 		return
@@ -770,10 +797,18 @@ func _start_gathering() -> void:
 	gather_request.request_completed.connect(_on_gather_completed)
 
 func _request_interaction() -> void:
-	var bench_distance := Vector2(player_node.global_position.x, player_node.global_position.z - 4.0).length()
 	var bank_distance := Vector2(player_node.global_position.x, player_node.global_position.z + 4.0).length()
 	var merchant_distance := Vector2(player_node.global_position.x - 4.0, player_node.global_position.z).length()
-	var forge_distance := Vector2(player_node.global_position.x, player_node.global_position.z - 8.0).length()
+	var nearest_station_id := ""
+	var nearest_station_distance := 1.0e20
+	for station in station_catalog:
+		if station is Dictionary:
+			var station_position: Variant = station.get("position", {})
+			if station_position is Dictionary:
+				var station_distance := Vector2(player_node.global_position.x - float(station_position.get("x", 0.0)), player_node.global_position.z - float(station_position.get("z", 0.0))).length()
+				if station_distance < nearest_station_distance:
+					nearest_station_distance = station_distance
+					nearest_station_id = str(station.get("id", ""))
 	var nearest_node_id := ""
 	var nearest_node_distance := 1.0e20
 	for node in gathering_catalog:
@@ -801,10 +836,10 @@ func _request_interaction() -> void:
 					enemy_distance = distance
 					nearest_enemy_id = str(enemy.get("id", ""))
 	var error := OK
-	if merchant_distance <= 3.0 and merchant_distance <= bank_distance and merchant_distance <= bench_distance and merchant_distance <= nearest_node_distance and merchant_distance <= forge_distance and merchant_distance <= enemy_distance:
+	if merchant_distance <= 3.0 and merchant_distance <= bank_distance and merchant_distance <= nearest_station_distance and merchant_distance <= nearest_node_distance and merchant_distance <= enemy_distance:
 		_show_market_panel()
 		return
-	elif bank_distance <= 3.0 and bank_distance <= bench_distance and bank_distance <= nearest_node_distance and bank_distance <= forge_distance and bank_distance <= enemy_distance:
+	elif bank_distance <= 3.0 and bank_distance <= nearest_station_distance and bank_distance <= nearest_node_distance and bank_distance <= enemy_distance:
 		var selected_item := ""
 		interaction_type = "bank_deposit"
 		for item in market_catalog:
@@ -832,7 +867,7 @@ func _request_interaction() -> void:
 			HTTPClient.METHOD_POST,
 			JSON.stringify({"itemId": selected_item, "quantity": 1})
 		)
-	elif forge_distance <= 3.0 and forge_distance <= bench_distance and forge_distance <= nearest_node_distance and forge_distance <= enemy_distance:
+	elif nearest_station_id == "frontier-forge" and nearest_station_distance <= 3.0 and nearest_station_distance <= nearest_node_distance and nearest_station_distance <= enemy_distance:
 		var recipe_id := "copper-bar"
 		if int(current_inventory.get("copper_bar", 0)) >= 3 and int(current_inventory.get("wooden_plank", 0)) >= 1:
 			recipe_id = "copper-sword"
@@ -844,7 +879,7 @@ func _request_interaction() -> void:
 			HTTPClient.METHOD_POST,
 			""
 		)
-	elif bench_distance <= 3.0 and bench_distance <= nearest_node_distance and bench_distance <= enemy_distance:
+	elif nearest_station_id == "frontier-workbench" and nearest_station_distance <= 3.0 and nearest_station_distance <= nearest_node_distance and nearest_station_distance <= enemy_distance:
 		interaction_type = "craft"
 		status_label.text = "Using frontier workbench..."
 		error = gather_request.request(
