@@ -56,7 +56,7 @@ An original sandbox MMORPG combining long-form skill progression and item gamepl
 2. Validate the auto-launched browser build on a real phone and refine touch controls and camera feel.
 3. Implement world zones, server-owned coordinates, spawn points and validated movement.
 4. Add PostgreSQL schema/migrations and transactional player persistence.
-5. Replace development XP awards with validated gathering, crafting and combat actions.
+5. Add durable PostgreSQL persistence and authenticated player sessions; retire the development-only movement/gather/XP routes before public deployment.
 
 ## Continuation instruction
 
