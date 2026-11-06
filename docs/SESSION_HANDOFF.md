@@ -26,7 +26,7 @@ An original sandbox MMORPG combining long-form skill progression and item gamepl
 - Starter item definitions and stack-count inventory.
 - Two gathering nodes (tree and stone) with interaction range, three charges, timed respawn and atomic inventory/XP rewards.
 - One frontier workbench and a basic plank recipe: consume two softwood logs, create one wooden plank and award Crafting XP. Crafting checks station range, skill level, ingredient counts and output stack capacity atomically.
-- HTTP routes expose skills, world zones, gathering nodes, items, players and player skills. Development-only XP, movement and gathering routes are disabled when RS_GALAXIES_ENV=production.
+- HTTP routes expose skills, world zones, gathering nodes, items, players and player skills. Development-only XP, movement, gathering and crafting routes are disabled when RS_GALAXIES_ENV=production.
 - Domain, API, movement, gathering and repository concurrency tests.
 - Go CI runs tests with the race detector and go vet.
 
@@ -49,7 +49,7 @@ An original sandbox MMORPG combining long-form skill progression and item gamepl
 
 - Go is the server language. Godot is provisional pending real-phone validation of camera, movement and Web export.
 - Storage is in memory; player, inventory and node state are lost when the server stops.
-- XP award, movement and gathering shortcuts are development-only. They must not be exposed publicly.
+- XP award, movement, gathering and crafting shortcuts are development-only. They must not be exposed publicly.
 - PostgreSQL, authentication, secure sessions, realtime replication, production persistence, NPCs, combat, additional recipes, player trading and production inventory persistence are not implemented.
 - Code and tests are committed. GitHub Actions execution results have not yet been inspected in this session; do not claim CI passes until verified.
 
