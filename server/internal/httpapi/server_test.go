@@ -691,7 +691,7 @@ func (s *testCharacterStore) CreateTradeInviteForAccount(_ context.Context,accou
 	if s.activeTrades[initiatorID]!=""||s.activeTrades[targetID]!=""{return game.TradeSnapshot{},game.ErrTradeAlreadyActive}
 	s.nextTradeID++
 	id:=fmt.Sprintf("test-trade-%d",s.nextTradeID)
-	trade:=game.TradeSnapshot{ID:id,Status:game.TradeStatusPending,Revision:1,CreatedAt:now,ExpiresAt:now.Add(game.TradeLifetime),Participants:[]game.TradeParticipant{{CharacterID:initiatorID,Name:initiator.Name,Role:"initiator",Offer:game.TradeOffer{Items:map[string]int{}}},{CharacterID:targetID,Name:target.Name,Role:"target",Offer:game.TradeOffer{Items:map[string]int{}}}}}
+	trade:=game.TradeSnapshot{ID:id,Status:game.TradeStatusPending,Revision:1,CreatedAt:now,ExpiresAt:now.Add(game.TradeLifetime),Participants:[]game.TradeParticipant{{CharacterID:initiatorID,CharacterName:initiator.Name,Role:"initiator",Offer:game.TradeOffer{Items:map[string]int{}}},{CharacterID:targetID,CharacterName:target.Name,Role:"target",Offer:game.TradeOffer{Items:map[string]int{}}}}}
 	s.trades[id]=trade;s.activeTrades[initiatorID]=id;s.activeTrades[targetID]=id
 	return trade,nil
 }
