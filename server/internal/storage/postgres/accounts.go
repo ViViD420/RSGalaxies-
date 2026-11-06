@@ -328,3 +328,40 @@ func (r *AccountRepository) RestForAccount(ctx context.Context,accountID string,
 	if err:=tx.Commit();err!=nil{return game.Player{},fmt.Errorf("commit player rest: %w",err)}
 	return player,nil
 }
+
+func (r *AccountRepository) SendLocalChatForAccount(ctx context.Context,accountID string,id game.PlayerID,message string,now time.Time)(game.ChatMessage,error){
+	cleaned,err:=game.ValidateChatMessage(message);if err!=nil{return game.ChatMessage{},err}
+	tx,err:=r.db.BeginTx(ctx,nil);if err!=nil{return game.ChatMessage{},err};defer tx.Rollback()
+	player,err:=r.lockOwnedPlayer(ctx,tx,accountID,id);if err!=nil{return game.ChatMessage{},err}
+	var lastMessageAt sql.NullTime
+	err=tx.QueryRowContext(ctx,`SELECT created_at FROM chat_messages WHERE sender_character_id=$1 ORDER BY id DESC LIMIT 1`,string(player.ID)).Scan(&lastMessageAt)
+	if err!=nil&&!errors.Is(err,sql.ErrNoRows){return game.ChatMessage{},fmt.Errorf("check local chat cooldown: %w",err)}
+	if lastMessageAt.Valid&&now.Sub(lastMessageAt.Time)<game.ChatCooldown{return game.ChatMessage{},game.ErrChatCooldown}
+	var result game.ChatMessage
+	err=tx.QueryRowContext(ctx,`INSERT INTO chat_messages(zone_id,sender_account_id,sender_character_id,sender_character_name,message,created_at)
+		VALUES($1,$2,$3,$4,$5,$6) RETURNING id,zone_id,sender_character_id,sender_character_name,message,created_at`,
+		player.Position.ZoneID,accountID,string(player.ID),player.Name,cleaned,now).Scan(&result.ID,&result.ZoneID,&result.CharacterID,&result.CharacterName,&result.Message,&result.CreatedAt)
+	if err!=nil{return game.ChatMessage{},fmt.Errorf("insert local chat message: %w",err)}
+	if err:=tx.Commit();err!=nil{return game.ChatMessage{},fmt.Errorf("commit local chat message: %w",err)}
+	return result,nil
+}
+
+func (r *AccountRepository) ListLocalChatForAccount(ctx context.Context,accountID string,id game.PlayerID,afterID int64,limit int)([]game.ChatMessage,error){
+	if afterID<0||limit<1||limit>50{return nil,game.ErrInvalidChatMessage}
+	var zoneID string
+	err:=r.db.QueryRowContext(ctx,`SELECT zone_id FROM players WHERE account_id=$1 AND id=$2`,accountID,string(id)).Scan(&zoneID)
+	if errors.Is(err,sql.ErrNoRows){return nil,game.ErrPlayerNotFound}
+	if err!=nil{return nil,fmt.Errorf("resolve chat character zone: %w",err)}
+	rows,err:=r.db.QueryContext(ctx,`SELECT id,zone_id,sender_character_id,sender_character_name,message,created_at
+		FROM chat_messages WHERE zone_id=$1 AND id>$2 ORDER BY id ASC LIMIT $3`,zoneID,afterID,limit)
+	if err!=nil{return nil,fmt.Errorf("list local chat messages: %w",err)}
+	defer rows.Close()
+	messages:=make([]game.ChatMessage,0)
+	for rows.Next(){
+		var message game.ChatMessage
+		if err:=rows.Scan(&message.ID,&message.ZoneID,&message.CharacterID,&message.CharacterName,&message.Message,&message.CreatedAt);err!=nil{return nil,fmt.Errorf("scan local chat message: %w",err)}
+		messages=append(messages,message)
+	}
+	if err:=rows.Err();err!=nil{return nil,fmt.Errorf("iterate local chat messages: %w",err)}
+	return messages,nil
+}
