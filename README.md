@@ -77,3 +77,5 @@ See docs/ARCHITECTURE.md, docs/ROADMAP.md and docs/SESSION_HANDOFF.md.
 - [Account authentication and session design](docs/ACCOUNT_AUTH_DESIGN.md)
 - [Architecture](docs/ARCHITECTURE.md)
 - [Development roadmap](docs/ROADMAP.md)
+
+Copy `.env.example` for local configuration and adjust the PostgreSQL connection string for your environment.
