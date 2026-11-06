@@ -301,7 +301,7 @@ func _request_interaction() -> void:
 	var tree_distance := Vector2(player_node.global_position.x - 2.0, player_node.global_position.z).length()
 	var stone_distance := Vector2(player_node.global_position.x + 2.0, player_node.global_position.z).length()
 	var bench_distance := Vector2(player_node.global_position.x, player_node.global_position.z - 4.0).length()
-	var error := ERR_UNAVAILABLE
+	var error := OK
 	if bench_distance <= 3.0 and bench_distance <= tree_distance and bench_distance <= stone_distance:
 		interaction_type = "craft"
 		status_label.text = "Using frontier workbench..."
@@ -337,7 +337,7 @@ func _on_gather_completed(result: int, response_code: int, _headers: PackedStrin
 		return
 	if response_code != 200:
 		var error_code := str(payload.get("error", "gathering_failed"))
-		status_label.text = "Gathering: " + error_code.replace("_", " ")
+		status_label.text = "Interaction: " + error_code.replace("_", " ")
 		return
 	var player_data: Dictionary = payload.get("player", {})
 	if interaction_type == "craft":
