@@ -99,7 +99,8 @@ func (r *AccountRepository) Login(ctx context.Context, email, password string, n
 	tx, err := r.db.BeginTx(ctx, nil)
 	if err != nil { return auth.Account{}, "", fmt.Errorf("begin login session: %w", err) }
 	defer tx.Rollback()
-	if _, err := tx.ExecContext(ctx, "SELECT id FROM accounts WHERE id=$1 FOR UPDATE", account.ID); err != nil {
+	var lockedAccountID string
+	if err := tx.QueryRowContext(ctx, "SELECT id FROM accounts WHERE id=$1 FOR UPDATE", account.ID).Scan(&lockedAccountID); err != nil {
 		return auth.Account{}, "", fmt.Errorf("lock account for session: %w", err)
 	}
 	if err := createSession(ctx, tx, account.ID, tokenHash[:], now); err != nil {
