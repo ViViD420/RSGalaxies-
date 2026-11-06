@@ -299,6 +299,8 @@ func _add_merchant_stall(at: Vector3) -> void:
 	var wood := StandardMaterial3D.new()
 	wood.albedo_color = Color(0.30, 0.19, 0.10)
 	var fabric := StandardMaterial3D.new()
+	var leather_material := StandardMaterial3D.new()
+	leather_material.albedo_color = Color(0.62, 0.45, 0.30)
 	fabric.albedo_color = Color(0.58, 0.32, 0.16)
 	var counter := MeshInstance3D.new()
 	var counter_mesh := BoxMesh.new()
@@ -325,6 +327,30 @@ func _add_merchant_stall(at: Vector3) -> void:
 			post.position = Vector3(x_offset, 1.15, z_offset)
 			post.material_override = wood
 			stall.add_child(post)
+	var vendor_material := StandardMaterial3D.new()
+	vendor_material.albedo_color = Color(0.22, 0.38, 0.30)
+	var vendor_body := MeshInstance3D.new()
+	var vendor_body_mesh := CapsuleMesh.new()
+	vendor_body_mesh.radius = 0.30
+	vendor_body_mesh.height = 1.25
+	vendor_body.mesh = vendor_body_mesh
+	vendor_body.position = Vector3(0.0, 0.62, 1.15)
+	vendor_body.material_override = vendor_material
+	stall.add_child(vendor_body)
+	var vendor_head := MeshInstance3D.new()
+	var vendor_head_mesh := SphereMesh.new()
+	vendor_head_mesh.radius = 0.23
+	vendor_head_mesh.height = 0.46
+	vendor_head.mesh = vendor_head_mesh
+	vendor_head.position = Vector3(0.0, 1.42, 1.15)
+	vendor_head.material_override = leather_material
+	stall.add_child(vendor_head)
+	var vendor_label := Label3D.new()
+	vendor_label.text = "Frontier Trader"
+	vendor_label.position = Vector3(0.0, 2.0, 1.15)
+	vendor_label.billboard = BaseMaterial3D.BILLBOARD_ENABLED
+	vendor_label.font_size = 28
+	stall.add_child(vendor_label)
 	add_child(stall)
 
 func _add_bank_chest(at: Vector3) -> void:
