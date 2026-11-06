@@ -80,7 +80,12 @@ func FindCraftingStation(id string) (CraftingStationDefinition, bool) {
 
 func FindCraftingRecipe(id string) (CraftingRecipeDefinition, bool) {
 	for _, recipe := range craftingRecipes {
-		if recipe.ID == id { return recipe, true }
+		if recipe.ID == id {
+			copy := recipe
+			copy.Ingredients = append([]ItemQuantity(nil), recipe.Ingredients...)
+			copy.Outputs = append([]ItemQuantity(nil), recipe.Outputs...)
+			return copy, true
+		}
 	}
 	return CraftingRecipeDefinition{}, false
 }
