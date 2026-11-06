@@ -41,8 +41,10 @@ func TestCombatCooldownDefeatAndSafeZoneRest(t *testing.T) {
 	if err!=nil{t.Fatal(err)}
 	if !result.PlayerDefeated||player.Health!=0{t.Fatalf("player defeat result=%+v health=%d",result,player.Health)}
 	if _,_,err:=player.AttackEnemy(enemy,EnemyState{},now.Add(2*time.Second));!errors.Is(err,ErrPlayerDefeated){t.Fatalf("defeated player attack error=%v",err)}
-	if err:=player.Rest();!errors.Is(err,ErrRestOutOfRange){t.Fatalf("rest away from spawn error=%v",err)}
-	player.Position.X=0;player.Position.Z=0
-	if err:=player.Rest();err!=nil{t.Fatalf("safe-zone rest: %v",err)}
+	player.Health=10
+	if err:=player.Rest();!errors.Is(err,ErrRestOutOfRange){t.Fatalf("rest while alive away from spawn error=%v",err)}
+	player.Health=0
+	if err:=player.Rest();err!=nil{t.Fatalf("death respawn: %v",err)}
+	if player.Position.X!=0||player.Position.Z!=0{t.Fatalf("defeated player did not respawn at spawn: %+v",player.Position)}
 	if player.Health!=MaxPlayerHealth{t.Fatalf("rest health=%d want=%d",player.Health,MaxPlayerHealth)}
 }
