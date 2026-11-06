@@ -300,3 +300,31 @@ func (r *AccountRepository) UnequipItemForAccount(ctx context.Context,accountID 
 	if err:=tx.Commit();err!=nil{return game.Player{},fmt.Errorf("commit equipment change: %w",err)}
 	return player,nil
 }
+
+func (r *AccountRepository) AttackEnemyForAccount(ctx context.Context,accountID string,id game.PlayerID,enemyID string,now time.Time)(game.Player,game.CombatResult,error){
+	tx,err:=r.db.BeginTx(ctx,nil);if err!=nil{return game.Player{},game.CombatResult{},err};defer tx.Rollback()
+	player,err:=r.lockOwnedPlayer(ctx,tx,accountID,id);if err!=nil{return game.Player{},game.CombatResult{},err}
+	enemy,ok:=game.FindEnemy(enemyID);if !ok{return player,game.CombatResult{},game.ErrUnknownEnemy}
+	if _,err:=tx.ExecContext(ctx,`INSERT INTO enemy_spawn_state(enemy_id,health,initialized) VALUES($1,0,FALSE) ON CONFLICT(enemy_id) DO NOTHING`,enemyID);err!=nil{return game.Player{},game.CombatResult{},fmt.Errorf("initialize enemy state: %w",err)}
+	var state game.EnemyState
+	var respawnAt sql.NullTime
+	if err:=tx.QueryRowContext(ctx,`SELECT health,respawn_at,initialized FROM enemy_spawn_state WHERE enemy_id=$1 FOR UPDATE`,enemyID).Scan(&state.Health,&respawnAt,&state.Initialized);err!=nil{return game.Player{},game.CombatResult{},fmt.Errorf("lock enemy state: %w",err)}
+	if respawnAt.Valid{state.RespawnAt=respawnAt.Time}
+	result,nextState,err:=player.AttackEnemy(enemy,state,now)
+	if err!=nil{return player,game.CombatResult{},err}
+	var respawnValue any
+	if !nextState.RespawnAt.IsZero(){respawnValue=nextState.RespawnAt}
+	if _,err:=tx.ExecContext(ctx,`UPDATE enemy_spawn_state SET health=$2,respawn_at=$3,initialized=$4 WHERE enemy_id=$1`,enemyID,nextState.Health,respawnValue,nextState.Initialized);err!=nil{return game.Player{},game.CombatResult{},fmt.Errorf("update enemy state: %w",err)}
+	if err:=updateOwnedPlayer(ctx,tx,accountID,player);err!=nil{return game.Player{},game.CombatResult{},err}
+	if err:=tx.Commit();err!=nil{return game.Player{},game.CombatResult{},fmt.Errorf("commit combat action: %w",err)}
+	return player,result,nil
+}
+
+func (r *AccountRepository) RestForAccount(ctx context.Context,accountID string,id game.PlayerID)(game.Player,error){
+	tx,err:=r.db.BeginTx(ctx,nil);if err!=nil{return game.Player{},err};defer tx.Rollback()
+	player,err:=r.lockOwnedPlayer(ctx,tx,accountID,id);if err!=nil{return game.Player{},err}
+	if err:=player.Rest();err!=nil{return player,err}
+	if err:=updateOwnedPlayer(ctx,tx,accountID,player);err!=nil{return game.Player{},err}
+	if err:=tx.Commit();err!=nil{return game.Player{},fmt.Errorf("commit player rest: %w",err)}
+	return player,nil
+}
