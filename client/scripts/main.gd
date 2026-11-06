@@ -45,6 +45,7 @@ var chat_last_id := 0
 var chat_poll_pending := false
 var chat_send_pending := false
 var chat_active_character_id := ""
+var chat_lines: Array[String] = []
 const game_max_health := 100
 var market_catalog: Array = []
 var enemy_catalog: Array = []
@@ -1321,8 +1322,8 @@ func _start_chat() -> void:
 	chat_last_id = 0
 	chat_poll_pending = false
 	chat_send_pending = false
-	chat_history.clear()
-	chat_history.append_text("Local zone chat • messages are visible to players in this zone.\n")
+	chat_lines.clear()
+	_append_chat_line("Local zone chat • messages are visible to players in this zone.")
 	chat_poll_request = HTTPRequest.new()
 	add_child(chat_poll_request)
 	chat_poll_request.request_completed.connect(_on_chat_poll_completed)
@@ -1411,7 +1412,7 @@ func _on_chat_poll_completed(result: int, response_code: int, _headers: PackedSt
 				if message_id <= chat_last_id:
 					continue
 				chat_last_id = message_id
-				chat_history.append_text(str(message.get("characterName", "Unknown")) + ": " + str(message.get("message", "")) + "\n")
+				_append_chat_line(str(message.get("characterName", "Unknown")) + ": " + str(message.get("message", "")))
 	chat_status_label.text = "Zone chat • cursor " + str(chat_last_id)
 
 func _on_chat_send_completed(result: int, response_code: int, _headers: PackedStringArray, body: PackedByteArray) -> void:
@@ -1430,7 +1431,7 @@ func _on_chat_send_completed(result: int, response_code: int, _headers: PackedSt
 		var message_id := int(message.get("id", 0))
 		if message_id > chat_last_id:
 			chat_last_id = message_id
-			chat_history.append_text(str(message.get("characterName", "You")) + ": " + str(message.get("message", "")) + "\n")
+			_append_chat_line(str(message.get("characterName", "You")) + ": " + str(message.get("message", "")))
 		chat_input.clear()
 		chat_status_label.text = "Message sent"
 	elif response_code == 429:
@@ -1549,4 +1550,15 @@ func _refresh_equipment_visuals() -> void:
 			boot.position = Vector3(side * 0.22, 0.12, 0.08)
 			boot.material_override = leather
 			equipment_visual_root.add_child(boot)
+
+
+func _append_chat_line(line: String) -> void:
+	chat_lines.append(line)
+	while chat_lines.size() > 100:
+		chat_lines.pop_front()
+	if chat_history == null:
+		return
+	chat_history.clear()
+	for entry in chat_lines:
+		chat_history.append_text(entry + "\n")
 
