@@ -616,11 +616,21 @@ func _request_interaction() -> void:
 	var merchant_distance := Vector2(player_node.global_position.x - 4.0, player_node.global_position.z).length()
 	var copper_distance := Vector2(player_node.global_position.x, player_node.global_position.z + 8.0).length()
 	var forge_distance := Vector2(player_node.global_position.x, player_node.global_position.z - 8.0).length()
+	var nearest_enemy_id := ""
+	var enemy_distance := 1.0e20
+	for enemy in enemy_catalog:
+		if enemy is Dictionary:
+			var enemy_position: Variant = enemy.get("position", {})
+			if enemy_position is Dictionary:
+				var distance := Vector2(player_node.global_position.x - float(enemy_position.get("x", 0.0)), player_node.global_position.z - float(enemy_position.get("z", 0.0))).length()
+				if distance < enemy_distance:
+					enemy_distance = distance
+					nearest_enemy_id = str(enemy.get("id", ""))
 	var error := OK
-	if merchant_distance <= 3.0 and merchant_distance <= bank_distance and merchant_distance <= bench_distance and merchant_distance <= tree_distance and merchant_distance <= stone_distance and merchant_distance <= copper_distance and merchant_distance <= forge_distance:
+	if merchant_distance <= 3.0 and merchant_distance <= bank_distance and merchant_distance <= bench_distance and merchant_distance <= tree_distance and merchant_distance <= stone_distance and merchant_distance <= copper_distance and merchant_distance <= forge_distance and merchant_distance <= enemy_distance:
 		_show_market_panel()
 		return
-	elif bank_distance <= 3.0 and bank_distance <= bench_distance and bank_distance <= tree_distance and bank_distance <= stone_distance and bank_distance <= copper_distance and bank_distance <= forge_distance:
+	elif bank_distance <= 3.0 and bank_distance <= bench_distance and bank_distance <= tree_distance and bank_distance <= stone_distance and bank_distance <= copper_distance and bank_distance <= forge_distance and bank_distance <= enemy_distance:
 		var selected_item := ""
 		interaction_type = "bank_deposit"
 		for item_id in ["softwood_log", "rough_stone", "copper_ore", "copper_bar", "wooden_plank"]:
@@ -644,7 +654,7 @@ func _request_interaction() -> void:
 			HTTPClient.METHOD_POST,
 			JSON.stringify({"itemId": selected_item, "quantity": 1})
 		)
-	elif forge_distance <= 3.0 and forge_distance <= bench_distance and forge_distance <= tree_distance and forge_distance <= stone_distance and forge_distance <= copper_distance:
+	elif forge_distance <= 3.0 and forge_distance <= bench_distance and forge_distance <= tree_distance and forge_distance <= stone_distance and forge_distance <= copper_distance and forge_distance <= enemy_distance:
 		var recipe_id := "copper-bar"
 		if int(current_inventory.get("copper_bar", 0)) >= 3 and int(current_inventory.get("wooden_plank", 0)) >= 1:
 			recipe_id = "copper-sword"
@@ -656,11 +666,20 @@ func _request_interaction() -> void:
 			HTTPClient.METHOD_POST,
 			""
 		)
-	elif bench_distance <= 3.0 and bench_distance <= tree_distance and bench_distance <= stone_distance and bench_distance <= copper_distance:
+	elif bench_distance <= 3.0 and bench_distance <= tree_distance and bench_distance <= stone_distance and bench_distance <= copper_distance and bench_distance <= enemy_distance:
 		interaction_type = "craft"
 		status_label.text = "Using frontier workbench..."
 		error = gather_request.request(
 			api_base_url + "/api/v1/account/characters/" + player_id + "/craft/basic-plank",
+			_api_headers(),
+			HTTPClient.METHOD_POST,
+			""
+		)
+	elif not nearest_enemy_id.is_empty() and enemy_distance <= 3.0 and enemy_distance <= tree_distance and enemy_distance <= stone_distance and enemy_distance <= copper_distance:
+		interaction_type = "combat"
+		status_label.text = "Attacking nearby creature..."
+		error = gather_request.request(
+			api_base_url + "/api/v1/account/characters/" + player_id + "/combat/attack/" + nearest_enemy_id,
 			_api_headers(),
 			HTTPClient.METHOD_POST,
 			""
