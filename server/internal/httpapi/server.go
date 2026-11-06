@@ -39,6 +39,9 @@ type characterStore interface {
 	UseItemForAccount(context.Context, string, game.PlayerID, string) (game.Player, int, error)
 	HeartbeatPresenceForAccount(context.Context, string, game.PlayerID, time.Time) error
 	ListZonePresenceForAccount(context.Context, string, game.PlayerID, time.Time) ([]game.RemotePlayer, error)
+	CreateTradeInviteForAccount(context.Context, string, game.PlayerID, game.PlayerID, time.Time) (game.TradeSnapshot, error)
+	AcceptTradeInviteForAccount(context.Context, string, string, time.Time) (game.TradeSnapshot, error)
+	GetTradeForAccount(context.Context, string, string) (game.TradeSnapshot, error)
 }
 
 const maxAuthRateKeys = 10000
@@ -115,6 +118,9 @@ func (s *Server) Routes() http.Handler {
 		mux.HandleFunc("POST /api/v1/account/characters/{id}/inventory/use/{itemID}", s.useOwnedItem)
 		mux.HandleFunc("POST /api/v1/account/characters/{id}/presence/heartbeat", s.heartbeatOwnedPresence)
 		mux.HandleFunc("GET /api/v1/account/characters/{id}/presence", s.listOwnedPresence)
+		mux.HandleFunc("POST /api/v1/account/characters/{id}/trades/invite/{targetID}", s.createOwnedTradeInvite)
+		mux.HandleFunc("POST /api/v1/account/trades/{tradeID}/accept", s.acceptOwnedTradeInvite)
+		mux.HandleFunc("GET /api/v1/account/trades/{tradeID}", s.getOwnedTrade)
 	}
 	return securityHeaders(mux)
 }
@@ -807,4 +813,48 @@ func (s *Server) listOwnedPresence(w http.ResponseWriter,r *http.Request) {
 		return
 	}
 	writeJSON(w,http.StatusOK,map[string]any{"players":players,"leaseSeconds":int(game.PresenceLease.Seconds())})
+}
+
+func (s *Server) createOwnedTradeInvite(w http.ResponseWriter,r *http.Request) {
+	account,_,ok:=s.authenticatedAccount(w,r);if !ok{return}
+	trade,err:=s.characters.CreateTradeInviteForAccount(r.Context(),account.ID,game.PlayerID(strings.TrimSpace(r.PathValue("id"))),game.PlayerID(strings.TrimSpace(r.PathValue("targetID"))),s.now())
+	if err!=nil{
+		switch {
+		case errors.Is(err,game.ErrPlayerNotFound):writeError(w,404,"character_not_found")
+		case errors.Is(err,game.ErrTradeSelf):writeError(w,409,"self_trade_not_allowed")
+		case errors.Is(err,game.ErrTradeParticipantUnavailable):writeError(w,409,"trade_partner_unavailable")
+		case errors.Is(err,game.ErrTradeOutOfRange):writeError(w,409,"trade_partner_out_of_range")
+		case errors.Is(err,game.ErrTradeDifferentZone):writeError(w,409,"trade_partner_in_different_zone")
+		case errors.Is(err,game.ErrTradeAlreadyActive):writeError(w,409,"trade_already_active")
+		case errors.Is(err,game.ErrPlayerDefeated):writeError(w,409,"character_defeated")
+		default:log.Printf("create trade invitation: %v",err);writeError(w,500,"internal_error")
+		}
+		return
+	}
+	writeJSON(w,http.StatusCreated,trade)
+}
+
+func (s *Server) acceptOwnedTradeInvite(w http.ResponseWriter,r *http.Request) {
+	account,_,ok:=s.authenticatedAccount(w,r);if !ok{return}
+	trade,err:=s.characters.AcceptTradeInviteForAccount(r.Context(),account.ID,r.PathValue("tradeID"),s.now())
+	if err!=nil{
+		switch {
+		case errors.Is(err,game.ErrTradeNotFound),errors.Is(err,game.ErrTradeNotParticipant):writeError(w,404,"trade_not_found")
+		case errors.Is(err,game.ErrTradeExpired):writeError(w,410,"trade_expired")
+		case errors.Is(err,game.ErrTradeNotAccepted):writeError(w,409,"trade_not_pending")
+		default:log.Printf("accept trade invitation: %v",err);writeError(w,500,"internal_error")
+		}
+		return
+	}
+	writeJSON(w,http.StatusOK,trade)
+}
+
+func (s *Server) getOwnedTrade(w http.ResponseWriter,r *http.Request) {
+	account,_,ok:=s.authenticatedAccount(w,r);if !ok{return}
+	trade,err:=s.characters.GetTradeForAccount(r.Context(),account.ID,r.PathValue("tradeID"))
+	if err!=nil{
+		if errors.Is(err,game.ErrTradeNotFound){writeError(w,404,"trade_not_found")}else{log.Printf("read trade: %v",err);writeError(w,500,"internal_error")}
+		return
+	}
+	writeJSON(w,http.StatusOK,trade)
 }
