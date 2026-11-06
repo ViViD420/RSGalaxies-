@@ -1865,9 +1865,7 @@ func _build_trade_panel() -> void:
 	trade_panel = PanelContainer.new()
 	trade_panel.anchor_left = 0.5
 	trade_panel.anchor_right = 0.5
-	trade_panel.offset_left = -205
 	trade_panel.offset_top = 145
-	trade_panel.offset_right = 205
 	trade_panel.offset_bottom = 535
 	trade_panel.custom_minimum_size = Vector2(410, 390)
 	var column := VBoxContainer.new()
@@ -1951,6 +1949,19 @@ func _build_trade_panel() -> void:
 	close_button.pressed.connect(func() -> void: trade_panel.visible = false)
 	column.add_child(close_button)
 	auth_panel.get_parent().add_child(trade_panel)
+	if not get_viewport().size_changed.is_connected(_layout_trade_panel):
+		get_viewport().size_changed.connect(_layout_trade_panel)
+	_layout_trade_panel()
+
+
+func _layout_trade_panel() -> void:
+	if trade_panel == null:
+		return
+	var viewport_width := get_viewport_rect().size.x
+	var panel_width := minf(410.0, maxf(240.0, viewport_width - 24.0))
+	trade_panel.offset_left = -panel_width / 2.0
+	trade_panel.offset_right = panel_width / 2.0
+	trade_panel.custom_minimum_size = Vector2(panel_width, 390)
 
 
 func _refresh_trade_targets() -> void:
