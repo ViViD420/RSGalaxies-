@@ -43,7 +43,8 @@
 
 ## Milestone 5: Social sandbox
 
-- [ ] Local/zone chat, direct messages, friends, groups and guilds.
+- [x] Persistent account-owned local zone chat with polling, message cursors and per-character cooldown.
+- [ ] Direct messages, friends, groups and guilds.
 - [ ] Player housing, permissions, storage and decoration.
 - [ ] Settlement plots, construction, shared storage and governance.
 - [ ] Player services, profession specialization and player-run institutions.
