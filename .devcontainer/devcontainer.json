@@ -1,6 +1,23 @@
 {
-  "name": "RS Galaxies Go + Godot workspace",
-  "image": "mcr.microsoft.com/devcontainers/go:1-1.23-bookworm",
+  "name": "RS Galaxies Go + Godot + PostgreSQL workspace",
+  "dockerComposeFile": "docker-compose.yml",
+  "service": "workspace",
+  "workspaceFolder": "/workspaces/rs-galaxies",
+  "shutdownAction": "stopCompose",
+  "forwardPorts": [
+    8000,
+    8080
+  ],
+  "portsAttributes": {
+    "8000": {
+      "label": "RS Galaxies browser prototype",
+      "onAutoForward": "openBrowser"
+    },
+    "8080": {
+      "label": "RS Galaxies development API",
+      "onAutoForward": "silent"
+    }
+  },
   "customizations": {
     "vscode": {
       "extensions": [
@@ -19,20 +36,7 @@
       }
     }
   },
-  "forwardPorts": [
-    8000,
-    8080
-  ],
-  "portsAttributes": {
-    "8000": {
-      "label": "RS Galaxies browser prototype",
-      "onAutoForward": "openBrowser"
-    },
-    "8080": {
-      "label": "RS Galaxies development API",
-      "onAutoForward": "silent"
-    }
-  },
   "postCreateCommand": "bash .devcontainer/setup.sh",
-  "postStartCommand": "bash .devcontainer/start.sh"
+  "postStartCommand": "bash .devcontainer/start.sh",
+  "remoteUser": "vscode"
 }
