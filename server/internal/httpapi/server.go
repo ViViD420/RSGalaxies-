@@ -32,6 +32,8 @@ type characterStore interface {
 	TradeItemForAccount(context.Context, string, game.PlayerID, string, int, bool) (game.Player, int64, error)
 	EquipItemForAccount(context.Context, string, game.PlayerID, string) (game.Player, error)
 	UnequipItemForAccount(context.Context, string, game.PlayerID, string) (game.Player, error)
+	AttackEnemyForAccount(context.Context, string, game.PlayerID, string, time.Time) (game.Player, game.CombatResult, error)
+	RestForAccount(context.Context, string, game.PlayerID) (game.Player, error)
 }
 
 type authAttemptWindow struct { started time.Time; count int }
@@ -61,6 +63,7 @@ func (s *Server) Routes() http.Handler {
 	mux.HandleFunc("GET /api/v1/world/nodes", s.listGatheringNodes)
 	mux.HandleFunc("GET /api/v1/items", s.listItems)
 	mux.HandleFunc("GET /api/v1/market/items", s.listMarketItems)
+	mux.HandleFunc("GET /api/v1/combat/enemies", s.listEnemies)
 	mux.HandleFunc("GET /api/v1/crafting/recipes", s.listCraftingRecipes)
 	mux.HandleFunc("GET /api/v1/crafting/stations", s.listCraftingStations)
 	// Player APIs are development-only until account authentication and character ownership are implemented.
@@ -95,6 +98,8 @@ func (s *Server) Routes() http.Handler {
 		mux.HandleFunc("POST /api/v1/account/characters/{id}/market/sell/{itemID}", s.sellOwnedMarketItem)
 		mux.HandleFunc("POST /api/v1/account/characters/{id}/equipment/equip/{itemID}", s.equipOwnedItem)
 		mux.HandleFunc("POST /api/v1/account/characters/{id}/equipment/unequip/{slot}", s.unequipOwnedItem)
+		mux.HandleFunc("POST /api/v1/account/characters/{id}/combat/attack/{enemyID}", s.attackOwnedEnemy)
+		mux.HandleFunc("POST /api/v1/account/characters/{id}/rest", s.restOwnedCharacter)
 	}
 	return securityHeaders(mux)
 }
@@ -631,4 +636,41 @@ func (s *Server) writeEquipmentResult(w http.ResponseWriter,player game.Player,e
 	}
 	attack,defense:=player.EquipmentBonuses()
 	writeJSON(w,200,map[string]any{"character":player,"equipment":player.Equipment,"bonuses":map[string]int{"attack":attack,"defense":defense}})
+}
+
+func (s *Server) listEnemies(w http.ResponseWriter,r *http.Request) {
+	writeJSON(w,http.StatusOK,map[string]any{"enemies":game.EnemyDefinitions()})
+}
+
+func (s *Server) attackOwnedEnemy(w http.ResponseWriter,r *http.Request) {
+	account,_,ok:=s.authenticatedAccount(w,r);if !ok{return}
+	player,result,err:=s.characters.AttackEnemyForAccount(r.Context(),account.ID,game.PlayerID(strings.TrimSpace(r.PathValue("id"))),r.PathValue("enemyID"),time.Now().UTC())
+	if err!=nil {
+		switch {
+		case errors.Is(err,game.ErrPlayerNotFound):writeError(w,404,"character_not_found")
+		case errors.Is(err,game.ErrUnknownEnemy):writeError(w,404,"unknown_enemy")
+		case errors.Is(err,game.ErrEnemyOutOfRange):writeError(w,409,"enemy_out_of_range")
+		case errors.Is(err,game.ErrEnemyRespawning):writeError(w,409,"enemy_respawning")
+		case errors.Is(err,game.ErrCombatCooldown):w.Header().Set("Retry-After","1");writeError(w,429,"combat_cooldown")
+		case errors.Is(err,game.ErrPlayerDefeated):writeError(w,409,"player_defeated")
+		default:log.Printf("attack with owned character: %v",err);writeError(w,500,"internal_error")
+		}
+		return
+	}
+	attack,defense:=player.EquipmentBonuses()
+	writeJSON(w,200,map[string]any{"character":player,"combat":result,"bonuses":map[string]int{"attack":attack,"defense":defense}})
+}
+
+func (s *Server) restOwnedCharacter(w http.ResponseWriter,r *http.Request) {
+	account,_,ok:=s.authenticatedAccount(w,r);if !ok{return}
+	player,err:=s.characters.RestForAccount(r.Context(),account.ID,game.PlayerID(strings.TrimSpace(r.PathValue("id"))))
+	if err!=nil {
+		switch {
+		case errors.Is(err,game.ErrPlayerNotFound):writeError(w,404,"character_not_found")
+		case errors.Is(err,game.ErrRestOutOfRange):writeError(w,409,"rest_out_of_range")
+		default:log.Printf("rest owned character: %v",err);writeError(w,500,"internal_error")
+		}
+		return
+	}
+	writeJSON(w,200,map[string]any{"character":player,"health":player.Health})
 }
