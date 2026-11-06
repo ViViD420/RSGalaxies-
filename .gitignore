@@ -4,6 +4,10 @@
 /server/coverage.out
 /server/*.test
 
+# Godot generated content
+/client/.godot/
+/client/build/
+
 # Unreal / game-engine generated content (if selected later)
 /client/Binaries/
 /client/DerivedDataCache/
