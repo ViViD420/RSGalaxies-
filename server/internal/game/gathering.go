@@ -46,6 +46,7 @@ type GatheringNodeState struct {
 var gatheringNodes = []GatheringNodeDefinition{
 	{ID: "tree-001", Name: "Young Frontier Tree", SkillID: "woodcutting", RequiredLevel: 1, ResourceID: "softwood_log", Experience: 25, Position: WorldPosition{ZoneID: DefaultWorldZoneID, X: 2, Z: 0}, InteractionRange: 3, MaxCharges: 3, RespawnSeconds: 30},
 	{ID: "stone-001", Name: "Exposed Stone Deposit", SkillID: "mining", RequiredLevel: 1, ResourceID: "rough_stone", Experience: 20, Position: WorldPosition{ZoneID: DefaultWorldZoneID, X: -2, Z: 0}, InteractionRange: 3, MaxCharges: 3, RespawnSeconds: 30},
+	{ID: "copper-001", Name: "Copper Vein", SkillID: "mining", RequiredLevel: 1, ResourceID: "copper_ore", Experience: 30, Position: WorldPosition{ZoneID: DefaultWorldZoneID, X: 0, Z: -8}, InteractionRange: 3, MaxCharges: 2, RespawnSeconds: 45},
 }
 
 func GatheringNodes() []GatheringNodeDefinition {
