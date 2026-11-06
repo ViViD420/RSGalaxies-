@@ -79,6 +79,25 @@ func (o TradeOffer) Clone() TradeOffer {
 
 // ValidateTradeOffer checks an offer against the character's current, unescrowed
 // inventory and wallet. Item metadata is always resolved from the server catalog.
+// ValidateTradeProximity requires two distinct, active characters in the same
+// zone and within the server-defined interaction range.
+func ValidateTradeProximity(first, second Player) error {
+	if first.ID == second.ID {
+		return ErrTradeSelf
+	}
+	if err := first.CanAct(); err != nil {
+		return err
+	}
+	if err := second.CanAct(); err != nil {
+		return err
+	}
+	if first.Position.ZoneID != second.Position.ZoneID ||
+		math.Hypot(first.Position.X-second.Position.X, first.Position.Z-second.Position.Z) > TradeInteractionRange {
+		return ErrTradeOutOfRange
+	}
+	return nil
+}
+
 func ValidateTradeOffer(player Player, offer TradeOffer) error {
 	if err := player.CanAct(); err != nil {
 		return err
