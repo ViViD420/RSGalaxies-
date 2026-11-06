@@ -1,6 +1,9 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
+sudo apt-get update
+sudo apt-get install -y curl unzip python3 libx11-6 libxcursor1 libxinerama1 libxrandr2 libxi6 libasound2 libpulse0 libgl1 libfontconfig1 libfreetype6
+
 GODOT_VERSION="4.3"
 GODOT_RELEASE="4.3-stable"
 GODOT_DIR="/tmp/rs-galaxies-godot"
