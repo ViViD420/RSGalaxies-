@@ -14,6 +14,12 @@ var character_button: Button
 var equipment_button: Button
 var rest_button: Button
 var bag_button: Button
+var skills_button: Button
+var skills_panel: PanelContainer
+var skills_list: VBoxContainer
+var skills_status_label: Label
+var skills_request: HTTPRequest
+var skills_pending := false
 var inventory_panel: PanelContainer
 var inventory_use_select: OptionButton
 var equipment_panel: PanelContainer
@@ -427,6 +433,17 @@ func _build_hud() -> void:
 
 	_build_chat_panel(layer)
 	_build_auth_panel(layer)
+	skills_button = Button.new()
+	skills_button.text = "Skills"
+	skills_button.anchor_left = 1.0
+	skills_button.anchor_right = 1.0
+	skills_button.offset_left = -718
+	skills_button.offset_top = 18
+	skills_button.offset_right = -608
+	skills_button.offset_bottom = 62
+	skills_button.visible = false
+	skills_button.pressed.connect(_toggle_skills_panel)
+	layer.add_child(skills_button)
 	bag_button = Button.new()
 	bag_button.text = "Bag"
 	bag_button.anchor_left = 1.0
@@ -540,6 +557,7 @@ func _on_api_request_completed(result: int, response_code: int, _headers: Packed
 			equipment_button.visible = false
 			rest_button.visible = false
 			bag_button.visible = false
+			skills_button.visible = false
 			if character_panel != null:
 				character_panel.visible = false
 			_stop_chat()
@@ -999,6 +1017,8 @@ func _activate_character(character_data: Dictionary) -> void:
 		character_panel.visible = false
 	if equipment_panel != null:
 		equipment_panel.visible = false
+	if skills_panel != null:
+		skills_panel.visible = false
 	if inventory_panel != null:
 		inventory_panel.visible = false
 	if market_panel != null:
@@ -1008,6 +1028,7 @@ func _activate_character(character_data: Dictionary) -> void:
 	equipment_button.visible = true
 	rest_button.visible = true
 	bag_button.visible = true
+	skills_button.visible = true
 	_start_movement_sync()
 	_start_gathering()
 	_start_chat()
@@ -1057,9 +1078,12 @@ func _expire_session() -> void:
 		market_panel.visible = false
 	if equipment_panel != null:
 		equipment_panel.visible = false
+	if skills_panel != null:
+		skills_panel.visible = false
 	if inventory_panel != null:
 		inventory_panel.visible = false
 	bag_button.visible = false
+	skills_button.visible = false
 	status_label.text = "Server: session expired"
 	auth_status_label.text = "Your session expired. Please sign in again."
 
@@ -1067,6 +1091,8 @@ func _show_character_selection(characters: Array) -> void:
 	_stop_chat()
 	if market_panel != null:
 		market_panel.visible = false
+	if skills_panel != null:
+		skills_panel.visible = false
 	if inventory_panel != null:
 		inventory_panel.visible = false
 	if movement_timer != null:
@@ -1085,6 +1111,7 @@ func _show_character_selection(characters: Array) -> void:
 	equipment_button.visible = false
 	rest_button.visible = false
 	bag_button.visible = false
+	skills_button.visible = false
 	var column := VBoxContainer.new()
 	character_panel.add_child(column)
 	var heading := Label.new()
@@ -1625,4 +1652,87 @@ func _use_selected_inventory_item() -> void:
 		status_label.text = "Using " + item_id.replace("_", " ") + "..."
 	else:
 		status_label.text = "Could not use item."
+
+
+func _toggle_skills_panel() -> void:
+	if skills_panel != null and skills_panel.visible:
+		skills_panel.visible = false
+		return
+	if market_panel != null:
+		market_panel.visible = false
+	if inventory_panel != null:
+		inventory_panel.visible = false
+	if equipment_panel != null:
+		equipment_panel.visible = false
+	if skills_panel == null:
+		skills_panel = PanelContainer.new()
+		skills_panel.position = Vector2(420, 155)
+		skills_panel.custom_minimum_size = Vector2(330, 380)
+		var column := VBoxContainer.new()
+		skills_panel.add_child(column)
+		var heading := Label.new()
+		heading.text = "SKILLS"
+		heading.add_theme_font_size_override("font_size", 18)
+		column.add_child(heading)
+		var scroll := ScrollContainer.new()
+		scroll.custom_minimum_size = Vector2(300, 280)
+		scroll.size_flags_vertical = Control.SIZE_EXPAND_FILL
+		column.add_child(scroll)
+		skills_list = VBoxContainer.new()
+		skills_list.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+		scroll.add_child(skills_list)
+		skills_status_label = Label.new()
+		column.add_child(skills_status_label)
+		var close_button := Button.new()
+		close_button.text = "Close"
+		close_button.pressed.connect(func() -> void: skills_panel.visible = false)
+		column.add_child(close_button)
+		auth_panel.get_parent().add_child(skills_panel)
+	skills_panel.visible = true
+	if skills_request == null:
+		skills_request = HTTPRequest.new()
+		add_child(skills_request)
+		skills_request.request_completed.connect(_on_skills_completed)
+	_refresh_skills_panel()
+
+func _refresh_skills_panel() -> void:
+	if skills_panel == null or not skills_panel.visible or skills_pending or skills_request == null:
+		return
+	var error := skills_request.request(
+		api_base_url + "/api/v1/account/characters/" + player_id + "/skills",
+		_api_headers()
+	)
+	if error == OK:
+		skills_pending = true
+		skills_status_label.text = "Loading skills..."
+	else:
+		skills_status_label.text = "Could not request skills."
+
+func _on_skills_completed(result: int, response_code: int, _headers: PackedStringArray, body: PackedByteArray) -> void:
+	skills_pending = false
+	if player_id.is_empty():
+		return
+	if response_code == 401:
+		_expire_session()
+		return
+	if result != HTTPRequest.RESULT_SUCCESS or response_code != 200:
+		skills_status_label.text = "Skills unavailable"
+		return
+	var payload: Variant = JSON.parse_string(body.get_string_from_utf8())
+	if not payload is Dictionary:
+		return
+	var skills: Variant = payload.get("skills", {})
+	if not skills is Dictionary:
+		return
+	for child in skills_list.get_children():
+		child.queue_free()
+	var skill_ids: Array = skills.keys()
+	skill_ids.sort()
+	for skill_id in skill_ids:
+		var progress: Variant = skills[skill_id]
+		if progress is Dictionary:
+			var skill_label := Label.new()
+			skill_label.text = str(skill_id).capitalize() + "  •  Level " + str(progress.get("level", 1)) + "  •  " + str(progress.get("experience", 0)) + " XP"
+			skills_list.add_child(skill_label)
+	skills_status_label.text = str(skills.size()) + " skills • XP is awarded by server actions"
 
