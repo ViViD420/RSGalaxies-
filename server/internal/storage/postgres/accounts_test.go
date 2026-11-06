@@ -8,6 +8,7 @@ import (
 	"time"
 
 	"github.com/ViViD420/RSGalaxies-/server/internal/game"
+	"github.com/ViViD420/RSGalaxies-/server/internal/auth"
 )
 
 func TestPostgresAccountRegistrationLoginAndSessionRevocation(t *testing.T) {
@@ -107,4 +108,20 @@ func TestPostgresOwnedGatheringLocksSharedNodeAndChecksOwner(t *testing.T) {
  if _,_,err:=repo.GatherForAccount(ctx,second.ID,player.ID,"tree-001",now.Add(time.Second));!errors.Is(err,game.ErrPlayerNotFound){t.Fatalf("foreign gather error=%v",err)}
  gathered,result,err:=repo.GatherForAccount(ctx,first.ID,player.ID,"tree-001",now.Add(time.Second));if err!=nil{t.Fatalf("owner gather: %v",err)}
  if result.ItemID!="softwood_log"||gathered.Inventory["softwood_log"]!=1||gathered.Skills["woodcutting"].Experience!=25{t.Fatalf("owned gather result=%+v player=%+v",result,gathered)}
+}
+
+func TestPostgresAccountSessionLimitPrunesOldestSessions(t *testing.T) {
+ db:=integrationDatabase(t);repo:=NewAccountRepository(db);ctx:=context.Background();now:=time.Now().UTC()
+ account,firstToken,err:=repo.Register(ctx,fmt.Sprintf("session-cap-%d@example.test",now.UnixNano()),"correct-horse-battery-staple",now);if err!=nil{t.Fatal(err)}
+ t.Cleanup(func(){_,_=db.ExecContext(context.Background(),"DELETE FROM accounts WHERE id=$1",account.ID)})
+ for i:=1;i<MaxActiveSessionsPerAccount;i++ {
+  _,hash,err:=auth.NewSessionToken();if err!=nil{t.Fatal(err)}
+  tx,err:=db.BeginTx(ctx,nil);if err!=nil{t.Fatal(err)}
+  if err:=createSession(ctx,tx,account.ID,hash[:],now.Add(time.Duration(i)*time.Second));err!=nil{_ = tx.Rollback();t.Fatal(err)}
+  if err:=tx.Commit();err!=nil{t.Fatal(err)}
+ }
+ if _,err:=repo.AuthenticateSession(ctx,firstToken,now.Add(time.Duration(MaxActiveSessionsPerAccount)*time.Second));!errors.Is(err,ErrSessionNotFound){t.Fatalf("oldest session should be pruned, got %v",err)}
+ var active int
+ if err:=db.QueryRowContext(ctx,"SELECT COUNT(*) FROM account_sessions WHERE account_id=$1 AND revoked_at IS NULL AND expires_at>$2",account.ID,now.Add(time.Duration(MaxActiveSessionsPerAccount)*time.Second)).Scan(&active);err!=nil{t.Fatal(err)}
+ if active!=MaxActiveSessionsPerAccount{t.Fatalf("active sessions=%d want=%d",active,MaxActiveSessionsPerAccount)}
 }
