@@ -19,7 +19,8 @@
 ## Milestone 3: Skills and progression
 - [x] Data-driven starting skill definitions and XP curve prototype.
 - [x] Starter gathering nodes with charges, depletion and timed respawn.
-- [ ] Crafting recipes, requirements and output quality.
+- [x] First workbench recipe with ingredient consumption, output and Crafting XP.
+- [ ] Recipe progression, quality, tool requirements and broader crafting stations.
 - [ ] Combat attributes, abilities, damage and death / recovery loop.
 - [x] Award XP through validated starter gathering actions (development prototype).
 - [ ] Full production gameplay-action validation for gathering, crafting and combat.
