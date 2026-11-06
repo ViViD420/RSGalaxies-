@@ -2,7 +2,6 @@ package httpapi
 
 import (
 	"bytes"
-	"context"
 	"encoding/json"
 	"net/http"
 	"net/http/httptest"
@@ -58,4 +57,3 @@ func TestMissingPlayerReturnsNotFound(t *testing.T) {
 	}
 }
 
-var _ = context.Background
