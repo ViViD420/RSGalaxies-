@@ -14,122 +14,63 @@ import (
 	"github.com/ViViD420/RSGalaxies-/server/internal/game"
 )
 
-type Server struct {
-	players game.PlayerRepository
-	now     func() time.Time
-}
-
-func New(players game.PlayerRepository) *Server {
-	return &Server{players: players, now: time.Now}
-}
+type Server struct { players game.PlayerRepository; now func() time.Time }
+func New(players game.PlayerRepository) *Server { return &Server{players:players, now:time.Now} }
 
 func (s *Server) Routes() http.Handler {
 	mux := http.NewServeMux()
 	mux.HandleFunc("GET /healthz", s.health)
+	mux.HandleFunc("GET /api/v1/skills", s.listSkills)
 	mux.HandleFunc("GET /api/v1/players", s.listPlayers)
 	mux.HandleFunc("POST /api/v1/players", s.createPlayer)
 	mux.HandleFunc("GET /api/v1/players/{id}", s.getPlayer)
+	mux.HandleFunc("GET /api/v1/players/{id}/skills", s.getPlayerSkills)
+	// Development-only: replace with validated gameplay actions before public deployment.
+	mux.HandleFunc("POST /api/v1/players/{id}/skills/{skill}/experience", s.awardExperience)
 	return securityHeaders(mux)
 }
 
-func (s *Server) health(w http.ResponseWriter, _ *http.Request) {
-	writeJSON(w, http.StatusOK, map[string]string{"status": "ok", "service": "rs-galaxies-world"})
+func (s *Server) health(w http.ResponseWriter, _ *http.Request) { writeJSON(w,200,map[string]string{"status":"ok","service":"rs-galaxies-world"}) }
+func (s *Server) listSkills(w http.ResponseWriter, _ *http.Request) { writeJSON(w,200,map[string]any{"skills":game.SkillDefinitions(),"maxLevel":game.MaxSkillLevel,"maxExperience":game.MaxSkillExperience}) }
+func (s *Server) listPlayers(w http.ResponseWriter,r *http.Request) {
+	players,err:=s.players.List(r.Context());if err!=nil{log.Printf("list players: %v",err);writeError(w,500,"internal_error");return};writeJSON(w,200,map[string]any{"players":players})
 }
-
-func (s *Server) listPlayers(w http.ResponseWriter, r *http.Request) {
-	players, err := s.players.List(r.Context())
-	if err != nil {
-		log.Printf("list players: %v", err)
-		writeError(w, http.StatusInternalServerError, "internal_error")
-		return
-	}
-	writeJSON(w, http.StatusOK, map[string]any{"players": players})
+func (s *Server) createPlayer(w http.ResponseWriter,r *http.Request) {
+	r.Body=http.MaxBytesReader(w,r.Body,4<<10);defer r.Body.Close()
+	var request struct{Name string `json:"name"`}
+	decoder:=json.NewDecoder(r.Body);decoder.DisallowUnknownFields()
+	if err:=decoder.Decode(&request);err!=nil{writeError(w,400,"invalid_json");return}
+	if err:=decoder.Decode(&struct{}{});err!=io.EOF{writeError(w,400,"invalid_json");return}
+	id,err:=newID();if err!=nil{log.Printf("generate player id: %v",err);writeError(w,500,"internal_error");return}
+	player,err:=game.NewPlayer(game.PlayerID(id),request.Name,s.now());if err!=nil{writeError(w,422,"invalid_player");return}
+	if err:=s.players.Create(r.Context(),player);err!=nil{if errors.Is(err,game.ErrPlayerAlreadyExists){writeError(w,409,"player_conflict");return};log.Printf("create player: %v",err);writeError(w,500,"internal_error");return}
+	writeJSON(w,201,player)
 }
-
-func (s *Server) createPlayer(w http.ResponseWriter, r *http.Request) {
-	r.Body = http.MaxBytesReader(w, r.Body, 4<<10)
-	defer r.Body.Close()
-
-	var request struct {
-		Name string `json:"name"`
-	}
-	decoder := json.NewDecoder(r.Body)
-	decoder.DisallowUnknownFields()
-	if err := decoder.Decode(&request); err != nil {
-		writeError(w, http.StatusBadRequest, "invalid_json")
-		return
-	}
-	if err := decoder.Decode(&struct{}{}); err != io.EOF {
-		writeError(w, http.StatusBadRequest, "invalid_json")
-		return
-	}
-
-	id, err := newID()
-	if err != nil {
-		log.Printf("generate player id: %v", err)
-		writeError(w, http.StatusInternalServerError, "internal_error")
-		return
-	}
-	player, err := game.NewPlayer(game.PlayerID(id), request.Name, s.now())
-	if err != nil {
-		writeError(w, http.StatusUnprocessableEntity, "invalid_player")
-		return
-	}
-	if err := s.players.Create(r.Context(), player); err != nil {
-		if errors.Is(err, game.ErrPlayerAlreadyExists) {
-			writeError(w, http.StatusConflict, "player_conflict")
-			return
-		}
-		log.Printf("create player: %v", err)
-		writeError(w, http.StatusInternalServerError, "internal_error")
-		return
-	}
-	writeJSON(w, http.StatusCreated, player)
+func (s *Server) getPlayer(w http.ResponseWriter,r *http.Request) {
+	player,err:=s.players.Get(r.Context(),game.PlayerID(strings.TrimSpace(r.PathValue("id"))));if err!=nil{s.writePlayerError(w,err);return};writeJSON(w,200,player)
 }
-
-func (s *Server) getPlayer(w http.ResponseWriter, r *http.Request) {
-	id := strings.TrimSpace(r.PathValue("id"))
-	if id == "" {
-		writeError(w, http.StatusBadRequest, "invalid_player_id")
-		return
+func (s *Server) getPlayerSkills(w http.ResponseWriter,r *http.Request) {
+	player,err:=s.players.Get(r.Context(),game.PlayerID(strings.TrimSpace(r.PathValue("id"))));if err!=nil{s.writePlayerError(w,err);return}
+	writeJSON(w,200,map[string]any{"playerId":player.ID,"skills":player.Skills})
+}
+func (s *Server) awardExperience(w http.ResponseWriter,r *http.Request) {
+	r.Body=http.MaxBytesReader(w,r.Body,1<<10);defer r.Body.Close()
+	var request struct{Amount int `json:"amount"`}
+	decoder:=json.NewDecoder(r.Body);decoder.DisallowUnknownFields()
+	if err:=decoder.Decode(&request);err!=nil{writeError(w,400,"invalid_json");return}
+	if err:=decoder.Decode(&struct{}{});err!=io.EOF{writeError(w,400,"invalid_json");return}
+	player,leveled,err:=s.players.AwardExperience(r.Context(),game.PlayerID(strings.TrimSpace(r.PathValue("id"))),r.PathValue("skill"),request.Amount)
+	if err!=nil{
+		switch{case errors.Is(err,game.ErrPlayerNotFound):writeError(w,404,"player_not_found")
+		case errors.Is(err,game.ErrUnknownSkill):writeError(w,422,"unknown_skill")
+		case errors.Is(err,game.ErrInvalidExperience):writeError(w,422,"invalid_experience")
+		case errors.Is(err,game.ErrExperienceOverflow):writeError(w,409,"experience_cap_reached")
+		default:log.Printf("award experience: %v",err);writeError(w,500,"internal_error")};return
 	}
-	player, err := s.players.Get(r.Context(), game.PlayerID(id))
-	if err != nil {
-		if errors.Is(err, game.ErrPlayerNotFound) {
-			writeError(w, http.StatusNotFound, "player_not_found")
-			return
-		}
-		log.Printf("get player: %v", err)
-		writeError(w, http.StatusInternalServerError, "internal_error")
-		return
-	}
-	writeJSON(w, http.StatusOK, player)
+	writeJSON(w,200,map[string]any{"player":player,"skill":player.Skills[strings.ToLower(r.PathValue("skill"))],"leveledUp":leveled})
 }
-
-func newID() (string, error) {
-	var bytes [16]byte
-	if _, err := rand.Read(bytes[:]); err != nil {
-		return "", err
-	}
-	return hex.EncodeToString(bytes[:]), nil
-}
-
-func writeJSON(w http.ResponseWriter, status int, value any) {
-	w.Header().Set("Content-Type", "application/json; charset=utf-8")
-	w.WriteHeader(status)
-	if err := json.NewEncoder(w).Encode(value); err != nil {
-		log.Printf("write response: %v", err)
-	}
-}
-
-func writeError(w http.ResponseWriter, status int, code string) {
-	writeJSON(w, status, map[string]string{"error": code})
-}
-
-func securityHeaders(next http.Handler) http.Handler {
-	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		w.Header().Set("X-Content-Type-Options", "nosniff")
-		w.Header().Set("Cache-Control", "no-store")
-		next.ServeHTTP(w, r)
-	})
-}
+func(s *Server)writePlayerError(w http.ResponseWriter,err error){if errors.Is(err,game.ErrPlayerNotFound){writeError(w,404,"player_not_found");return};log.Printf("player lookup: %v",err);writeError(w,500,"internal_error")}
+func newID()(string,error){var b [16]byte;if _,err:=rand.Read(b[:]);err!=nil{return "",err};return hex.EncodeToString(b[:]),nil}
+func writeJSON(w http.ResponseWriter,status int,value any){w.Header().Set("Content-Type","application/json; charset=utf-8");w.WriteHeader(status);if err:=json.NewEncoder(w).Encode(value);err!=nil{log.Printf("write response: %v",err)}}
+func writeError(w http.ResponseWriter,status int,code string){writeJSON(w,status,map[string]string{"error":code})}
+func securityHeaders(next http.Handler)http.Handler{return http.HandlerFunc(func(w http.ResponseWriter,r *http.Request){w.Header().Set("X-Content-Type-Options","nosniff");w.Header().Set("Cache-Control","no-store");next.ServeHTTP(w,r)})}
