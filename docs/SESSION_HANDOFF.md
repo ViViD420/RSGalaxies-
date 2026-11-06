@@ -56,7 +56,7 @@ An original sandbox MMORPG combining long-form skill progression and item gamepl
 
 - .devcontainer/ provides a GitHub Codespaces Go/Godot/PostgreSQL workspace with separate development and integration-test databases.
 - Codespaces setup installs Godot 4.3 and export templates, runs race-enabled Go tests, go vet, headless project import and Web export.
-- .env.example contains local-only sample settings; docs/API.md, docs/ACCOUNT_AUTH_DESIGN.md, docs/DEPLOYMENT.md, docs/COMBAT.md, docs/CHAT.md, docs/PRESENCE.md and refreshed docs/ARCHITECTURE.md describe routes, security boundaries, deployment and gameplay rules.
+- .env.example contains local-only sample settings; docs/API.md, docs/ACCOUNT_AUTH_DESIGN.md, docs/DEPLOYMENT.md, docs/COMBAT.md, docs/CHAT.md, docs/PRESENCE.md, docs/PLAYER_TRADE_DESIGN.md and refreshed docs/ARCHITECTURE.md describe routes, security boundaries, deployment, gameplay rules and escrow-safe trade requirements.
 - Go server CI runs race-enabled unit/integration tests against PostgreSQL and go vet. Server run #263 passed after the production-route comment cleanup; run #262 passed presence persistence, privacy, heartbeat write-coalescing and account-scoped roster tests. Run #268 exposed a stale public market-catalog test expectation after the herbal items were added; commit 8c0a7fb updates that assertion. Runs #269–#274 are validating the catalog correction, herbal foraging/crafting additions, password-policy enforcement and coalesced session activity writes. Runs #260–#263 passed. Server runs #245–#253 passed chat-history, readiness and rate-limiter hardening.
 - Godot client CI uses the official Godot 4.3 release and export templates. Client run #90 passed data-driven crafting-station visuals and target selection; runs #89–#90 passed the client catalog changes. Runs #83–#88 also passed presence, inventory search/sort, gathering visuals and bounded HTTP timeouts/redirect-safe requests.
 
@@ -74,7 +74,7 @@ An original sandbox MMORPG combining long-form skill progression and item gamepl
 ## Next engineering tasks
 
 1. Finish validating server runs #269–#274, including the new account-auth and session-write optimizations; then build reconnect recovery and authoritative remote-player movement snapshots.
-2. Add player-to-player trade with escrow and transaction safety, then add a real-phone pass on the Godot Web client.
+2. Implement the escrow-safe player-to-player trade lifecycle from `docs/PLAYER_TRADE_DESIGN.md`, then add a real-phone pass on the Godot Web client.
 3. Add email verification, password recovery, MFA, distributed abuse controls and administrative account operations before enabling public registration.
 4. Add unique item instances/durability, combat animations/AI, currency sinks and player-to-player trade with escrow/transaction safety.
 5. Expand professions, gathering tiers, recipes, NPCs, combat, housing and settlements.
