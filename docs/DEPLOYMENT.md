@@ -38,3 +38,8 @@ Still required before public launch:
 - Probe `GET /healthz` for process liveness. It deliberately does not depend on PostgreSQL, so a database outage does not trigger a restart loop.
 - Probe `GET /readyz` for readiness. When PostgreSQL is configured, it performs a bounded two-second database ping and returns HTTP 503 with a generic response if the dependency is unavailable.
 - Route traffic only to ready instances; let the orchestrator use liveness independently.
+
+
+## Player trading release gate
+
+Player-to-player trade routes are disabled in production unless `RS_GALAXIES_ENABLE_TRADING=true` is explicitly set. Keep the flag unset until PostgreSQL concurrency tests, cancel/confirm and expiry/confirm race tests, escrow refund/restart recovery, real-device client validation and abuse/load review are complete.
