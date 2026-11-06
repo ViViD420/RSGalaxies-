@@ -255,3 +255,10 @@ func (r *AccountRepository) ExpireTrades(ctx context.Context,now time.Time,limit
 	for _,id:=range ids{if _,err:=r.finishTrade(ctx,"","",id,game.TradeStatusExpired,now);err!=nil{if errors.Is(err,game.ErrTradeNotAccepted)||errors.Is(err,game.ErrTradeNotFound){continue};return count,err};count++}
 	return count,nil
 }
+
+func (r *AccountRepository) GetTradeForAccount(ctx context.Context,accountID,tradeID string)(game.TradeSnapshot,error){
+	var allowed bool
+	if err:=r.db.QueryRowContext(ctx,`SELECT EXISTS(SELECT 1 FROM player_trade_participants WHERE trade_id=$1 AND account_id=$2)`,tradeID,accountID).Scan(&allowed);err!=nil{return game.TradeSnapshot{},fmt.Errorf("authorize trade read: %w",err)}
+	if !allowed{return game.TradeSnapshot{},game.ErrTradeNotFound}
+	return loadTradeSnapshot(ctx,r.db,tradeID)
+}
