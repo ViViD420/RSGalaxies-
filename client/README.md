@@ -11,6 +11,7 @@ Open this folder in Godot 4.3 or newer and run the main scene.
 - Touchscreen: on-screen directional pad, USE and jump buttons; drag to orbit the camera.
 - Gather: walk within range of the starter tree or stone deposit and press E / USE to collect a resource and gain the matching skill XP.
 - Craft: collect two logs, move to the frontier workbench and press E / USE to craft a wooden plank for Crafting XP.
+- Bank: move to the starter chest behind the spawn point and press E / USE to deposit one carried starter item, or withdraw one item when your bag has none of those resources.
 
 On startup the client checks the Go API and presents account login/registration. After authentication it loads the account's first character or creates a starter character if the account has none. It sends the bearer token with account-scoped movement, gathering and crafting requests, and supports sign-out and re-authentication after session expiry. The token is held in memory only and is not persisted between application launches. The server validates movement against elapsed server time, maximum speed and zone bounds. When running as a Codespaces Web build, the client derives the forwarded API origin automatically. In a local native run, start the Go server on port 8080 first; change api_base_url in scripts/main.gd if it uses a different address.
 
