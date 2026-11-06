@@ -1630,6 +1630,7 @@ func _start_presence() -> void:
 	add_child(presence_roster_timer)
 	presence_heartbeat_timer.start()
 	presence_roster_timer.start()
+	_start_trade_polling()
 	_send_presence_heartbeat()
 	_poll_zone_presence()
 
@@ -1660,6 +1661,8 @@ func _stop_presence() -> void:
 			remote.queue_free()
 	remote_player_nodes.clear()
 	remote_player_targets.clear()
+	remote_player_names.clear()
+	_stop_trade_polling()
 	if presence_label != null:
 		presence_label.text = "Nearby players: offline"
 
@@ -1725,6 +1728,7 @@ func _on_presence_roster_completed(result: int, response_code: int, _headers: Pa
 		if not remote_player_nodes.has(character_id):
 			_create_remote_player_visual(character_id, str(remote_data.get("name", "Wayfarer")), target)
 		remote_player_targets[character_id] = target
+		remote_player_names[character_id] = str(remote_data.get("name", "Wayfarer"))
 	for character_id in remote_player_nodes.keys():
 		if not seen.has(character_id):
 			var stale: Node3D = remote_player_nodes[character_id]
@@ -1732,11 +1736,13 @@ func _on_presence_roster_completed(result: int, response_code: int, _headers: Pa
 				stale.queue_free()
 			remote_player_nodes.erase(character_id)
 			remote_player_targets.erase(character_id)
+			remote_player_names.erase(character_id)
 	if presence_label != null:
 		presence_label.text = "Nearby players: " + str(remote_player_nodes.size())
 
 
 func _create_remote_player_visual(character_id: String, display_name: String, at: Vector3) -> void:
+	remote_player_names[character_id] = display_name
 	var remote := Node3D.new()
 	remote.name = "Remote_" + character_id
 	remote.position = at
