@@ -41,6 +41,7 @@ Send `Authorization: Bearer <accessToken>`:
 - `GET /api/v1/account/characters`
 - `POST /api/v1/account/characters` with `{"name":"Wayfarer"}`
 - `GET /api/v1/account/characters/{characterId}`
+- `GET /api/v1/market/items` — public item definitions and merchant prices.
 - `GET /api/v1/account/characters/{characterId}/skills`
 - `POST /api/v1/account/characters/{characterId}/skills/{skillId}/experience` with `{"amount":25}`
 - `POST /api/v1/account/characters/{characterId}/move` with `{"x":1.0,"z":2.0}`
@@ -48,10 +49,12 @@ Send `Authorization: Bearer <accessToken>`:
 - `POST /api/v1/account/characters/{characterId}/craft/{recipeId}`
 - `POST /api/v1/account/characters/{characterId}/bank/deposit` with `{"itemId":"softwood_log","quantity":10}`
 - `POST /api/v1/account/characters/{characterId}/bank/withdraw` with `{"itemId":"softwood_log","quantity":10}`
+- `POST /api/v1/account/characters/{characterId}/market/buy/{itemId}` with `{"quantity":1}`
+- `POST /api/v1/account/characters/{characterId}/market/sell/{itemId}` with `{"quantity":1}`
 
 Every character operation is scoped by the authenticated account in its SQL query or transaction. A character belonging to another account is reported as not found.
 
-Sessions expire after 30 days. The server stores only a SHA-256 digest of the random 256-bit token. Each account is limited to 10 active sessions; creating another prunes the oldest. Logout revokes the digest server-side.
+New characters start with 100 coins; starter merchant prices are part of the public item catalog. Purchases and sales atomically update the owned character's coin balance and inventory. Sessions expire after 30 days. The server stores only a SHA-256 digest of the random 256-bit token. Each account is limited to 10 active sessions; creating another prunes the oldest. Logout revokes the digest server-side.
 
 ## Production configuration
 
