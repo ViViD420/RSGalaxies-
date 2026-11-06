@@ -254,8 +254,8 @@ func (s *testAccountStore) AuthenticateSession(_ context.Context,token string,_ 
 }
 func (s *testAccountStore) RevokeSession(_ context.Context,token string,_ time.Time)error{s.revoked[token]=true;return nil}
 
-type testCharacterStore struct { players map[string]map[game.PlayerID]game.Player; enemies map[string]game.EnemyState; messages []game.ChatMessage; lastChat map[game.PlayerID]time.Time; nextChatID int64; presence map[game.PlayerID]game.RemotePlayer }
-func newTestCharacterStore()*testCharacterStore{return &testCharacterStore{players:map[string]map[game.PlayerID]game.Player{},enemies:map[string]game.EnemyState{},lastChat:map[game.PlayerID]time.Time{},presence:map[game.PlayerID]game.RemotePlayer{}}}
+type testCharacterStore struct { players map[string]map[game.PlayerID]game.Player; enemies map[string]game.EnemyState; messages []game.ChatMessage; lastChat map[game.PlayerID]time.Time; nextChatID int64; presence map[game.PlayerID]game.RemotePlayer; trades map[string]game.TradeSnapshot; activeTrades map[game.PlayerID]string; nextTradeID int }
+func newTestCharacterStore()*testCharacterStore{return &testCharacterStore{players:map[string]map[game.PlayerID]game.Player{},enemies:map[string]game.EnemyState{},lastChat:map[game.PlayerID]time.Time{},presence:map[game.PlayerID]game.RemotePlayer{},trades:map[string]game.TradeSnapshot{},activeTrades:map[game.PlayerID]string{}}}
 func (s *testCharacterStore) CreateCharacter(_ context.Context,accountID string,player game.Player)error{
 	if s.players[accountID]==nil{s.players[accountID]=map[game.PlayerID]game.Player{}}
 	if _,ok:=s.players[accountID][player.ID];ok{return game.ErrPlayerAlreadyExists}
@@ -678,4 +678,82 @@ func TestWorldCatalogBundlesAllPublicDefinitions(t *testing.T) {
 	if len(payload.Skills)!=10||len(payload.Zones)!=1||len(payload.Nodes)!=4||len(payload.Items)!=15||len(payload.Enemies)!=2||len(payload.Recipes)!=5||len(payload.Stations)!=2||payload.StartingCoins!=game.StartingCoins {
 		t.Fatalf("incomplete world catalog skills=%d zones=%d nodes=%d items=%d enemies=%d recipes=%d stations=%d coins=%d",len(payload.Skills),len(payload.Zones),len(payload.Nodes),len(payload.Items),len(payload.Enemies),len(payload.Recipes),len(payload.Stations),payload.StartingCoins)
 	}
+}
+
+func (s *testCharacterStore) CreateTradeInviteForAccount(_ context.Context,accountID string,initiatorID,targetID game.PlayerID,now time.Time)(game.TradeSnapshot,error){
+	initiator,ok:=s.players[accountID][initiatorID];if !ok{return game.TradeSnapshot{},game.ErrPlayerNotFound}
+	remote,ok:=s.presence[targetID];if !ok||now.Sub(remote.LastSeenAt)>game.PresenceLease{return game.TradeSnapshot{},game.ErrTradeParticipantUnavailable}
+	var target game.Player;var targetAccount string
+	for owner,players:=range s.players{if candidate,exists:=players[targetID];exists{target=candidate;targetAccount=owner;break}}
+	if targetAccount==""{return game.TradeSnapshot{},game.ErrTradeParticipantUnavailable}
+	if targetAccount==accountID{return game.TradeSnapshot{},game.ErrTradeSelf}
+	if err:=game.ValidateTradeInvite(initiator,target);err!=nil{return game.TradeSnapshot{},err}
+	if s.activeTrades[initiatorID]!=""||s.activeTrades[targetID]!=""{return game.TradeSnapshot{},game.ErrTradeAlreadyActive}
+	s.nextTradeID++
+	id:=fmt.Sprintf("test-trade-%d",s.nextTradeID)
+	trade:=game.TradeSnapshot{ID:id,Status:game.TradeStatusPending,Revision:1,CreatedAt:now,ExpiresAt:now.Add(game.TradeLifetime),Participants:[]game.TradeParticipant{{CharacterID:initiatorID,Name:initiator.Name,Role:"initiator",Offer:game.TradeOffer{Items:map[string]int{}}},{CharacterID:targetID,Name:target.Name,Role:"target",Offer:game.TradeOffer{Items:map[string]int{}}}}}
+	s.trades[id]=trade;s.activeTrades[initiatorID]=id;s.activeTrades[targetID]=id
+	return trade,nil
+}
+func (s *testCharacterStore) AcceptTradeInviteForAccount(_ context.Context,accountID,tradeID string,now time.Time)(game.TradeSnapshot,error){
+	trade,ok:=s.trades[tradeID];if !ok{return game.TradeSnapshot{},game.ErrTradeNotFound}
+	allowed:=false
+	for _,participant:=range trade.Participants{if participant.Role=="target"{for _,player:=range s.players[accountID]{if player.ID==participant.CharacterID{allowed=true}}}}
+	if !allowed{return game.TradeSnapshot{},game.ErrTradeNotFound}
+	if trade.Status!=game.TradeStatusPending{return game.TradeSnapshot{},game.ErrTradeNotAccepted}
+	if !now.Before(trade.ExpiresAt){trade.Status=game.TradeStatusExpired;s.trades[tradeID]=trade;delete(s.activeTrades,trade.Participants[0].CharacterID);delete(s.activeTrades,trade.Participants[1].CharacterID);return game.TradeSnapshot{},game.ErrTradeExpired}
+	trade.Status=game.TradeStatusOpen;s.trades[tradeID]=trade;return trade,nil
+}
+func (s *testCharacterStore) GetTradeForAccount(_ context.Context,accountID,tradeID string)(game.TradeSnapshot,error){
+	trade,ok:=s.trades[tradeID];if !ok{return game.TradeSnapshot{},game.ErrTradeNotFound}
+	for _,participant:=range trade.Participants{for _,player:=range s.players[accountID]{if player.ID==participant.CharacterID{return trade,nil}}}
+	return game.TradeSnapshot{},game.ErrTradeNotFound
+}
+
+func TestAuthenticatedTradeInvitationAcceptanceAndPrivacy(t *testing.T) {
+	t.Setenv("RS_GALAXIES_ENV","production")
+	t.Setenv("RS_GALAXIES_ENABLE_REGISTRATION","true")
+	characters:=newTestCharacterStore()
+	handler:=NewWithAccounts(game.NewMemoryPlayerRepository(),newTestAccountStore(),characters).Routes()
+	register:=func(email string)string{
+		response:=httptest.NewRecorder()
+		body:=fmt.Sprintf(`{"email":%q,"password":"long-enough-password"}`,email)
+		handler.ServeHTTP(response,httptest.NewRequest(http.MethodPost,"/api/v1/auth/register",bytes.NewBufferString(body)))
+		if response.Code!=http.StatusCreated{t.Fatalf("register status=%d body=%s",response.Code,response.Body.String())}
+		var payload struct{AccessToken string `json:"accessToken"`}
+		if err:=json.Unmarshal(response.Body.Bytes(),&payload);err!=nil{t.Fatal(err)}
+		return payload.AccessToken
+	}
+	create:=func(token,name string)game.Player{
+		response:=httptest.NewRecorder();request:=httptest.NewRequest(http.MethodPost,"/api/v1/account/characters",bytes.NewBufferString(fmt.Sprintf(`{"name":%q}`,name)))
+		request.Header.Set("Authorization","Bearer "+token);handler.ServeHTTP(response,request)
+		if response.Code!=http.StatusCreated{t.Fatalf("create character status=%d body=%s",response.Code,response.Body.String())}
+		var player game.Player;if err:=json.Unmarshal(response.Body.Bytes(),&player);err!=nil{t.Fatal(err)};return player
+	}
+	firstToken:=register("trade-first@example.test")
+	secondToken:=register("trade-second@example.test")
+	outsiderToken:=register("trade-outsider@example.test")
+	first:=create(firstToken,"TradeFirst")
+	second:=create(secondToken,"TradeSecond")
+	_ = create(outsiderToken,"TradeOutsider")
+	heartbeat:=httptest.NewRecorder();heartbeatRequest:=httptest.NewRequest(http.MethodPost,"/api/v1/account/characters/"+string(second.ID)+"/presence/heartbeat",nil)
+	heartbeatRequest.Header.Set("Authorization","Bearer "+secondToken);handler.ServeHTTP(heartbeat,heartbeatRequest)
+	if heartbeat.Code!=http.StatusNoContent{t.Fatalf("target heartbeat status=%d body=%s",heartbeat.Code,heartbeat.Body.String())}
+	invite:=httptest.NewRecorder();inviteRequest:=httptest.NewRequest(http.MethodPost,"/api/v1/account/characters/"+string(first.ID)+"/trades/invite/"+string(second.ID),nil)
+	inviteRequest.Header.Set("Authorization","Bearer "+firstToken);handler.ServeHTTP(invite,inviteRequest)
+	if invite.Code!=http.StatusCreated{t.Fatalf("invite status=%d body=%s",invite.Code,invite.Body.String())}
+	var trade game.TradeSnapshot;if err:=json.Unmarshal(invite.Body.Bytes(),&trade);err!=nil{t.Fatal(err)}
+	if trade.Status!=game.TradeStatusPending||len(trade.Participants)!=2{t.Fatalf("trade invitation=%+v",trade)}
+	if strings.Contains(invite.Body.String(),"accountId")||strings.Contains(invite.Body.String(),"email"){t.Fatal("trade response leaked account details")}
+	foreign:=httptest.NewRecorder();foreignRequest:=httptest.NewRequest(http.MethodGet,"/api/v1/account/trades/"+trade.ID,nil)
+	foreignRequest.Header.Set("Authorization","Bearer "+outsiderToken);handler.ServeHTTP(foreign,foreignRequest)
+	if foreign.Code!=http.StatusNotFound{t.Fatalf("outsider trade read status=%d body=%s",foreign.Code,foreign.Body.String())}
+	accept:=httptest.NewRecorder();acceptRequest:=httptest.NewRequest(http.MethodPost,"/api/v1/account/trades/"+trade.ID+"/accept",nil)
+	acceptRequest.Header.Set("Authorization","Bearer "+secondToken);handler.ServeHTTP(accept,acceptRequest)
+	if accept.Code!=http.StatusOK{t.Fatalf("accept status=%d body=%s",accept.Code,accept.Body.String())}
+	var accepted game.TradeSnapshot;if err:=json.Unmarshal(accept.Body.Bytes(),&accepted);err!=nil{t.Fatal(err)}
+	if accepted.Status!=game.TradeStatusOpen{t.Fatalf("accepted trade status=%s",accepted.Status)}
+	self:=httptest.NewRecorder();selfRequest:=httptest.NewRequest(http.MethodPost,"/api/v1/account/characters/"+string(first.ID)+"/trades/invite/"+string(first.ID),nil)
+	selfRequest.Header.Set("Authorization","Bearer "+firstToken);handler.ServeHTTP(self,selfRequest)
+	if self.Code!=http.StatusConflict{t.Fatalf("self invite status=%d body=%s",self.Code,self.Body.String())}
 }
