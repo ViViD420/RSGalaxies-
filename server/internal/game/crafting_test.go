@@ -94,3 +94,35 @@ func TestHerbalTeaCraftingCreatesUsableConsumable(t *testing.T) {
 	healed,err:=player.UseItem("herbal_tea")
 	if err!=nil||healed!=15||player.Health!=95||player.Inventory["herbal_tea"]!=0{t.Fatalf("use herbal tea healed=%d health=%d inventory=%v err=%v",healed,player.Health,player.Inventory,err)}
 }
+
+func TestCraftingAggregatesDuplicateIngredientsAndPreservesState(t *testing.T) {
+	player,err:=NewPlayer("duplicate-ingredients","RecipeTester",time.Now());if err!=nil{t.Fatal(err)}
+	station,_:=FindCraftingStation("frontier-workbench")
+	player.Position=station.Position
+	player.Inventory["softwood_log"]=3
+	recipe:=CraftingRecipeDefinition{ID:"duplicate-inputs",SkillID:"crafting",RequiredLevel:1,StationID:station.ID,Ingredients:[]ItemQuantity{{ItemID:"softwood_log",Quantity:2},{ItemID:"softwood_log",Quantity:2}},Outputs:[]ItemQuantity{{ItemID:"wooden_plank",Quantity:1}},Experience:10}
+	if _,err:=player.Craft(recipe,station,time.Now());!errors.Is(err,ErrInsufficientIngredients){t.Fatalf("duplicate ingredient error=%v",err)}
+	if player.Inventory["softwood_log"]!=3||player.Inventory["wooden_plank"]!=0||player.Skills["crafting"].Experience!=0{t.Fatalf("failed duplicate-input craft mutated player: %+v",player)}
+}
+
+func TestCraftingAppliesNetStackChangeAndAggregatesOutputs(t *testing.T) {
+	player,err:=NewPlayer("net-stack","RecipeTester",time.Now());if err!=nil{t.Fatal(err)}
+	station,_:=FindCraftingStation("frontier-workbench")
+	player.Position=station.Position
+	player.Inventory["wild_herb"]=100
+	netRecipe:=CraftingRecipeDefinition{ID:"net-herbs",SkillID:"crafting",RequiredLevel:1,StationID:station.ID,Ingredients:[]ItemQuantity{{ItemID:"wild_herb",Quantity:2}},Outputs:[]ItemQuantity{{ItemID:"wild_herb",Quantity:2}},Experience:10}
+	if _,err:=player.Craft(netRecipe,station,time.Now());err!=nil{t.Fatalf("net-zero stack recipe should fit: %v",err)}
+	if player.Inventory["wild_herb"]!=100{t.Fatalf("net-zero recipe changed stack: %d",player.Inventory["wild_herb"])}
+	player.Inventory["softwood_log"]=1
+	overflowRecipe:=CraftingRecipeDefinition{ID:"duplicate-outputs",SkillID:"crafting",RequiredLevel:1,StationID:station.ID,Ingredients:[]ItemQuantity{{ItemID:"softwood_log",Quantity:1}},Outputs:[]ItemQuantity{{ItemID:"wild_herb",Quantity:60},{ItemID:"wild_herb",Quantity:60}},Experience:10}
+	if _,err:=player.Craft(overflowRecipe,station,time.Now());!errors.Is(err,ErrCraftingOutputFull){t.Fatalf("duplicate output overflow error=%v",err)}
+	if player.Inventory["softwood_log"]!=1||player.Inventory["wild_herb"]!=100||player.Skills["crafting"].Experience!=10{t.Fatalf("overflowing craft was not atomic: inventory=%v skills=%v",player.Inventory,player.Skills)}
+}
+
+func TestCraftingRejectsWrongStation(t *testing.T) {
+	player,err:=NewPlayer("wrong-station","RecipeTester",time.Now());if err!=nil{t.Fatal(err)}
+	recipe,_:=FindCraftingRecipe("basic-plank")
+	forge,_:=FindCraftingStation("frontier-forge")
+	player.Position=forge.Position
+	if _,err:=player.Craft(recipe,forge,time.Now());!errors.Is(err,ErrUnknownCraftingStation){t.Fatalf("wrong station error=%v",err)}
+}
