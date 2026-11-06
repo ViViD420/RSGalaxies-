@@ -37,7 +37,7 @@ func TestPasswordValidationAndMalformedHash(t *testing.T) {
 	if _, err := HashPassword("short"); !errors.Is(err, ErrInvalidPassword) {
 		t.Fatalf("short password error = %v", err)
 	}
-	if _, err := VerifyPassword("not-a-hash", "anything"); !errors.Is(err, ErrInvalidHash) {
+	if _, err := VerifyPassword("not-a-hash", "a-valid-length-password"); !errors.Is(err, ErrInvalidHash) {
 		t.Fatalf("malformed hash error = %v", err)
 	}
 	if _, err := VerifyPassword("not-a-hash", strings.Repeat("x", maxPasswordBytes+1)); !errors.Is(err, ErrInvalidPassword) {
