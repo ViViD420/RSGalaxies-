@@ -1,0 +1,9 @@
+ALTER TABLE players ADD COLUMN IF NOT EXISTS health INTEGER NOT NULL DEFAULT 100 CHECK (health >= 0 AND health <= 100);
+ALTER TABLE players ADD COLUMN IF NOT EXISTS last_combat_at TIMESTAMPTZ NOT NULL DEFAULT NOW();
+
+CREATE TABLE IF NOT EXISTS enemy_spawn_state (
+    enemy_id TEXT PRIMARY KEY,
+    health INTEGER NOT NULL CHECK (health >= 0),
+    respawn_at TIMESTAMPTZ NULL,
+    initialized BOOLEAN NOT NULL DEFAULT FALSE
+);
