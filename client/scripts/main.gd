@@ -32,6 +32,17 @@ var current_equipment: Dictionary = {}
 var current_attack_bonus := 0
 var current_defense_bonus := 0
 var current_health := 100
+var chat_panel: PanelContainer
+var chat_history: RichTextLabel
+var chat_input: LineEdit
+var chat_status_label: Label
+var chat_poll_request: HTTPRequest
+var chat_send_request: HTTPRequest
+var chat_poll_timer: Timer
+var chat_last_id := 0
+var chat_poll_pending := false
+var chat_send_pending := false
+var chat_active_character_id := ""
 const game_max_health := 100
 var market_catalog: Array = []
 var enemy_catalog: Array = []
@@ -484,6 +495,7 @@ func _on_api_request_completed(result: int, response_code: int, _headers: Packed
 			rest_button.visible = false
 			if character_panel != null:
 				character_panel.visible = false
+			_stop_chat()
 			if market_panel != null:
 				market_panel.visible = false
 			status_label.text = "Server: signed out"
@@ -938,6 +950,7 @@ func _activate_character(character_data: Dictionary) -> void:
 	rest_button.visible = true
 	_start_movement_sync()
 	_start_gathering()
+	_start_chat()
 
 func _request_character_list() -> void:
 	api_stage = "list_characters"
@@ -967,6 +980,7 @@ func _create_account_character(character_name: String) -> void:
 
 
 func _expire_session() -> void:
+	_stop_chat()
 	auth_token = ""
 	player_id = ""
 	movement_pending = false
@@ -987,6 +1001,7 @@ func _expire_session() -> void:
 	auth_status_label.text = "Your session expired. Please sign in again."
 
 func _show_character_selection(characters: Array) -> void:
+	_stop_chat()
 	if market_panel != null:
 		market_panel.visible = false
 	if movement_timer != null:
@@ -1226,3 +1241,163 @@ func _rest_character() -> void:
 		status_label.text = "Resting at the frontier spawn..."
 	else:
 		status_label.text = "Could not send rest request."
+
+func _build_chat_panel(layer: CanvasLayer) -> void:
+	chat_panel = PanelContainer.new()
+	chat_panel.position = Vector2(18, 430)
+	chat_panel.custom_minimum_size = Vector2(390, 250)
+	chat_panel.visible = false
+	var column := VBoxContainer.new()
+	chat_panel.add_child(column)
+	var heading := Label.new()
+	heading.text = "LOCAL ZONE CHAT"
+	heading.add_theme_font_size_override("font_size", 16)
+	column.add_child(heading)
+	chat_history = RichTextLabel.new()
+	chat_history.bbcode_enabled = false
+	chat_history.scroll_following = true
+	chat_history.custom_minimum_size = Vector2(360, 150)
+	chat_history.text = "Messages from players in your current zone appear here."
+	column.add_child(chat_history)
+	var input_row := HBoxContainer.new()
+	column.add_child(input_row)
+	chat_input = LineEdit.new()
+	chat_input.placeholder_text = "Say something to the zone..."
+	chat_input.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	chat_input.max_length = 240
+	chat_input.text_submitted.connect(func(_value: String) -> void: _send_local_chat())
+	input_row.add_child(chat_input)
+	var send_button := Button.new()
+	send_button.text = "Send"
+	send_button.pressed.connect(_send_local_chat)
+	input_row.add_child(send_button)
+	chat_status_label = Label.new()
+	chat_status_label.text = "Zone chat"
+	column.add_child(chat_status_label)
+	layer.add_child(chat_panel)
+
+func _start_chat() -> void:
+	_stop_chat()
+	if player_id.is_empty() or auth_token.is_empty():
+		return
+	chat_active_character_id = player_id
+	chat_last_id = 0
+	chat_poll_pending = false
+	chat_send_pending = false
+	chat_history.clear()
+	chat_history.append_text("Local zone chat • messages are visible to players in this zone.\n")
+	chat_poll_request = HTTPRequest.new()
+	add_child(chat_poll_request)
+	chat_poll_request.request_completed.connect(_on_chat_poll_completed)
+	chat_send_request = HTTPRequest.new()
+	add_child(chat_send_request)
+	chat_send_request.request_completed.connect(_on_chat_send_completed)
+	chat_poll_timer = Timer.new()
+	chat_poll_timer.wait_time = 2.0
+	chat_poll_timer.timeout.connect(_poll_local_chat)
+	add_child(chat_poll_timer)
+	chat_panel.visible = true
+	chat_poll_timer.start()
+	_poll_local_chat()
+
+func _stop_chat() -> void:
+	chat_active_character_id = ""
+	if chat_poll_timer != null:
+		chat_poll_timer.stop()
+		chat_poll_timer.queue_free()
+		chat_poll_timer = null
+	if chat_poll_request != null:
+		if chat_poll_request.get_http_client_status() != HTTPClient.STATUS_DISCONNECTED:
+			chat_poll_request.cancel_request()
+		chat_poll_request.queue_free()
+		chat_poll_request = null
+	if chat_send_request != null:
+		if chat_send_request.get_http_client_status() != HTTPClient.STATUS_DISCONNECTED:
+			chat_send_request.cancel_request()
+		chat_send_request.queue_free()
+		chat_send_request = null
+	chat_poll_pending = false
+	chat_send_pending = false
+	if chat_panel != null:
+		chat_panel.visible = false
+
+func _poll_local_chat() -> void:
+	if chat_active_character_id.is_empty() or player_id != chat_active_character_id or chat_poll_pending or chat_poll_request == null:
+		return
+	var url := api_base_url + "/api/v1/account/characters/" + chat_active_character_id + "/chat/local?after=" + str(chat_last_id) + "&limit=50"
+	var error := chat_poll_request.request(url, _api_headers())
+	if error == OK:
+		chat_poll_pending = true
+	else:
+		chat_status_label.text = "Chat connection unavailable"
+
+func _send_local_chat() -> void:
+	if chat_active_character_id.is_empty() or player_id != chat_active_character_id or chat_send_pending or chat_send_request == null:
+		return
+	var message := chat_input.text.strip_edges()
+	if message.is_empty():
+		return
+	chat_send_pending = true
+	var error := chat_send_request.request(
+		api_base_url + "/api/v1/account/characters/" + chat_active_character_id + "/chat/local",
+		_api_headers(),
+		HTTPClient.METHOD_POST,
+		JSON.stringify({"message": message})
+	)
+	if error == OK:
+		chat_status_label.text = "Sending..."
+	else:
+		chat_send_pending = false
+		chat_status_label.text = "Could not send message"
+
+func _on_chat_poll_completed(result: int, response_code: int, _headers: PackedStringArray, body: PackedByteArray) -> void:
+	chat_poll_pending = false
+	if chat_active_character_id.is_empty() or player_id != chat_active_character_id:
+		return
+	if result != HTTPRequest.RESULT_SUCCESS:
+		chat_status_label.text = "Chat connection unavailable"
+		return
+	if response_code == 401:
+		_expire_session()
+		return
+	if response_code != 200:
+		chat_status_label.text = "Chat: " + str(response_code)
+		return
+	var payload: Variant = JSON.parse_string(body.get_string_from_utf8())
+	if not payload is Dictionary:
+		return
+	var messages: Variant = payload.get("messages", [])
+	if messages is Array:
+		for message in messages:
+			if message is Dictionary:
+				var message_id := int(message.get("id", 0))
+				if message_id <= chat_last_id:
+					continue
+				chat_last_id = message_id
+				chat_history.append_text(str(message.get("characterName", "Unknown")) + ": " + str(message.get("message", "")) + "\n")
+	chat_status_label.text = "Zone chat • cursor " + str(chat_last_id)
+
+func _on_chat_send_completed(result: int, response_code: int, _headers: PackedStringArray, body: PackedByteArray) -> void:
+	chat_send_pending = false
+	if chat_active_character_id.is_empty() or player_id != chat_active_character_id:
+		return
+	if result != HTTPRequest.RESULT_SUCCESS:
+		chat_status_label.text = "Chat connection unavailable"
+		return
+	if response_code == 401:
+		_expire_session()
+		return
+	var payload: Variant = JSON.parse_string(body.get_string_from_utf8())
+	if response_code == 201 and payload is Dictionary:
+		var message: Dictionary = payload.get("message", {})
+		var message_id := int(message.get("id", 0))
+		if message_id > chat_last_id:
+			chat_last_id = message_id
+			chat_history.append_text(str(message.get("characterName", "You")) + ": " + str(message.get("message", "")) + "\n")
+		chat_input.clear()
+		chat_status_label.text = "Message sent"
+	elif response_code == 429:
+		chat_status_label.text = "Chat cooldown • wait a moment"
+	else:
+		chat_status_label.text = "Chat: " + str(payload.get("error", "send_failed") if payload is Dictionary else "send_failed")
+
