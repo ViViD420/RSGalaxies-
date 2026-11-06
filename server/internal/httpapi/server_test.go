@@ -12,6 +12,7 @@ import (
 	"github.com/ViViD420/RSGalaxies-/server/internal/game"
 	"github.com/ViViD420/RSGalaxies-/server/internal/auth"
 	"net/url"
+	"strings"
 )
 
 func TestPlayerLifecycle(t *testing.T) {
@@ -129,6 +130,9 @@ func TestDevelopmentCORSPreflight(t *testing.T) {
 	}
 	if response.Header().Get("Access-Control-Allow-Origin") != "*" {
 		t.Fatal("development CORS origin header missing")
+	}
+	if !strings.Contains(response.Header().Get("Access-Control-Allow-Headers"), "Authorization") {
+		t.Fatal("development CORS preflight does not allow bearer authorization")
 	}
 }
 
