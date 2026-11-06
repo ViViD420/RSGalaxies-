@@ -17,6 +17,27 @@ import (
 	_ "github.com/jackc/pgx/v5/stdlib"
 )
 
+func runTradeExpiryWorker(ctx context.Context, repository *postgres.AccountRepository) {
+	if repository == nil { return }
+	ticker := time.NewTicker(15 * time.Second)
+	defer ticker.Stop()
+	for {
+		workCtx, cancel := context.WithTimeout(ctx, 10*time.Second)
+		count, err := repository.ExpireTrades(workCtx, time.Now().UTC(), 100)
+		cancel()
+		if err != nil {
+			log.Printf("expire player trades: %v", err)
+		} else if count > 0 {
+			log.Printf("released escrow for %d expired player trade(s)", count)
+		}
+		select {
+		case <-ctx.Done():
+			return
+		case <-ticker.C:
+		}
+	}
+}
+
 func main() {
 	address := os.Getenv("RS_GALAXIES_ADDR")
 	if address == "" {
@@ -56,10 +77,13 @@ func main() {
 		log.Print("using in-memory development storage; set RS_GALAXIES_DATABASE_URL for PostgreSQL")
 	}
 
+	workerCtx, stopWorkers := context.WithCancel(context.Background())
+	defer stopWorkers()
 	api := httpapi.New(players)
 	if accountRepository != nil {
 		api = httpapi.NewWithAccounts(players, accountRepository, accountRepository)
 		api.SetReadinessCheck(database.PingContext)
+		go runTradeExpiryWorker(workerCtx, accountRepository)
 	}
 
 	server := &http.Server{
@@ -75,6 +99,7 @@ func main() {
 	signal.Notify(stopped, syscall.SIGINT, syscall.SIGTERM)
 	go func() {
 		<-stopped
+		stopWorkers()
 		ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
 		defer cancel()
 		if err := server.Shutdown(ctx); err != nil {
