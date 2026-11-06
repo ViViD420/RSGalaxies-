@@ -75,6 +75,7 @@ var remote_player_targets: Dictionary = {}
 const game_max_health := 100
 var market_catalog: Array = []
 var enemy_catalog: Array = []
+var gathering_catalog: Array = []
 var api_request: HTTPRequest
 var movement_request: HTTPRequest
 var gather_request: HTTPRequest
@@ -636,6 +637,15 @@ func _on_api_request_completed(result: int, response_code: int, _headers: Packed
 		if enemies is Array:
 			enemy_catalog = enemies
 			_build_enemy_spawns()
+		api_stage = "node_catalog"
+		var node_error := api_request.request(api_base_url + "/api/v1/world/nodes")
+		if node_error != OK:
+			status_label.text = "Server: ready • gathering catalog unavailable"
+		return
+	if api_stage == "node_catalog":
+		var nodes: Variant = payload.get("nodes", [])
+		if nodes is Array:
+			gathering_catalog = nodes
 		auth_panel.visible = true
 		status_label.text = "Server: ready • sign in to continue"
 		return
@@ -715,52 +725,69 @@ func _start_gathering() -> void:
 	gather_request.request_completed.connect(_on_gather_completed)
 
 func _request_interaction() -> void:
-	var tree_distance := Vector2(player_node.global_position.x - 2.0, player_node.global_position.z).length()
-	var stone_distance := Vector2(player_node.global_position.x + 2.0, player_node.global_position.z).length()
 	var bench_distance := Vector2(player_node.global_position.x, player_node.global_position.z - 4.0).length()
 	var bank_distance := Vector2(player_node.global_position.x, player_node.global_position.z + 4.0).length()
 	var merchant_distance := Vector2(player_node.global_position.x - 4.0, player_node.global_position.z).length()
-	var copper_distance := Vector2(player_node.global_position.x, player_node.global_position.z + 8.0).length()
 	var forge_distance := Vector2(player_node.global_position.x, player_node.global_position.z - 8.0).length()
+	var nearest_node_id := ""
+	var nearest_node_distance := 1.0e20
+	for node in gathering_catalog:
+		if node is Dictionary:
+			var node_position: Variant = node.get("position", {})
+			if node_position is Dictionary:
+				var distance := Vector2(
+					player_node.global_position.x - float(node_position.get("x", 0.0)),
+					player_node.global_position.z - float(node_position.get("z", 0.0))
+				).length()
+				if distance < nearest_node_distance:
+					nearest_node_distance = distance
+					nearest_node_id = str(node.get("id", ""))
 	var nearest_enemy_id := ""
 	var enemy_distance := 1.0e20
 	for enemy in enemy_catalog:
 		if enemy is Dictionary:
 			var enemy_position: Variant = enemy.get("position", {})
 			if enemy_position is Dictionary:
-				var distance := Vector2(player_node.global_position.x - float(enemy_position.get("x", 0.0)), player_node.global_position.z - float(enemy_position.get("z", 0.0))).length()
+				var distance := Vector2(
+					player_node.global_position.x - float(enemy_position.get("x", 0.0)),
+					player_node.global_position.z - float(enemy_position.get("z", 0.0))
+				).length()
 				if distance < enemy_distance:
 					enemy_distance = distance
 					nearest_enemy_id = str(enemy.get("id", ""))
 	var error := OK
-	if merchant_distance <= 3.0 and merchant_distance <= bank_distance and merchant_distance <= bench_distance and merchant_distance <= tree_distance and merchant_distance <= stone_distance and merchant_distance <= copper_distance and merchant_distance <= forge_distance and merchant_distance <= enemy_distance:
+	if merchant_distance <= 3.0 and merchant_distance <= bank_distance and merchant_distance <= bench_distance and merchant_distance <= nearest_node_distance and merchant_distance <= forge_distance and merchant_distance <= enemy_distance:
 		_show_market_panel()
 		return
-	elif bank_distance <= 3.0 and bank_distance <= bench_distance and bank_distance <= tree_distance and bank_distance <= stone_distance and bank_distance <= copper_distance and bank_distance <= forge_distance and bank_distance <= enemy_distance:
+	elif bank_distance <= 3.0 and bank_distance <= bench_distance and bank_distance <= nearest_node_distance and bank_distance <= forge_distance and bank_distance <= enemy_distance:
 		var selected_item := ""
 		interaction_type = "bank_deposit"
-		for item_id in ["softwood_log", "rough_stone", "copper_ore", "copper_bar", "wooden_plank", "rat_pelt", "boar_hide", "minor_healing_potion", "training_sword", "leather_cap", "leather_tunic", "leather_boots"]:
-			if int(current_inventory.get(item_id, 0)) > 0:
-				selected_item = item_id
-				break
-		if selected_item.is_empty():
-			interaction_type = "bank_withdraw"
-			for item_id in ["softwood_log", "rough_stone", "copper_ore", "copper_bar", "wooden_plank", "rat_pelt", "boar_hide", "minor_healing_potion", "training_sword", "leather_cap", "leather_tunic", "leather_boots"]:
-				if int(current_bank.get(item_id, 0)) > 0:
+		for item in market_catalog:
+			if item is Dictionary:
+				var item_id := str(item.get("id", ""))
+				if int(current_inventory.get(item_id, 0)) > 0:
 					selected_item = item_id
 					break
 		if selected_item.is_empty():
-			status_label.text = "Bank: no starter items to move"
+			interaction_type = "bank_withdraw"
+			for item in market_catalog:
+				if item is Dictionary:
+					var item_id := str(item.get("id", ""))
+					if int(current_bank.get(item_id, 0)) > 0:
+						selected_item = item_id
+						break
+		if selected_item.is_empty():
+			status_label.text = "Bank: no items to move"
 			return
 		var bank_action := "deposit" if interaction_type == "bank_deposit" else "withdraw"
 		status_label.text = "Bank: " + bank_action + "ing " + selected_item.replace("_", " ") + "..."
 		error = gather_request.request(
 			api_base_url + "/api/v1/account/characters/" + player_id + "/bank/" + bank_action,
-			PackedStringArray(["Content-Type: application/json", "Authorization: Bearer " + auth_token]),
+			_api_headers(),
 			HTTPClient.METHOD_POST,
 			JSON.stringify({"itemId": selected_item, "quantity": 1})
 		)
-	elif forge_distance <= 3.0 and forge_distance <= bench_distance and forge_distance <= tree_distance and forge_distance <= stone_distance and forge_distance <= copper_distance and forge_distance <= enemy_distance:
+	elif forge_distance <= 3.0 and forge_distance <= bench_distance and forge_distance <= nearest_node_distance and forge_distance <= enemy_distance:
 		var recipe_id := "copper-bar"
 		if int(current_inventory.get("copper_bar", 0)) >= 3 and int(current_inventory.get("wooden_plank", 0)) >= 1:
 			recipe_id = "copper-sword"
@@ -772,7 +799,7 @@ func _request_interaction() -> void:
 			HTTPClient.METHOD_POST,
 			""
 		)
-	elif bench_distance <= 3.0 and bench_distance <= tree_distance and bench_distance <= stone_distance and bench_distance <= copper_distance and bench_distance <= enemy_distance:
+	elif bench_distance <= 3.0 and bench_distance <= nearest_node_distance and bench_distance <= enemy_distance:
 		interaction_type = "craft"
 		status_label.text = "Using frontier workbench..."
 		error = gather_request.request(
@@ -781,7 +808,7 @@ func _request_interaction() -> void:
 			HTTPClient.METHOD_POST,
 			""
 		)
-	elif not nearest_enemy_id.is_empty() and enemy_distance <= 3.0 and enemy_distance <= tree_distance and enemy_distance <= stone_distance and enemy_distance <= copper_distance:
+	elif not nearest_enemy_id.is_empty() and enemy_distance <= 3.0 and enemy_distance <= nearest_node_distance:
 		interaction_type = "combat"
 		status_label.text = "Attacking nearby creature..."
 		error = gather_request.request(
@@ -791,20 +818,12 @@ func _request_interaction() -> void:
 			""
 		)
 	else:
-		var node_id := "tree-001"
-		var nearest_distance := tree_distance
-		if stone_distance < nearest_distance:
-			node_id = "stone-001"
-			nearest_distance = stone_distance
-		if copper_distance < nearest_distance:
-			node_id = "copper-001"
-			nearest_distance = copper_distance
-		if nearest_distance > 3.0:
+		if nearest_node_id.is_empty() or nearest_node_distance > 3.0:
 			status_label.text = "Move closer to a resource, station or trader"
 			return
 		interaction_type = "gather"
 		error = gather_request.request(
-			api_base_url + "/api/v1/account/characters/" + player_id + "/gather/" + node_id,
+			api_base_url + "/api/v1/account/characters/" + player_id + "/gather/" + nearest_node_id,
 			_api_headers(),
 			HTTPClient.METHOD_POST,
 			""
