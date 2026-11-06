@@ -57,6 +57,18 @@ func TestPostgresRepositoryPersistsPlayerAndCraftingTransaction(t *testing.T) {
 	if persisted.Skills["crafting"].Experience != 30 || persisted.Inventory["wooden_plank"] != 1 {
 		t.Fatalf("craft transaction was not persisted: %+v", persisted)
 	}
+
+	moveAt := time.Now().Add(100 * time.Millisecond)
+	moved, err := repository.MovePlayer(ctx, id, 0.1, 2, moveAt)
+	if err != nil { t.Fatalf("move player: %v", err) }
+	if moved.Position.X != 0.1 || !moved.LastMoveAt.Equal(moveAt) {
+		t.Fatalf("movement state mismatch: position=%+v lastMoveAt=%s", moved.Position, moved.LastMoveAt)
+	}
+	reloaded, err := repository.Get(ctx, id)
+	if err != nil { t.Fatalf("reload moved player: %v", err) }
+	if reloaded.Position.X != 0.1 || !reloaded.LastMoveAt.Equal(moveAt) {
+		t.Fatalf("movement timestamp/position not persisted: position=%+v lastMoveAt=%s", reloaded.Position, reloaded.LastMoveAt)
+	}
 }
 
 func TestPostgresRepositoryRollsBackInvalidCraft(t *testing.T) {
