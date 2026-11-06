@@ -14,7 +14,8 @@ func _ready() -> void:
 func _build_world() -> void:
 	var environment := WorldEnvironment.new()
 	var world_environment := Environment.new()
-	world_environment.background_mode = Environment.BG_SKY
+	world_environment.background_mode = Environment.BG_COLOR
+	world_environment.background_color = Color(0.035, 0.055, 0.075, 1)
 	world_environment.ambient_light_source = Environment.AMBIENT_SOURCE_COLOR
 	world_environment.ambient_light_color = Color(0.48, 0.56, 0.68)
 	world_environment.ambient_light_energy = 0.65
@@ -47,7 +48,7 @@ func _build_world() -> void:
 	add_child(floor_body)
 
 	var player := PLAYER_SCENE.instantiate()
-	player.position = Vector3(0.0, 1.0, 0.0)
+	player.position = Vector3(0.0, 0.05, 0.0)
 	add_child(player)
 
 func _build_hud() -> void:
