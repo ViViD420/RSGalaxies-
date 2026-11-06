@@ -376,6 +376,13 @@ func _on_api_request_completed(result: int, response_code: int, _headers: Packed
 		var error_code := str(payload.get("error", "request_failed"))
 		_set_account_status("Account: " + error_code.replace("_", " "))
 		return
+	if api_stage == "market_catalog":
+		var catalog_items: Variant = payload.get("items", [])
+		if catalog_items is Array:
+			market_catalog = catalog_items
+		auth_panel.visible = true
+		status_label.text = "Server: ready • sign in to continue"
+		return
 	match api_stage:
 		"login", "register":
 			auth_token = str(payload.get("accessToken", ""))
