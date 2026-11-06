@@ -4,6 +4,7 @@ package auth
 
 import (
 	"context"
+	"errors"
 	"time"
 	"crypto/hmac"
 	"crypto/rand"
