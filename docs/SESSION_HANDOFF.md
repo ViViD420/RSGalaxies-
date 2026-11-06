@@ -15,37 +15,44 @@ An original sandbox MMORPG combining long-form skill progression and item gamepl
 
 ## Current implementation
 
+### Server
 - Go development server with player creation, retrieval and listing.
 - Ten stable skills: combat, cooking, crafting, farming, foraging, mining, ranged, scavenging, smithing and woodcutting.
 - Deterministic cumulative XP curve, levels 1–99 and 200,000,000 XP cap.
 - Player creation initializes all skills at level one.
 - Domain XP validation, level-up detection and atomic in-memory awards.
 - Defensive copying of player skill maps and stable player listing.
-- HTTP routes for skill catalog, player skills and development-only XP awards.
-- Domain, API and concurrency tests.
-- GitHub Actions Go test/vet workflow.
-- Codespaces development-container configuration in .devcontainer/devcontainer.json.
+- HTTP routes for skill catalog, player skills and development-only XP awards. The XP shortcut is disabled when RS_GALAXIES_ENV=production.
+- Domain, API and repository concurrency tests.
+- Go CI runs tests with the race detector and go vet.
+
+### Client
+- Godot 4.3 prototype in client/.
+- Procedurally generated test floor, placeholder character, third-person orbit camera and WASD/jump movement.
+- Startup HTTP health check against the Go service.
+- Headless Godot validation workflow.
+- This is a movement/API proof of concept, not a final client or a network-authoritative character controller.
+
+### Development environment
+- .devcontainer/ configures a GitHub Codespaces Go workspace.
+- .devcontainer/setup.sh installs Godot 4.3 and export templates, then runs Go tests/vet and a headless Godot project import.
+- User can edit files in GitHub/Codespaces through a browser; no local PC installation is required for repository work.
 
 ## Limits and decisions
 
-- Go is the server-side language.
-- Godot 4 is the intended client prototype direction; validate movement, camera and world-scale before locking it as final.
-- Storage is in memory and data is lost when the server stops.
-- The XP-award endpoint is development-only and must never be exposed publicly. Production XP must come from validated game actions.
-- PostgreSQL, authentication, secure sessions, realtime networking, production persistence and actual world simulation remain unimplemented.
-- Tests are committed, but their pass status must be verified in GitHub Actions before claiming success.
+- Go is the server language. Godot is the provisional client engine, pending camera, movement and web/mobile export validation.
+- Storage is in memory; data is lost when the server stops.
+- The XP-award HTTP endpoint is development-only and must not be exposed publicly. Production XP must come from validated game actions.
+- PostgreSQL, authentication, secure sessions, realtime networking, production persistence, world simulation and server-authoritative movement are not implemented.
+- Code and tests are committed, but GitHub Actions execution results have not yet been inspected in this session. Do not claim CI passes until verified.
 
 ## Next engineering tasks
 
-1. Inspect latest GitHub Actions result and fix any build/test failures.
-2. Build a Godot 4 client prototype: 3D test scene, orbit camera, movement and Go API connection.
-3. Implement world zones, server-owned coordinates, spawn points and movement validation.
+1. Inspect GitHub Actions results and fix any Go/Godot build failures.
+2. Add a browser-playable Godot web export and phone-friendly input controls.
+3. Implement world zones, server-owned coordinates, spawn points and validated movement.
 4. Add PostgreSQL schema/migrations and transactional player persistence.
 5. Replace development XP awards with validated gathering, crafting and combat actions.
-
-## Phone-first workflow
-
-The repository includes .devcontainer/devcontainer.json for GitHub Codespaces. From GitHub in a browser, use Code > Codespaces to create a hosted workspace. Setup runs Go tests and vet. No local PC installation is needed for repository edits or CI.
 
 ## Continuation instruction
 
