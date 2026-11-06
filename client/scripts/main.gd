@@ -2150,13 +2150,18 @@ func _on_trade_request_completed(result: int, response_code: int, _headers: Pack
 	var completed_status := str(current_trade.get("status", ""))
 	if trade_action == "invite" or trade_action == "accept" or trade_action == "update" or completed_status == "completed" or completed_status == "cancelled" or completed_status == "expired":
 		_refresh_character_after_trade()
-	if trade_button != null and str(current_trade.get("status", "")) == "pending":
+	var trade_status := str(current_trade.get("status", ""))
+	if trade_button != null and trade_status == "pending":
 		trade_button.text = "Trade • 1"
 		for participant in current_trade.get("participants", []):
 			if participant is Dictionary and str(participant.get("characterId", "")) != player_id:
 				status_label.text = "Trade invitation from " + str(participant.get("name", "nearby player"))
 	elif trade_button != null:
 		trade_button.text = "Trade"
+		if trade_status == "open":
+			status_label.text = "Trade open • review both offers and confirm when ready."
+		elif trade_status == "completed" or trade_status == "cancelled" or trade_status == "expired":
+			status_label.text = "Trade " + trade_status + "."
 
 
 func _refresh_character_after_trade() -> void:
