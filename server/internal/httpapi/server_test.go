@@ -306,6 +306,21 @@ func TestAuthenticatedCharacterLifecycleAndOwnership(t *testing.T) {
 	handler.ServeHTTP(sell,sellRequest)
 	if sell.Code!=http.StatusOK{t.Fatalf("market sell status=%d body=%s",sell.Code,sell.Body.String())}
 	if characters.players[registration.Account.ID][player.ID].Coins!=95||characters.players[registration.Account.ID][player.ID].Inventory["rough_stone"]!=1{t.Fatal("market transactions did not update currency and inventory")}
+	buyGear:=httptest.NewRecorder()
+	buyGearRequest:=httptest.NewRequest(http.MethodPost,"/api/v1/account/characters/"+string(player.ID)+"/market/buy/training_sword",bytes.NewBufferString(`{"quantity":1}`))
+	buyGearRequest.Header.Set("Authorization","Bearer "+registration.AccessToken)
+	handler.ServeHTTP(buyGear,buyGearRequest)
+	if buyGear.Code!=http.StatusOK{t.Fatalf("buy gear status=%d body=%s",buyGear.Code,buyGear.Body.String())}
+	equip:=httptest.NewRecorder()
+	equipRequest:=httptest.NewRequest(http.MethodPost,"/api/v1/account/characters/"+string(player.ID)+"/equipment/equip/training_sword",nil)
+	equipRequest.Header.Set("Authorization","Bearer "+registration.AccessToken)
+	handler.ServeHTTP(equip,equipRequest)
+	if equip.Code!=http.StatusOK{t.Fatalf("equip status=%d body=%s",equip.Code,equip.Body.String())}
+	unequip:=httptest.NewRecorder()
+	unequipRequest:=httptest.NewRequest(http.MethodPost,"/api/v1/account/characters/"+string(player.ID)+"/equipment/unequip/main_hand",nil)
+	unequipRequest.Header.Set("Authorization","Bearer "+registration.AccessToken)
+	handler.ServeHTTP(unequip,unequipRequest)
+	if unequip.Code!=http.StatusOK{t.Fatalf("unequip status=%d body=%s",unequip.Code,unequip.Body.String())}
 	deposit:=httptest.NewRecorder()
 	depositRequest:=httptest.NewRequest(http.MethodPost,"/api/v1/account/characters/"+string(player.ID)+"/bank/deposit",bytes.NewBufferString(`{"itemId":"softwood_log","quantity":2}`))
 	depositRequest.Header.Set("Authorization","Bearer "+registration.AccessToken)
