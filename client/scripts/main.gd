@@ -53,6 +53,7 @@ var movement_request: HTTPRequest
 var gather_request: HTTPRequest
 var movement_timer: Timer
 var player_node: CharacterBody3D
+var equipment_visual_root: Node3D
 var player_id := ""
 var api_stage := "health"
 var auth_mode := "login"
@@ -132,6 +133,9 @@ func _build_world() -> void:
 
 	player_node = PLAYER_SCENE.instantiate() as CharacterBody3D
 	player_node.position = Vector3(0.0, 0.05, 0.0)
+	equipment_visual_root = Node3D.new()
+	equipment_visual_root.name = "EquipmentVisuals"
+	player_node.add_child(equipment_visual_root)
 	add_child(player_node)
 
 func _add_tree(at: Vector3) -> void:
@@ -844,6 +848,7 @@ func _update_inventory(inventory_data: Variant, bank_data: Variant = {}, coins_d
 			if item is Dictionary and str(item.get("id", "")) == str(item_id):
 				current_attack_bonus += int(item.get("attackBonus", 0))
 				current_defense_bonus += int(item.get("defenseBonus", 0))
+	_refresh_equipment_visuals()
 	inventory_label.text = "HP %d/%d • Coins %d • ATK %d DEF %d • Bag L:%d P:%d S:%d Cu:%d/%d • Bank L:%d P:%d S:%d Cu:%d/%d" % [
 			current_health, game_max_health, current_coins, current_attack_bonus, current_defense_bonus,
 		int(current_inventory.get("softwood_log", 0)),
@@ -1483,4 +1488,65 @@ func _show_inventory_panel() -> void:
 	close_button.pressed.connect(func() -> void: inventory_panel.visible = false)
 	column.add_child(close_button)
 	auth_panel.get_parent().add_child(inventory_panel)
+
+
+func _refresh_equipment_visuals() -> void:
+	if equipment_visual_root == null:
+		return
+	for child in equipment_visual_root.get_children():
+		child.queue_free()
+	var leather := StandardMaterial3D.new()
+	leather.albedo_color = Color(0.30, 0.17, 0.09)
+	var metal := StandardMaterial3D.new()
+	metal.albedo_color = Color(0.62, 0.66, 0.70)
+	var cloth := StandardMaterial3D.new()
+	cloth.albedo_color = Color(0.35, 0.25, 0.16)
+	if current_equipment.has("main_hand"):
+		var sword := Node3D.new()
+		sword.position = Vector3(0.48, 0.95, -0.05)
+		sword.rotation_degrees.z = -22.0
+		var blade := MeshInstance3D.new()
+		var blade_mesh := BoxMesh.new()
+		blade_mesh.size = Vector3(0.10, 0.85, 0.07)
+		blade.mesh = blade_mesh
+		blade.position.y = 0.42
+		blade.material_override = metal
+		sword.add_child(blade)
+		var grip := MeshInstance3D.new()
+		var grip_mesh := BoxMesh.new()
+		grip_mesh.size = Vector3(0.12, 0.24, 0.12)
+		grip.mesh = grip_mesh
+		grip.position.y = -0.12
+		grip.material_override = leather
+		sword.add_child(grip)
+		equipment_visual_root.add_child(sword)
+	if current_equipment.has("head"):
+		var cap := MeshInstance3D.new()
+		var cap_mesh := SphereMesh.new()
+		cap_mesh.radius = 0.36
+		cap_mesh.height = 0.34
+		cap.mesh = cap_mesh
+		cap.position.y = 1.82
+		cap.scale = Vector3(1.0, 0.55, 1.0)
+		cap.material_override = leather
+		equipment_visual_root.add_child(cap)
+	if current_equipment.has("body"):
+		var tunic := MeshInstance3D.new()
+		var tunic_mesh := CylinderMesh.new()
+		tunic_mesh.top_radius = 0.39
+		tunic_mesh.bottom_radius = 0.48
+		tunic_mesh.height = 0.92
+		tunic.mesh = tunic_mesh
+		tunic.position.y = 0.92
+		tunic.material_override = cloth
+		equipment_visual_root.add_child(tunic)
+	if current_equipment.has("feet"):
+		for side in [-1.0, 1.0]:
+			var boot := MeshInstance3D.new()
+			var boot_mesh := BoxMesh.new()
+			boot_mesh.size = Vector3(0.32, 0.24, 0.48)
+			boot.mesh = boot_mesh
+			boot.position = Vector3(side * 0.22, 0.12, 0.08)
+			boot.material_override = leather
+			equipment_visual_root.add_child(boot)
 
