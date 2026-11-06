@@ -9,7 +9,7 @@ Build an original, server-authoritative sandbox MMORPG with independently testab
 | Area | Initial direction | Rationale |
 |---|---|---|
 | Game rules / world service | Go | Fast iteration, strong concurrency and simple deployment |
-| Client | Not selected yet | Avoid prematurely committing to an engine before prototype requirements are measured |
+| Client | Godot 4.3 prototype (provisional) | Open-source 3D engine; validating third-person movement, touch controls and Web export before final commitment |
 | Durable data | PostgreSQL (planned) | Transactions and relational integrity for characters, inventories, ownership and economy |
 | Cache / ephemeral coordination | Redis (planned, not required yet) | Later use for presence, rate limits and ephemeral coordination |
 | Realtime transport | WebSocket or UDP-based protocol (planned) | Choose after latency and replication prototypes |
@@ -39,14 +39,18 @@ The Go service in this milestone is a development API, not yet a production MMO 
 
 ## Initial service contract
 
-The first slice exposes a small JSON API for development players:
+The current development API exposes:
 
 - `GET /healthz`
-- `GET /api/v1/players`
-- `POST /api/v1/players`
-- `GET /api/v1/players/{id}`
+- `GET /api/v1/skills`
+- `GET /api/v1/world/zones`
+- `GET /api/v1/world/nodes`
+- `GET /api/v1/items`
+- `GET /api/v1/players`, `POST /api/v1/players`, `GET /api/v1/players/{id}`
+- `GET /api/v1/players/{id}/skills`
+- Development-only `POST` routes for XP awards, movement and gathering.
 
-The API is intentionally small. Authentication, authorization, database persistence, world simulation ticks and realtime networking are not represented as complete features yet.
+The first world slice contains one bounded zone, a spawn point, server-time-validated horizontal movement, two starter resource nodes, stack-count inventory and XP rewards. Resource gathering updates player inventory, skill XP and node charges under one repository lock. Resource nodes have limited charges and timed respawn. These systems are in-memory development implementations, not durable multiplayer services. Development state-changing shortcuts are not registered when RS_GALAXIES_ENV=production.
 
 ## Data ownership and transaction strategy
 
