@@ -105,3 +105,30 @@ func TestTradeInviteRequiresAvailableNearbyCharactersInSameZone(t *testing.T) {
 	target.Health=0
 	if err:=ValidateTradeInvite(initiator,target);!errors.Is(err,ErrTradeParticipantUnavailable){t.Fatalf("defeated target invite error=%v",err)}
 }
+
+
+func TestValidateTradeProximityUsesServerZoneAndRange(t *testing.T) {
+	now := time.Now().UTC()
+	first, err := NewPlayer("trade-near-a", "NearTraderA", now)
+	if err != nil { t.Fatal(err) }
+	second, err := NewPlayer("trade-near-b", "NearTraderB", now)
+	if err != nil { t.Fatal(err) }
+	second.Position.X = TradeInteractionRange
+	if err := ValidateTradeProximity(first, second); err != nil {
+		t.Fatalf("characters at interaction boundary should trade: %v", err)
+	}
+	second.Position.X += 0.01
+	if err := ValidateTradeProximity(first, second); !errors.Is(err, ErrTradeOutOfRange) {
+		t.Fatalf("out-of-range error=%v", err)
+	}
+	second.Position.X = 0
+	second.Position.ZoneID = "another-zone"
+	if err := ValidateTradeProximity(first, second); !errors.Is(err, ErrTradeOutOfRange) {
+		t.Fatalf("cross-zone error=%v", err)
+	}
+	second.Position.ZoneID = first.Position.ZoneID
+	second.ID = first.ID
+	if err := ValidateTradeProximity(first, second); !errors.Is(err, ErrTradeSelf) {
+		t.Fatalf("self-trade error=%v", err)
+	}
+}
