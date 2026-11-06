@@ -4,10 +4,9 @@ import (
 	"context"
 	"crypto/rand"
 	"encoding/hex"
-	"encoding/json"
 	"database/sql"
-	"errors"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"net/mail"
 	"strings"
@@ -52,7 +51,7 @@ func (r *AccountRepository) Register(ctx context.Context, email, password string
 	email, err := normalizeEmail(email)
 	if err != nil { return auth.Account{}, "", err }
 	passwordHash, err := auth.HashPassword(password)
-	if err != nil { return Account{}, "", err }
+	if err != nil { return auth.Account{}, "", err }
 	id, err := newAccountID()
 	if err != nil { return Account{}, "", fmt.Errorf("generate account id: %w", err) }
 	token, tokenHash, err := auth.NewSessionToken()
@@ -76,7 +75,7 @@ func (r *AccountRepository) Register(ctx context.Context, email, password string
 	return auth.Account{ID:id, Email:email, CreatedAt:now}, token, nil
 }
 
-func (r *AccountRepository) Login(ctx context.Context, email, password string, now time.Time) (Account, string, error) {
+func (r *AccountRepository) Login(ctx context.Context, email, password string, now time.Time) (auth.Account, string, error) {
 	email, err := normalizeEmail(email)
 	if err != nil { return Account{}, "", ErrInvalidCredentials }
 	var account auth.Account
@@ -98,10 +97,10 @@ func (r *AccountRepository) Login(ctx context.Context, email, password string, n
 	return account, token, nil
 }
 
-func (r *AccountRepository) AuthenticateSession(ctx context.Context, token string, now time.Time) (Account, error) {
+func (r *AccountRepository) AuthenticateSession(ctx context.Context, token string, now time.Time) (auth.Account, error) {
 	tokenHash, err := auth.HashSessionToken(token)
 	if err != nil { return Account{}, ErrSessionNotFound }
-	var account Account
+	var account auth.Account
 	err = r.db.QueryRowContext(ctx, `UPDATE account_sessions s SET last_used_at=$2
 		FROM accounts a
 		WHERE s.token_hash=$1 AND s.account_id=a.id AND s.revoked_at IS NULL
