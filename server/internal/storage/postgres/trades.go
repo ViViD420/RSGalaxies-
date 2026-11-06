@@ -194,9 +194,22 @@ func (r *AccountRepository) AcceptTradeForAccount(ctx context.Context,accountID 
 	return loadTradeSnapshot(ctx,r.db,tradeID)
 }
 
+func (r *AccountRepository) expireTrade(ctx context.Context, tradeID string, now time.Time) error {
+	_, err := r.finishTrade(ctx, "", "", tradeID, game.TradeStatusExpired, now)
+	if errors.Is(err, game.ErrTradeNotAccepted) {
+		return nil
+	}
+	return err
+}
+
 func (r *AccountRepository) UpdateTradeOfferForAccount(ctx context.Context,accountID string,id game.PlayerID,tradeID string,revision int64,offer game.TradeOffer,now time.Time)(game.TradeSnapshot,error){
 	tx,err:=r.db.BeginTx(ctx,nil);if err!=nil{return game.TradeSnapshot{},err};defer tx.Rollback()
 	snapshot,err:=lockTrade(ctx,tx,tradeID);if err!=nil{return game.TradeSnapshot{},err}
+	if !now.UTC().Before(snapshot.ExpiresAt) {
+		_ = tx.Rollback()
+		if err:=r.expireTrade(ctx,tradeID,now);err!=nil{return game.TradeSnapshot{},err}
+		return game.TradeSnapshot{},game.ErrTradeExpired
+	}
 	if snapshot.Status!=game.TradeStatusOpen{return game.TradeSnapshot{},game.ErrTradeNotAccepted}
 	if snapshot.Revision!=revision{return game.TradeSnapshot{},game.ErrTradeRevisionConflict}
 	participant,ok:=participantRole(snapshot,id);if !ok{return game.TradeSnapshot{},game.ErrTradeNotParticipant}
@@ -215,8 +228,12 @@ func (r *AccountRepository) UpdateTradeOfferForAccount(ctx context.Context,accou
 func (r *AccountRepository) ConfirmTradeForAccount(ctx context.Context,accountID string,id game.PlayerID,tradeID string,revision int64,now time.Time)(game.TradeSnapshot,error){
 	tx,err:=r.db.BeginTx(ctx,nil);if err!=nil{return game.TradeSnapshot{},err};defer tx.Rollback()
 	snapshot,err:=lockTrade(ctx,tx,tradeID);if err!=nil{return game.TradeSnapshot{},err}
+	if !now.UTC().Before(snapshot.ExpiresAt) {
+		_ = tx.Rollback()
+		if err:=r.expireTrade(ctx,tradeID,now);err!=nil{return game.TradeSnapshot{},err}
+		return game.TradeSnapshot{},game.ErrTradeExpired
+	}
 	if snapshot.Status!=game.TradeStatusOpen{return game.TradeSnapshot{},game.ErrTradeNotAccepted}
-	if !now.Before(snapshot.ExpiresAt){return game.TradeSnapshot{},game.ErrTradeExpired}
 	if snapshot.Revision!=revision{return game.TradeSnapshot{},game.ErrTradeRevisionConflict}
 	participant,ok:=participantRole(snapshot,id);if !ok{return game.TradeSnapshot{},game.ErrTradeNotParticipant}
 	players,err:=lockTradePlayers(ctx,tx,tradeID);if err!=nil{return game.TradeSnapshot{},err}
