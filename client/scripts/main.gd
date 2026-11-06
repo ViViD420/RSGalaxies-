@@ -9,6 +9,10 @@ var auth_email_input: LineEdit
 var auth_password_input: LineEdit
 var auth_status_label: Label
 var logout_button: Button
+var character_button: Button
+var character_panel: PanelContainer
+var character_select: OptionButton
+var character_name_input: LineEdit
 var auth_token := ""
 var current_inventory: Dictionary = {}
 var current_bank: Dictionary = {}
@@ -219,6 +223,17 @@ func _build_hud() -> void:
 	column.add_child(inventory_label)
 
 	_build_auth_panel(layer)
+	character_button = Button.new()
+	character_button.text = "Characters"
+	character_button.anchor_left = 1.0
+	character_button.anchor_right = 1.0
+	character_button.offset_left = -238
+	character_button.offset_top = 18
+	character_button.offset_right = -128
+	character_button.offset_bottom = 62
+	character_button.visible = false
+	character_button.pressed.connect(_request_character_list)
+	layer.add_child(character_button)
 	logout_button = Button.new()
 	logout_button.text = "Sign out"
 	logout_button.anchor_left = 1.0
@@ -284,6 +299,9 @@ func _on_api_request_completed(result: int, response_code: int, _headers: Packed
 			interaction_pending = false
 			auth_panel.visible = true
 			logout_button.visible = false
+			character_button.visible = false
+			if character_panel != null:
+				character_panel.visible = false
 			status_label.text = "Server: signed out"
 			auth_status_label.text = "You have been signed out."
 		else:
@@ -323,10 +341,10 @@ func _on_api_request_completed(result: int, response_code: int, _headers: Packed
 			_request_character_list()
 		"list_characters":
 			var characters: Variant = payload.get("characters", [])
-			if characters is Array and not characters.is_empty() and characters[0] is Dictionary:
-				_activate_character(characters[0])
+			if characters is Array and not characters.is_empty():
+				_show_character_selection(characters)
 			else:
-				_create_account_character()
+				_create_account_character("Wayfarer")
 		"create_character":
 			_activate_character(payload)
 func _start_movement_sync() -> void:
@@ -566,6 +584,8 @@ func _logout() -> void:
 		status_label.text = "Sign out failed; try again."
 
 func _activate_character(character_data: Dictionary) -> void:
+	if movement_timer != null:
+		movement_timer.stop()
 	player_id = str(character_data.get("id", ""))
 	if player_id.is_empty():
 		status_label.text = "Account: character response had no ID"
@@ -576,7 +596,10 @@ func _activate_character(character_data: Dictionary) -> void:
 	status_label.text = "Server: connected • account character ready"
 	_update_inventory(character_data.get("inventory", {}), character_data.get("bank", {}))
 	auth_panel.visible = false
+	if character_panel != null:
+		character_panel.visible = false
 	logout_button.visible = true
+	character_button.visible = true
 	_start_movement_sync()
 	_start_gathering()
 
@@ -590,13 +613,18 @@ func _request_character_list() -> void:
 	if error != OK:
 		auth_status_label.text = "Could not load account characters."
 
-func _create_account_character() -> void:
+func _create_account_character(character_name: String) -> void:
+	character_name = character_name.strip_edges()
+	if character_name.length() < 3 or character_name.length() > 20:
+		if auth_status_label != null:
+			auth_status_label.text = "Character names must be 3–20 characters."
+		return
 	api_stage = "create_character"
 	var error := api_request.request(
 		api_base_url + "/api/v1/account/characters",
 		PackedStringArray(["Content-Type: application/json", "Authorization: Bearer " + auth_token]),
 		HTTPClient.METHOD_POST,
-		JSON.stringify({"name": "Wayfarer"})
+		JSON.stringify({"name": character_name})
 	)
 	if error != OK:
 		auth_status_label.text = "Could not create a character."
@@ -614,3 +642,52 @@ func _expire_session() -> void:
 	logout_button.visible = false
 	status_label.text = "Server: session expired"
 	auth_status_label.text = "Your session expired. Please sign in again."
+
+func _show_character_selection(characters: Array) -> void:
+	if character_panel != null:
+		character_panel.queue_free()
+	character_panel = PanelContainer.new()
+	character_panel.position = Vector2(18, 155)
+	character_panel.custom_minimum_size = Vector2(360, 230)
+	auth_panel.visible = false
+	logout_button.visible = true
+	character_button.visible = false
+	var column := VBoxContainer.new()
+	character_panel.add_child(column)
+	var heading := Label.new()
+	heading.text = "SELECT A CHARACTER"
+	heading.add_theme_font_size_override("font_size", 18)
+	column.add_child(heading)
+	character_select = OptionButton.new()
+	character_select.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	for character in characters:
+		if character is Dictionary:
+			character_select.add_item(str(character.get("name", "Unnamed")))
+			character_select.set_item_metadata(character_select.item_count - 1, character)
+	column.add_child(character_select)
+	var enter_button := Button.new()
+	enter_button.text = "Enter world"
+	enter_button.pressed.connect(func() -> void:
+		var selected: Variant = character_select.get_selected_metadata()
+		if selected is Dictionary:
+			_activate_character(selected)
+	)
+	column.add_child(enter_button)
+	var separator := HSeparator.new()
+	column.add_child(separator)
+	var new_character_label := Label.new()
+	new_character_label.text = "Create another character"
+	column.add_child(new_character_label)
+	character_name_input = LineEdit.new()
+	character_name_input.placeholder_text = "Character name (3–20 characters)"
+	column.add_child(character_name_input)
+	var create_button := Button.new()
+	create_button.text = "Create character"
+	create_button.pressed.connect(func() -> void: _create_account_character(character_name_input.text))
+	column.add_child(create_button)
+	auth_status_label = Label.new()
+	auth_status_label.text = "Choose an existing character or create another."
+	auth_status_label.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+	column.add_child(auth_status_label)
+	auth_panel.get_parent().add_child(character_panel)
+
