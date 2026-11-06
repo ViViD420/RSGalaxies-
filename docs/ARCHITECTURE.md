@@ -10,12 +10,12 @@ Build an original, server-authoritative sandbox MMORPG with independently testab
 |---|---|---|
 | Game rules / world service | Go | Fast iteration, strong concurrency and simple deployment |
 | Client | Godot 4.3 prototype (provisional) | Open-source 3D engine; validating third-person movement, touch controls and Web export before final commitment |
-| Durable data | PostgreSQL (planned) | Transactions and relational integrity for characters, inventories, ownership and economy |
+| Durable data | PostgreSQL 16 (implemented for development) | Transactions and relational integrity for characters, skills, inventory and gathering-node state |
 | Cache / ephemeral coordination | Redis (planned, not required yet) | Later use for presence, rate limits and ephemeral coordination |
 | Realtime transport | WebSocket or UDP-based protocol (planned) | Choose after latency and replication prototypes |
 | CI | GitHub Actions | Repeatable tests on every change |
 
-The Go service in this milestone is a development API, not yet a production MMO server. Its in-memory repository is deliberately replaceable.
+The Go service is a development API, not yet a production MMO server. It selects a transactional PostgreSQL repository when RS_GALAXIES_DATABASE_URL is configured and otherwise uses the replaceable in-memory repository. PostgreSQL migrations and integration tests are included; authentication and production operational hardening remain future work.
 
 ## Runtime boundaries
 
@@ -48,20 +48,22 @@ The current development API exposes:
 - `GET /api/v1/items`
 - `GET /api/v1/players`, `POST /api/v1/players`, `GET /api/v1/players/{id}`
 - `GET /api/v1/players/{id}/skills`
-- Development-only `POST` routes for XP awards, movement and gathering.
+- `GET /api/v1/crafting/recipes` and `GET /api/v1/crafting/stations`
+- Development-only `POST` routes for XP awards, movement, gathering and crafting.
 
-The first world slice contains one bounded zone, a spawn point, server-time-validated horizontal movement, two starter resource nodes, stack-count inventory and XP rewards. Resource gathering updates player inventory, skill XP and node charges under one repository lock; resource nodes have limited charges and timed respawn. A first workbench recipe consumes two logs to create a wooden plank and award Crafting XP. Crafting checks station range, skill level, ingredient counts and output stack capacity before committing the inventory/XP change. These systems are in-memory development implementations, not durable multiplayer services. Development state-changing shortcuts are not registered when RS_GALAXIES_ENV=production.
+The first world slice contains one bounded zone, a spawn point, server-time-validated horizontal movement, two starter resource nodes, stack-count inventory and XP rewards. Resource gathering updates player inventory, skill XP and node charges under one repository lock; resource nodes have limited charges and timed respawn. A first workbench recipe consumes two logs to create a wooden plank and award Crafting XP. Crafting checks station range, skill level, ingredient counts and output stack capacity before committing the inventory/XP change. These systems have both in-memory and PostgreSQL repository implementations for development. PostgreSQL persists character skills, inventory, positions, movement timestamps and gathering-node charge/respawn state. Development state-changing shortcuts are not registered when RS_GALAXIES_ENV=production.
 
 ## Data ownership and transaction strategy
 
+Implemented PostgreSQL aggregates:
+- Character identity, skills, inventory stacks and world position
+- Gathering-node charges and respawn timestamps
+
 Planned PostgreSQL aggregates:
-- Account and character identity
-- Character skills and progression
-- Inventory and item instances
-- Bank storage
-- Currency ledger
-- Trade offers and completed trades
-- Housing / settlement ownership
+- Account identity and authenticated sessions
+- Item instances, equipment and bank storage
+- Currency ledger and trade offers/completions
+- Housing and settlement ownership
 
 A trade must lock or version-check both parties' affected inventories, validate capacity and ownership, write both sides and the currency ledger in one transaction, then publish an event after commit. Never acknowledge a trade based only on a client message.
 
