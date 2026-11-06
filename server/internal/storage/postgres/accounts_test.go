@@ -5,6 +5,7 @@ import (
 	"errors"
 	"fmt"
 	"testing"
+	"sync"
 	"time"
 
 	"github.com/ViViD420/RSGalaxies-/server/internal/game"
@@ -128,4 +129,20 @@ func TestPostgresAccountSessionLimitPrunesOldestSessions(t *testing.T) {
  var active int
  if err:=db.QueryRowContext(ctx,"SELECT COUNT(*) FROM account_sessions WHERE account_id=$1 AND revoked_at IS NULL AND expires_at>$2",account.ID,now.Add(time.Duration(MaxActiveSessionsPerAccount)*time.Second)).Scan(&active);err!=nil{t.Fatal(err)}
  if active!=MaxActiveSessionsPerAccount{t.Fatalf("active sessions=%d want=%d",active,MaxActiveSessionsPerAccount)}
+}
+
+func TestPostgresConcurrentBankDepositsDoNotLoseItems(t *testing.T) {
+ db:=integrationDatabase(t);repo:=NewAccountRepository(db);ctx:=context.Background();now:=time.Now().UTC()
+ account,_,err:=repo.Register(ctx,fmt.Sprintf("bank-race-%d@example.test",now.UnixNano()),"correct-horse-battery-staple",now);if err!=nil{t.Fatal(err)}
+ t.Cleanup(func(){_,_=db.ExecContext(context.Background(),"DELETE FROM accounts WHERE id=$1",account.ID)})
+ player,err:=game.NewPlayer(game.PlayerID(fmt.Sprintf("bank-race-char-%d",now.UnixNano())),"BankRace",now);if err!=nil{t.Fatal(err)}
+ player.Inventory["softwood_log"]=10
+ if err:=repo.CreateCharacter(ctx,account.ID,player);err!=nil{t.Fatal(err)}
+ var group sync.WaitGroup
+ errorsSeen:=make(chan error,10)
+ for i:=0;i<10;i++{group.Add(1);go func(){defer group.Done();_,err:=repo.TransferBankItemForAccount(ctx,account.ID,player.ID,"softwood_log",1,true);errorsSeen<-err}()}
+ group.Wait();close(errorsSeen)
+ for err:=range errorsSeen{if err!=nil{t.Fatalf("concurrent bank deposit: %v",err)}}
+ persisted,err:=repo.GetCharacter(ctx,account.ID,player.ID);if err!=nil{t.Fatal(err)}
+ if persisted.Inventory["softwood_log"]!=0||persisted.Bank["softwood_log"]!=10{t.Fatalf("concurrent transfer lost updates: inventory=%v bank=%v",persisted.Inventory,persisted.Bank)}
 }
