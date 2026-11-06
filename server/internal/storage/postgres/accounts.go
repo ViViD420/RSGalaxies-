@@ -508,30 +508,35 @@ func (r *AccountRepository) AcceptTradeInviteForAccount(ctx context.Context,acco
 	}
 	// Recheck both characters while holding their rows in deterministic order;
 	// an invitation cannot be accepted after either character has moved away.
-	type participantLock struct { id game.PlayerID; owner string }
-	participantRows,err:=tx.QueryContext(ctx,`SELECT character_id,account_id FROM player_trade_participants WHERE trade_id=$1 ORDER BY character_id`,tradeID)
+	type participantLock struct { id game.PlayerID; owner, role string }
+	participantRows,err:=tx.QueryContext(ctx,`SELECT character_id,account_id,role FROM player_trade_participants WHERE trade_id=$1 ORDER BY character_id`,tradeID)
 	if err!=nil{return game.TradeSnapshot{},fmt.Errorf("load trade participants for acceptance: %w",err)}
 	locks:=make([]participantLock,0,2)
 	for participantRows.Next(){
 		var lock participantLock
-		if err:=participantRows.Scan(&lock.id,&lock.owner);err!=nil{participantRows.Close();return game.TradeSnapshot{},fmt.Errorf("scan trade participant for acceptance: %w",err)}
+		if err:=participantRows.Scan(&lock.id,&lock.owner,&lock.role);err!=nil{participantRows.Close();return game.TradeSnapshot{},fmt.Errorf("scan trade participant for acceptance: %w",err)}
 		locks=append(locks,lock)
 	}
 	if err:=participantRows.Err();err!=nil{participantRows.Close();return game.TradeSnapshot{},fmt.Errorf("iterate trade participants for acceptance: %w",err)}
 	if err:=participantRows.Close();err!=nil{return game.TradeSnapshot{},fmt.Errorf("close trade participants for acceptance: %w",err)}
 	if len(locks)!=2{return game.TradeSnapshot{},game.ErrTradeInvalidState}
-	players:=make([]game.Player,0,2)
+	var initiatorPlayer,targetPlayer game.Player
 	for _,lock:=range locks{
 		player,err:=r.lockOwnedPlayer(ctx,tx,lock.owner,lock.id)
 		if err!=nil{return game.TradeSnapshot{},game.ErrTradeParticipantUnavailable}
-		players=append(players,player)
+		switch lock.role {
+		case "initiator": initiatorPlayer=player
+		case "target": targetPlayer=player
+		default: return game.TradeSnapshot{},game.ErrTradeInvalidState
+		}
 	}
+	if initiatorPlayer.ID==""||targetPlayer.ID==""||targetPlayer.ID!=targetCharacterID{return game.TradeSnapshot{},game.ErrTradeInvalidState}
 	var targetLastSeen time.Time
 	if err:=tx.QueryRowContext(ctx,`SELECT last_seen_at FROM zone_presence WHERE character_id=$1 AND last_seen_at>$2`,string(targetCharacterID),now.UTC().Add(-game.PresenceLease)).Scan(&targetLastSeen);err!=nil{
 		if errors.Is(err,sql.ErrNoRows){return game.TradeSnapshot{},game.ErrTradeParticipantUnavailable}
 		return game.TradeSnapshot{},fmt.Errorf("recheck target presence: %w",err)
 	}
-	if err:=game.ValidateTradeInvite(players[0],players[1]);err!=nil{return game.TradeSnapshot{},err}
+	if err:=game.ValidateTradeInvite(initiatorPlayer,targetPlayer);err!=nil{return game.TradeSnapshot{},err}
 	if _,err:=tx.ExecContext(ctx,`UPDATE player_trades SET status='open',updated_at=$2 WHERE id=$1 AND status='pending'`,tradeID,now.UTC());err!=nil{return game.TradeSnapshot{},fmt.Errorf("accept trade invitation: %w",err)}
 	if err:=tx.Commit();err!=nil{return game.TradeSnapshot{},fmt.Errorf("commit trade acceptance: %w",err)}
 	return readTradeSnapshot(ctx,r.db,accountID,tradeID)
