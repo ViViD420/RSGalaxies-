@@ -14,6 +14,8 @@ import (
 
 type PlayerRepository struct { db *sql.DB }
 
+var _ game.PlayerRepository = (*PlayerRepository)(nil)
+
 func NewPlayerRepository(db *sql.DB) *PlayerRepository { return &PlayerRepository{db: db} }
 
 type scanner interface { Scan(dest ...any) error }
