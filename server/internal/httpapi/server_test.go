@@ -90,6 +90,11 @@ func TestProductionDisablesDevelopmentAwardEndpoint(t *testing.T) {
 	if move.Code != http.StatusNotFound && move.Code != http.StatusMethodNotAllowed {
 		t.Fatalf("production movement route status = %d, want route unavailable", move.Code)
 	}
+	gather := httptest.NewRecorder()
+	handler.ServeHTTP(gather, httptest.NewRequest(http.MethodPost, "/api/v1/players/player/gather/tree-001", nil))
+	if gather.Code != http.StatusNotFound && gather.Code != http.StatusMethodNotAllowed {
+		t.Fatalf("production gathering route status = %d, want route unavailable", gather.Code)
+	}
 }
 
 func TestDevelopmentCORSPreflight(t *testing.T) {
