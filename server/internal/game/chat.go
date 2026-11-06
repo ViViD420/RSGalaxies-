@@ -16,6 +16,7 @@ const (
 var (
 	ErrInvalidChatMessage = errors.New("chat message must contain 1-240 characters")
 	ErrChatCooldown = errors.New("chat is cooling down")
+	ErrInvalidChatCursor = errors.New("invalid chat cursor or page size")
 )
 
 type ChatMessage struct {
