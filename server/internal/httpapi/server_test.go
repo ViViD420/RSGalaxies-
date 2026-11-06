@@ -742,6 +742,13 @@ func (s *testCharacterStore) CancelTradeForAccount(_ context.Context,accountID s
 	for i:=range trade.Participants{participant:=trade.Participants[i];player:=s.playersForCharacter(participant.CharacterID);if err:=game.ApplyTradeOffer(&player,participant.Offer);err!=nil{return game.TradeSnapshot{},err};for owner,players:=range s.players{if _,ok:=players[player.ID];ok{s.players[owner][player.ID]=player}}}
 	trade.Status=game.TradeCancelled;s.trades[tradeID]=trade;delete(s.activeTrades,trade.Participants[0].CharacterID);delete(s.activeTrades,trade.Participants[1].CharacterID);return trade,nil
 }
+func (s *testCharacterStore) GetActiveTradeForAccount(_ context.Context,accountID string,id game.PlayerID,now time.Time)(game.TradeSnapshot,error){
+	tradeID:=s.activeTrades[id]
+	if tradeID==""{return game.TradeSnapshot{},game.ErrTradeNotFound}
+	trade,ok:=s.trades[tradeID];if !ok{return game.TradeSnapshot{},game.ErrTradeNotFound}
+	for _,participant:=range trade.Participants{if participant.CharacterID==id{if _,ok:=s.players[accountID][id];!ok{return game.TradeSnapshot{},game.ErrTradeNotFound};return trade,nil}}
+	return game.TradeSnapshot{},game.ErrTradeNotFound
+}
 func (s *testCharacterStore) GetTradeForAccount(_ context.Context,accountID,tradeID string)(game.TradeSnapshot,error){
 	trade,ok:=s.trades[tradeID];if !ok{return game.TradeSnapshot{},game.ErrTradeNotFound}
 	for _,participant:=range trade.Participants{for _,player:=range s.players[accountID]{if player.ID==participant.CharacterID{return trade,nil}}}
@@ -786,7 +793,7 @@ func TestAuthenticatedTradeInvitationAcceptanceAndPrivacy(t *testing.T) {
 	foreign:=httptest.NewRecorder();foreignRequest:=httptest.NewRequest(http.MethodGet,"/api/v1/account/trades/"+trade.ID,nil)
 	foreignRequest.Header.Set("Authorization","Bearer "+outsiderToken);handler.ServeHTTP(foreign,foreignRequest)
 	if foreign.Code!=http.StatusNotFound{t.Fatalf("outsider trade read status=%d body=%s",foreign.Code,foreign.Body.String())}
-	accept:=httptest.NewRecorder();acceptRequest:=httptest.NewRequest(http.MethodPost,"/api/v1/account/characters/"+string(second.ID)+"/trades/"+trade.ID+"/accept",bytes.NewBufferString(`{"items":{},"coins":0}`))
+	accept:=httptest.NewRecorder();acceptRequest:=httptest.NewRequest(http.MethodPost,"/api/v1/account/characters/"+string(second.ID)+"/trades/"+trade.ID+"/accept",bytes.NewBufferString(`{"offer":{"items":{},"coins":0}}`))
 	acceptRequest.Header.Set("Authorization","Bearer "+secondToken);handler.ServeHTTP(accept,acceptRequest)
 	if accept.Code!=http.StatusOK{t.Fatalf("accept status=%d body=%s",accept.Code,accept.Body.String())}
 	var accepted game.TradeSnapshot;if err:=json.Unmarshal(accept.Body.Bytes(),&accepted);err!=nil{t.Fatal(err)}
