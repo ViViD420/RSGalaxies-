@@ -12,7 +12,7 @@ Open this folder in Godot 4.3 or newer and run the main scene.
 - Gather: walk within range of the starter tree or stone deposit and press E / USE to collect a resource and gain the matching skill XP.
 - Craft: collect two logs, move to the frontier workbench and press E / USE to craft a wooden plank for Crafting XP.
 
-On startup the client checks the Go API, creates a development character, and synchronizes horizontal movement every 200 ms. The server validates movement against elapsed server time, maximum speed and zone bounds. When running as a Codespaces Web build, the client derives the forwarded API origin automatically. In a local native run, start the Go server on port 8080 first; change api_base_url in scripts/main.gd if it uses a different address.
+On startup the client checks the Go API and presents account login/registration. After authentication it loads the account's first character or creates a starter character if the account has none. It sends the bearer token with account-scoped movement, gathering and crafting requests, and supports sign-out and re-authentication after session expiry. The token is held in memory only and is not persisted between application launches. The server validates movement against elapsed server time, maximum speed and zone bounds. When running as a Codespaces Web build, the client derives the forwarded API origin automatically. In a local native run, start the Go server on port 8080 first; change api_base_url in scripts/main.gd if it uses a different address.
 
 A Web export preset is included in export_presets.cfg. The Codespaces setup installs Godot 4.3 and its export templates so a browser build can be produced from the hosted workspace.
 
@@ -20,5 +20,6 @@ A Web export preset is included in export_presets.cfg. The Codespaces setup inst
 
 - Movement is client-predicted with periodic server validation and correction; there is no continuous world simulation or remote-player replication yet.
 - The world is a generated test floor with a placeholder capsule character.
-- Inventory currently supports starter stackable resources and the first crafted plank item. There is no authentication, durable persistence, equipment, combat, production art or multiplayer networking yet.
+- Inventory currently supports starter stackable resources and the first crafted plank item. Authentication is integrated with bearer sessions, but the client does not yet persist tokens securely across launches, support password recovery/MFA, character selection or character deletion.
+- There is no equipment, combat, production art or remote-player networking yet.
 - This prototype is used to validate camera, movement and touch interaction before committing to a full client architecture.
