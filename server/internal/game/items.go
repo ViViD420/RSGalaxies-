@@ -10,6 +10,8 @@ type ItemDefinition struct {
 	EquipmentSlot string `json:"equipmentSlot,omitempty"`
 	AttackBonus int `json:"attackBonus,omitempty"`
 	DefenseBonus int `json:"defenseBonus,omitempty"`
+	Consumable bool `json:"consumable,omitempty"`
+	HealAmount int `json:"healAmount,omitempty"`
 }
 
 var itemDefinitions = []ItemDefinition{
@@ -24,6 +26,7 @@ var itemDefinitions = []ItemDefinition{
 	{ID: "copper_bar", Name: "Copper Bar", Description: "A refined copper ingot ready for smithing.", MaxStack: 100, BuyPrice: 10, SellPrice: 4},
 	{ID: "rat_pelt", Name: "Rat Pelt", Description: "A small hide recovered from a frontier rat.", MaxStack: 100, BuyPrice: 6, SellPrice: 2},
 	{ID: "boar_hide", Name: "Boar Hide", Description: "A tough hide taken from a wild boar.", MaxStack: 100, BuyPrice: 15, SellPrice: 5},
+	{ID: "minor_healing_potion", Name: "Minor Healing Potion", Description: "Restores up to 25 health when used.", MaxStack: 10, BuyPrice: 20, SellPrice: 5, Consumable: true, HealAmount: 25},
 }
 
 func ItemDefinitions() []ItemDefinition {
