@@ -1,53 +1,62 @@
 # RS Galaxies — Roadmap
 
 ## Milestone 1: Independent foundation
-- [x] Establish standalone repository and project identity.
-- [x] Document design pillars and system boundaries.
-- [x] Add server API and deterministic tests.
-- [ ] Validate client engine through movement, camera and world-size prototype.
-- [x] Add PostgreSQL migrations and Codespaces development database.
+
+- [x] Establish standalone repository and original project identity.
+- [x] Document architecture, design pillars and system boundaries.
+- [x] Add Go world API, deterministic unit tests, race checks and vet.
+- [x] Add Godot 4.3 third-person client, headless import and Web export validation.
+- [x] Add PostgreSQL migrations, integration tests and Codespaces development database.
 - [x] Add hosted Codespaces development-container configuration.
 
-## Milestone 2: Character and world slice
-- [x] Basic character identity and in-memory development storage.
-- [x] Durable character, inventory and gathering-node persistence prototype.
-- [x] First world zone, coordinates, spawn point and server-validated movement prototype.
-- [ ] Interactable objects and NPC definitions.
-- [ ] Session lifecycle and basic presence.
-- [ ] Client displays fully authoritative character state (current movement sync is development-only).
+## Milestone 2: Account and world slice
+
+- [x] Character identity, account registration/login/logout and bearer-session lifecycle.
+- [x] PostgreSQL-backed account and character ownership; account-scoped character APIs.
+- [x] First world zone, coordinates, spawn point and server-validated movement.
+- [x] Godot account UI, multi-character selection and authenticated gameplay requests.
+- [x] Interactable gathering nodes, workbench, forge, bank, merchant and enemy spawn points.
+- [x] Safe-spawn recovery and session-expiry recovery.
+- [ ] Remote-player presence, reconnect state and fully authoritative client replication.
+- [ ] Email verification, password recovery, MFA and distributed abuse controls before public registration.
 
 ## Milestone 3: Skills and progression
-- [x] Data-driven starting skill definitions and XP curve prototype.
-- [x] Starter gathering nodes with charges, depletion and timed respawn.
-- [x] First workbench recipe with ingredient consumption, output and Crafting XP.
-- [ ] Recipe progression, quality, tool requirements and broader crafting stations.
-- [ ] Combat attributes, abilities, damage and death / recovery loop.
-- [x] Award XP through validated starter gathering actions (development prototype).
-- [ ] Full production gameplay-action validation for gathering, crafting and combat.
-- [x] Deterministic progression boundary and repository concurrency tests.
 
-## Milestone 4: Inventory and economy
-- [x] Starter item definitions and stack-count inventory.
-- [ ] Item instances, equipment, ownership rules and full stack management.
-- [ ] Bank storage and item ownership.
-- [ ] Atomic player-to-player trades.
-- [ ] Currency ledger and NPC/player shops.
-- [ ] Resource properties, regional supply and market discovery.
+- [x] Ten data-driven skills, level 1–99 progression curve and XP cap.
+- [x] Tree, stone and copper gathering with range, skill, charge and respawn rules.
+- [x] Workbench plank recipe and forge copper smelting/training-sword recipes.
+- [x] Transactional crafting with ingredient consumption, output capacity and skill XP.
+- [x] Basic PvE enemy definitions, server-calculated damage, cooldowns, retaliation, combat XP, loot and respawns.
+- [x] Player health, defeated-state action restrictions and safe-spawn recovery.
+- [ ] Enemy movement/AI, combat animations, abilities, target selection and deeper combat progression.
+- [ ] Recipe quality, tool requirements, advanced stations and broader profession progression.
+
+## Milestone 4: Inventory, equipment and economy
+
+- [x] Starter item catalog, stack-count inventory and server-side stack validation.
+- [x] Persistent 100-slot bank with atomic deposit/withdraw operations.
+- [x] Persistent coin wallet, starter merchant catalog and atomic buy/sell transactions.
+- [x] Equipment slots, equip/unequip transactions and derived attack/defense bonuses.
+- [ ] Unique item instances, durability, binding, item modifiers and richer stack management.
+- [ ] Currency ledger, player-to-player trading with escrow and anti-duplication guarantees.
+- [ ] Regional supply, market discovery, currency sinks and player-run shops.
 
 ## Milestone 5: Social sandbox
-- [ ] Friends, groups, guilds and communication.
-- [ ] Player housing and permissions.
-- [ ] Settlement plots, construction and shared storage.
-- [ ] Player services and profession specialization.
-- [ ] Factions, reputation and world events.
+
+- [ ] Local/zone chat, direct messages, friends, groups and guilds.
+- [ ] Player housing, permissions, storage and decoration.
+- [ ] Settlement plots, construction, shared storage and governance.
+- [ ] Player services, profession specialization and player-run institutions.
+- [ ] Factions, reputation, world events and persistent world consequences.
 
 ## Milestone 6: Persistent multiplayer alpha
-- [ ] Realtime replication and reconnect recovery.
-- [ ] Durable world state, backups and migrations.
-- [ ] Load testing, observability and operational runbooks.
-- [ ] Abuse prevention, economy monitoring and moderation tools.
+
+- [ ] Realtime replication, zone ownership and reconnect recovery.
+- [ ] Durable world-state ownership, backup/restore drills and migration operations.
+- [ ] Load testing, observability, capacity planning and operational runbooks.
+- [ ] Distributed abuse prevention, economy monitoring, moderation and admin tools.
 - [ ] Closed alpha deployment and feedback loop.
 
 ## Working rule
 
-Each milestone is a tested, reviewable slice. Do not mark a feature complete because a placeholder or interface exists; completion requires server rules, persistence where applicable, tests, and a usable client path.
+Each milestone is a tested, reviewable slice. A feature is not complete because a placeholder or interface exists: completion requires server rules, persistence where applicable, tests, and a usable client path. Keep production registration disabled until the documented security launch gates are met.
