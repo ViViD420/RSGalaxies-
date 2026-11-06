@@ -737,5 +737,5 @@ func (s *Server) useOwnedItem(w http.ResponseWriter,r *http.Request) {
 		}
 		return
 	}
-	writeJSON(w,200,map[string]any{"character":player,"healed":healed,"health":player.Health,"inventory":player.Inventory})
+	writeJSON(w,200,map[string]any{"character":player,"itemId":r.PathValue("itemID"),"healed":healed,"health":player.Health,"inventory":player.Inventory})
 }
