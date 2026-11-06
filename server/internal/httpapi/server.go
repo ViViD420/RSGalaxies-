@@ -28,6 +28,7 @@ type characterStore interface {
 	MovePlayerForAccount(context.Context, string, game.PlayerID, float64, float64, time.Time) (game.Player, error)
 	GatherForAccount(context.Context, string, game.PlayerID, string, time.Time) (game.Player, game.GatheringResult, error)
 	CraftForAccount(context.Context, string, game.PlayerID, string, time.Time) (game.Player, game.CraftingResult, error)
+	TransferBankItemForAccount(context.Context, string, game.PlayerID, string, int, bool) (game.Player, error)
 }
 
 type authAttemptWindow struct { started time.Time; count int }
@@ -84,6 +85,8 @@ func (s *Server) Routes() http.Handler {
 		mux.HandleFunc("POST /api/v1/account/characters/{id}/move", s.moveOwnedCharacter)
 		mux.HandleFunc("POST /api/v1/account/characters/{id}/gather/{nodeID}", s.gatherOwnedCharacter)
 		mux.HandleFunc("POST /api/v1/account/characters/{id}/craft/{recipeID}", s.craftOwnedCharacter)
+		mux.HandleFunc("POST /api/v1/account/characters/{id}/bank/deposit", s.depositOwnedBankItem)
+		mux.HandleFunc("POST /api/v1/account/characters/{id}/bank/withdraw", s.withdrawOwnedBankItem)
 	}
 	return securityHeaders(mux)
 }
@@ -528,4 +531,33 @@ func (s *Server) allowAuthAttempt(w http.ResponseWriter,r *http.Request,limit in
  window.count++
  s.authAttempts[key]=window
  return true
+}
+
+func (s *Server) depositOwnedBankItem(w http.ResponseWriter,r *http.Request) {
+	s.transferOwnedBankItem(w,r,true)
+}
+
+func (s *Server) withdrawOwnedBankItem(w http.ResponseWriter,r *http.Request) {
+	s.transferOwnedBankItem(w,r,false)
+}
+
+func (s *Server) transferOwnedBankItem(w http.ResponseWriter,r *http.Request,deposit bool) {
+	account,_,ok:=s.authenticatedAccount(w,r);if !ok{return}
+	var request struct { ItemID string; Quantity int }
+	if !decodeStrictJSON(w,r,1<<10,&request){return}
+	player,err:=s.characters.TransferBankItemForAccount(r.Context(),account.ID,game.PlayerID(strings.TrimSpace(r.PathValue("id"))),request.ItemID,request.Quantity,deposit)
+	if err!=nil {
+		switch {
+		case errors.Is(err,game.ErrPlayerNotFound): writeError(w,404,"character_not_found")
+		case errors.Is(err,game.ErrUnknownBankItem): writeError(w,404,"unknown_item")
+		case errors.Is(err,game.ErrInvalidItemQuantity): writeError(w,422,"invalid_quantity")
+		case errors.Is(err,game.ErrInsufficientItems): writeError(w,409,"insufficient_items")
+		case errors.Is(err,game.ErrBankFull): writeError(w,409,"bank_full")
+		case errors.Is(err,game.ErrBankStackFull): writeError(w,409,"bank_stack_full")
+		case errors.Is(err,game.ErrInventoryStackFull): writeError(w,409,"inventory_stack_full")
+		default: log.Printf("transfer owned bank item: %v",err); writeError(w,500,"internal_error")
+		}
+		return
+	}
+	writeJSON(w,200,map[string]any{"character":player,"bank":player.Bank,"inventory":player.Inventory})
 }
