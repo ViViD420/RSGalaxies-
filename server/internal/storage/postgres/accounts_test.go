@@ -78,7 +78,9 @@ func TestPostgresOwnedGameplayMutationsEnforceOwnership(t *testing.T) {
  if err:=repo.CreateCharacter(ctx,first.ID,player);err!=nil{t.Fatal(err)}
  if _,_,err:=repo.AwardExperienceForAccount(ctx,second.ID,player.ID,"mining",50);!errors.Is(err,game.ErrPlayerNotFound){t.Fatalf("foreign XP mutation error=%v",err)}
  if _,_,err:=repo.CraftForAccount(ctx,second.ID,player.ID,"basic-plank",now.Add(time.Second));!errors.Is(err,game.ErrPlayerNotFound){t.Fatalf("foreign craft error=%v",err)}
- crafted,result,err:=repo.CraftForAccount(ctx,first.ID,player.ID,"basic-plank",now.Add(time.Second));if err!=nil{t.Fatalf("owner craft: %v",err)}
+ if _,_,err:=repo.AwardExperienceForAccount(ctx,first.ID,player.ID,"mining",50);err!=nil{t.Fatalf("owner XP award: %v",err)}
+ if _,err:=repo.MovePlayerForAccount(ctx,first.ID,player.ID,0.1,2,now.Add(time.Second));err!=nil{t.Fatalf("owner movement: %v",err)}
+ crafted,result,err:=repo.CraftForAccount(ctx,first.ID,player.ID,"basic-plank",now.Add(2*time.Second));if err!=nil{t.Fatalf("owner craft: %v",err)}
  if result.Experience!=30||crafted.Inventory["wooden_plank"]!=1||crafted.Inventory["softwood_log"]!=0{t.Fatalf("owner craft result=%+v player=%+v",result,crafted)}
  persisted,err:=repo.GetCharacter(ctx,first.ID,player.ID);if err!=nil{t.Fatal(err)}
  if persisted.Skills["crafting"].Experience!=30{t.Fatalf("owned crafting XP not persisted: %+v",persisted.Skills["crafting"])}
@@ -91,4 +93,18 @@ func TestPostgresMigrationsAreIdempotent(t *testing.T) {
  var count int
  if err:=db.QueryRowContext(ctx,"SELECT COUNT(*) FROM schema_migrations WHERE version IN (1,2)").Scan(&count);err!=nil{t.Fatal(err)}
  if count!=2{t.Fatalf("migration versions applied=%d want=2",count)}
+}
+
+func TestPostgresOwnedGatheringLocksSharedNodeAndChecksOwner(t *testing.T) {
+ db:=integrationDatabase(t);repo:=NewAccountRepository(db);ctx:=context.Background();now:=time.Now().UTC()
+ first,_,err:=repo.Register(ctx,fmt.Sprintf("gather-owner-%d@example.test",now.UnixNano()),"correct-horse-battery-staple",now);if err!=nil{t.Fatal(err)}
+ second,_,err:=repo.Register(ctx,fmt.Sprintf("gather-other-%d@example.test",now.UnixNano()),"correct-horse-battery-staple",now);if err!=nil{t.Fatal(err)}
+ t.Cleanup(func(){_,_=db.ExecContext(context.Background(),"DELETE FROM accounts WHERE id IN ($1,$2)",first.ID,second.ID);_,_=db.ExecContext(context.Background(),"DELETE FROM gathering_node_state WHERE node_id=$1","tree-001")})
+ _,_=db.ExecContext(ctx,"DELETE FROM gathering_node_state WHERE node_id=$1","tree-001")
+ player,err:=game.NewPlayer(game.PlayerID(fmt.Sprintf("gather-owned-%d",now.UnixNano())),"GatherOwned",now);if err!=nil{t.Fatal(err)}
+ player.Position.X=2
+ if err:=repo.CreateCharacter(ctx,first.ID,player);err!=nil{t.Fatal(err)}
+ if _,_,err:=repo.GatherForAccount(ctx,second.ID,player.ID,"tree-001",now.Add(time.Second));!errors.Is(err,game.ErrPlayerNotFound){t.Fatalf("foreign gather error=%v",err)}
+ gathered,result,err:=repo.GatherForAccount(ctx,first.ID,player.ID,"tree-001",now.Add(time.Second));if err!=nil{t.Fatalf("owner gather: %v",err)}
+ if result.ItemID!="softwood_log"||gathered.Inventory["softwood_log"]!=1||gathered.Skills["woodcutting"].Experience!=25{t.Fatalf("owned gather result=%+v player=%+v",result,gathered)}
 }
