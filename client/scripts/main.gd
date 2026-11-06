@@ -257,8 +257,47 @@ func _build_gathering_node_visuals() -> void:
 				_add_stone_deposit(at)
 			"copper_ore":
 				_add_copper_vein(at)
+			"wild_herb":
+				_add_herb_patch(at)
 			_:
 				_add_generic_gathering_node(at, str(node.get("name", "Resource Node")))
+
+func _add_herb_patch(at: Vector3) -> void:
+	var patch := Node3D.new()
+	patch.position = at
+	var stem_material := StandardMaterial3D.new()
+	stem_material.albedo_color = Color(0.18, 0.38, 0.16)
+	var leaf_material := StandardMaterial3D.new()
+	leaf_material.albedo_color = Color(0.28, 0.58, 0.22)
+	var stem := MeshInstance3D.new()
+	var stem_mesh := CylinderMesh.new()
+	stem_mesh.top_radius = 0.035
+	stem_mesh.bottom_radius = 0.06
+	stem_mesh.height = 0.55
+	stem.mesh = stem_mesh
+	stem.position.y = 0.27
+	stem.material_override = stem_material
+	patch.add_child(stem)
+	for index in range(5):
+		var leaf := MeshInstance3D.new()
+		var leaf_mesh := SphereMesh.new()
+		leaf_mesh.radius = 0.22
+		leaf_mesh.height = 0.18
+		leaf.mesh = leaf_mesh
+		leaf.scale = Vector3(0.85, 0.5, 1.5)
+		var angle := float(index) * TAU / 5.0
+		leaf.position = Vector3(cos(angle) * 0.18, 0.18 + float(index % 2) * 0.08, sin(angle) * 0.18)
+		leaf.rotation.y = angle
+		leaf.material_override = leaf_material
+		patch.add_child(leaf)
+	var label := Label3D.new()
+	label.text = "Wild Herbs"
+	label.position.y = 0.8
+	label.billboard = BaseMaterial3D.BILLBOARD_ENABLED
+	label.font_size = 22
+	patch.add_child(label)
+	add_child(patch)
+
 
 func _add_generic_gathering_node(at: Vector3, node_name: String) -> void:
 	var root := Node3D.new()
