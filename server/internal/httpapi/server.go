@@ -129,7 +129,6 @@ func (s *Server) Routes() http.Handler {
 		mux.HandleFunc("POST /api/v1/account/characters/{id}/trades/{tradeID}/cancel", s.cancelOwnedTrade)
 		mux.HandleFunc("GET /api/v1/account/characters/{id}/trades/active", s.getActiveOwnedTrade)
 		mux.HandleFunc("GET /api/v1/account/trades/{tradeID}", s.getOwnedTrade)
-		mux.HandleFunc("PUT /api/v1/account/characters/{id}/trades/{tradeID}/offer", s.updateOwnedTradeOffer)
 	}
 	return securityHeaders(mux)
 }
@@ -873,7 +872,7 @@ func (s *Server) writeTradeError(w http.ResponseWriter,err error) {
 		writeError(w,409,"trade_not_open")
 	case errors.Is(err,game.ErrInvalidTradeOffer):
 		writeError(w,422,"invalid_trade_offer")
-	case errors.Is(err,game.ErrTradeItemEquipped):
+	case errors.Is(err,game.ErrTradeItemEquipped),errors.Is(err,game.ErrTradeSelf),errors.Is(err,game.ErrTradeOutOfRange),errors.Is(err,game.ErrTradeDifferentZone),errors.Is(err,game.ErrTradeParticipantUnavailable),errors.Is(err,game.ErrTradeAlreadyActive):
 		writeError(w,409,"equipped_item_not_tradable")
 	case errors.Is(err,game.ErrTradeOfferCapacity):
 		writeError(w,409,"trade_offer_capacity")
