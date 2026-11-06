@@ -32,7 +32,7 @@ An original sandbox MMORPG combining long-form skill progression and item gamepl
 - Authenticated routes cover login/register/logout/me, character list/create/read, skills/XP, movement, gathering, crafting, bank deposits/withdrawals, merchant trades, equipment equip/unequip, combat attacks, safe-spawn rest and local zone chat.
 - Legacy unscoped player-ID and development mutation routes remain disabled in production. Production registration is disabled unless explicitly enabled.
 - Auth routes have per-process IP/path throttling with bounded key memory. Production CORS uses an exact-origin allowlist. Security response headers and no-store responses are applied.
-- Public catalog routes include skills, world zones, gathering nodes, items, crafting definitions and merchant prices.
+- Public catalog routes include skills, world zones, gathering nodes, items, crafting definitions and merchant prices. `/healthz` is a liveness probe; `/readyz` performs a bounded PostgreSQL readiness check without exposing dependency errors.
 - `/healthz` is a dependency-independent liveness probe; `/readyz` performs a bounded two-second PostgreSQL ping and returns a generic 503 on dependency failure.
 
 ### Godot client
@@ -41,7 +41,7 @@ An original sandbox MMORPG combining long-form skill progression and item gamepl
 - Account login/registration, multi-character selection and additional character creation.
 - Server-driven enemy visuals, combat attacks, damage/loot/XP feedback, health HUD, Rest recovery/respawn and a polling local-zone chat panel.
 - Live authenticated skills panel with all ten skills, per-skill XP progress bars and next-level XP remaining (including the 200M XP cap display at level 99); requests are cancelled when characters change or sign out.
-- Bearer-authenticated movement, gathering, crafting, bank transfers, merchant buy/sell panel, equipment panel and full inventory/bank contents panel.
+- Bearer-authenticated movement, gathering, crafting, bank transfers, merchant buy/sell panel, equipment panel and full inventory/bank contents panel with selectable stack quantities for deposits and withdrawals.
 - Starter bank chest, merchant stall/NPC, copper vein, forge and enemy spawns in the test world; coin balance, health, attack/defense bonuses, bag and bank counts appear in the HUD. Equipped sword/armor pieces have simple client-side visuals.
 - Market panel loads item names and prices from the server catalog.
 - Sign-out and session-expiry recovery. Access tokens are held in memory only; the user signs in again after restarting the client.
@@ -61,7 +61,7 @@ An original sandbox MMORPG combining long-form skill progression and item gamepl
 - Production CORS is configured through exact comma-separated RS_GALAXIES_ALLOWED_ORIGINS.
 - Keep RS_GALAXIES_ENABLE_REGISTRATION unset until email verification, password recovery, distributed edge rate limiting, monitoring and admin account-disable/recovery operations exist.
 - Email verification, password reset/recovery, MFA, distributed rate limiting, admin account tools and security/load review remain incomplete.
-- The current in-process auth throttle is only a local safety net; production still needs trusted edge controls. `/readyz` provides a bounded PostgreSQL dependency check, while `/healthz` intentionally remains live during database outages.
+- The current in-process auth throttle is only a local safety net; production still needs trusted edge controls. When its 10,000-key map is full, new keys fail closed until stale windows expire. `/readyz` provides a bounded PostgreSQL dependency check, while `/healthz` intentionally remains live during database outages.
 - The Godot client does not persist access tokens across launches. Secure platform-specific persistence is a future decision.
 - No remote-player replication, enemy AI/movement, combat animations/abilities, unique equipment instances/durability, housing, settlements, player-to-player trading or large-scale world streaming yet.
 - The account APIs require PostgreSQL. The server's in-memory-only development mode does not register account routes.
@@ -69,7 +69,7 @@ An original sandbox MMORPG combining long-form skill progression and item gamepl
 ## Next engineering tasks
 
 1. Finish validating the latest PostgreSQL chat-history tests and server hardening runs, then add player-to-player trade with escrow and transaction safety.
-2. Add merchant/bank usability improvements and a real-phone pass on the Godot Web client.
+2. Complete a real-phone pass on the Godot Web client and add better inventory/bank sorting and item filters.
 3. Add email verification, password recovery, MFA, distributed abuse controls and administrative account operations before enabling public registration.
 4. Add unique item instances/durability, combat animations/AI, currency sinks and player-to-player trade with escrow/transaction safety.
 5. Expand professions, gathering tiers, recipes, NPCs, combat, housing and settlements.
