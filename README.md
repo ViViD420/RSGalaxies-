@@ -47,8 +47,13 @@ The server listens on http://localhost:8080 by default. Set RS_GALAXIES_ADDR to 
 - GET /api/v1/players — list development players.
 - POST /api/v1/players — create a player.
 - GET /api/v1/players/{id} — retrieve a player.
-- GET /api/v1/players/{id}/skills — retrieve skill progress.\n- GET /api/v1/world/zones — zone bounds and spawn data.\n- GET /api/v1/world/nodes — resource node definitions.\n- GET /api/v1/items — starter item definitions.
-- POST /api/v1/players/{id}/skills/{skill}/experience — development-only XP award.\n- POST /api/v1/players/{id}/move — development movement request with server speed/bounds validation.\n- POST /api/v1/players/{id}/gather/{nodeID} — development gathering action that updates inventory and XP.
+- GET /api/v1/players/{id}/skills — retrieve skill progress.
+- GET /api/v1/world/zones — zone bounds and spawn data.
+- GET /api/v1/world/nodes — resource node definitions.
+- GET /api/v1/items — starter item definitions.
+- POST /api/v1/players/{id}/skills/{skill}/experience — development-only XP award.
+- POST /api/v1/players/{id}/move — development movement request with server speed/bounds validation.
+- POST /api/v1/players/{id}/gather/{nodeID} — development gathering action that updates inventory and XP.
 
 Create a character with POST /api/v1/players and JSON body {"name":"Wayfarer"}. The XP curve is cumulative and deterministic, with levels 1–99 and a 200,000,000 XP cap. Development-only XP, movement and gathering shortcuts are disabled when RS_GALAXIES_ENV=production; production use still requires authentication and durable persistence.
 
