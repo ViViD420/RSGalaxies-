@@ -68,3 +68,14 @@ func TestCopperVeinAwardsMiningExperienceAndOre(t *testing.T) {
  if result.ItemID!="copper_ore"||result.Experience!=30||player.Inventory["copper_ore"]!=1||player.Skills["mining"].Experience!=30{t.Fatalf("copper gather result=%+v player=%+v",result,player)}
  if state.Charges!=1{t.Fatalf("copper vein charges=%d want=1",state.Charges)}
 }
+
+func TestForagingHerbPatchAwardsForagingExperience(t *testing.T) {
+	now:=time.Date(2026,11,6,12,0,0,0,time.UTC)
+	player,err:=NewPlayer("forager-1","HerbGatherer",now);if err!=nil{t.Fatal(err)}
+	player.Position.X=8
+	player.Position.Z=1
+	node,ok:=FindGatheringNode("herb-001");if !ok{t.Fatal("herb patch missing")}
+	result,state,err:=player.Gather(node,GatheringNodeState{},now);if err!=nil{t.Fatal(err)}
+	if result.ItemID!="wild_herb"||result.SkillID!="foraging"||result.Experience!=25{t.Fatalf("foraging result=%+v",result)}
+	if player.Inventory["wild_herb"]!=1||player.Skills["foraging"].Experience!=25||state.Charges!=3{t.Fatalf("foraging state player=%+v node=%+v",player,state)}
+}
