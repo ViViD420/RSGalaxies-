@@ -337,6 +337,10 @@ func TestPostgresPlayerTradeEscrowSchemaEnforcesReservationsAndPositiveBalances(
 	if _, err := db.ExecContext(ctx, `INSERT INTO player_trades(id,status,revision,created_at,updated_at,expires_at)
 		VALUES($1,'pending',1,$2,$2,$3)`, secondTradeID, now, now.Add(10*time.Minute)); err != nil { t.Fatal(err) }
 	if _, err := db.ExecContext(ctx, `INSERT INTO player_trade_participants(trade_id,character_id,account_id,role)
+		VALUES($1,$2,$3,'initiator')`, secondTradeID, string(thirdPlayer.ID), first.ID); err == nil {
+		t.Fatal("trade participant was allowed to claim a character owned by another account")
+	}
+	if _, err := db.ExecContext(ctx, `INSERT INTO player_trade_participants(trade_id,character_id,account_id,role)
 		VALUES($1,$2,$3,'initiator')`, secondTradeID, string(firstPlayer.ID), first.ID); err != nil { t.Fatal(err) }
 	if _, err := db.ExecContext(ctx, `INSERT INTO player_trade_active_characters(character_id,trade_id,account_id)
 		VALUES($1,$2,$3)`, string(firstPlayer.ID), secondTradeID, first.ID); err == nil {
