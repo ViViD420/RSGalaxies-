@@ -35,9 +35,11 @@ jobs:
         with:
           go-version: "1.23.x"
           cache-dependency-path: server/go.mod
-      - name: Download dependencies
+      - name: Resolve and download dependencies
         working-directory: server
-        run: go mod download
+        run: |
+          go mod tidy
+          go mod download
       - name: Test (race detector and PostgreSQL integration)
         working-directory: server
         run: go test -race ./...
