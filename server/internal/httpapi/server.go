@@ -486,6 +486,7 @@ func (s *Server) moveOwnedCharacter(w http.ResponseWriter, r *http.Request) {
  player,err:=s.characters.MovePlayerForAccount(r.Context(),account.ID,game.PlayerID(strings.TrimSpace(r.PathValue("id"))),request.X,request.Z,s.now())
  if err != nil {
   switch { case errors.Is(err,game.ErrPlayerNotFound): writeError(w,404,"character_not_found")
+		case errors.Is(err,game.ErrPlayerDefeated): writeError(w,409,"player_defeated")
   case errors.Is(err,game.ErrMovementTooFast): writeJSON(w,422,map[string]any{"error":"movement_too_fast","position":player.Position})
   case errors.Is(err,game.ErrOutsideWorld): writeJSON(w,422,map[string]any{"error":"outside_world_bounds","position":player.Position})
   case errors.Is(err,game.ErrInvalidMovement),errors.Is(err,game.ErrUnknownWorldZone): writeJSON(w,422,map[string]any{"error":"invalid_movement","position":player.Position})
@@ -498,6 +499,7 @@ func (s *Server) gatherOwnedCharacter(w http.ResponseWriter, r *http.Request) {
  player,result,err:=s.characters.GatherForAccount(r.Context(),account.ID,game.PlayerID(strings.TrimSpace(r.PathValue("id"))),r.PathValue("nodeID"),s.now())
  if err != nil {
   switch { case errors.Is(err,game.ErrPlayerNotFound): writeError(w,404,"character_not_found")
+		case errors.Is(err,game.ErrPlayerDefeated): writeError(w,409,"player_defeated")
   case errors.Is(err,game.ErrUnknownGatheringNode): writeError(w,404,"gathering_node_not_found")
   case errors.Is(err,game.ErrGatheringOutOfRange): writeError(w,422,"gathering_out_of_range")
   case errors.Is(err,game.ErrGatheringNodeDepleted): writeError(w,409,"gathering_node_depleted")
@@ -512,6 +514,7 @@ func (s *Server) craftOwnedCharacter(w http.ResponseWriter, r *http.Request) {
  player,result,err:=s.characters.CraftForAccount(r.Context(),account.ID,game.PlayerID(strings.TrimSpace(r.PathValue("id"))),r.PathValue("recipeID"),s.now())
  if err != nil {
   switch { case errors.Is(err,game.ErrPlayerNotFound): writeError(w,404,"character_not_found")
+		case errors.Is(err,game.ErrPlayerDefeated): writeError(w,409,"player_defeated")
   case errors.Is(err,game.ErrUnknownCraftingRecipe),errors.Is(err,game.ErrUnknownCraftingStation): writeError(w,404,"crafting_definition_not_found")
   case errors.Is(err,game.ErrCraftingOutOfRange): writeError(w,422,"crafting_out_of_range")
   case errors.Is(err,game.ErrInsufficientIngredients): writeError(w,422,"insufficient_ingredients")
@@ -562,6 +565,7 @@ func (s *Server) transferOwnedBankItem(w http.ResponseWriter,r *http.Request,dep
 	if err!=nil {
 		switch {
 		case errors.Is(err,game.ErrPlayerNotFound): writeError(w,404,"character_not_found")
+		case errors.Is(err,game.ErrPlayerDefeated): writeError(w,409,"player_defeated")
 		case errors.Is(err,game.ErrUnknownBankItem): writeError(w,404,"unknown_item")
 		case errors.Is(err,game.ErrInvalidItemQuantity): writeError(w,422,"invalid_quantity")
 		case errors.Is(err,game.ErrInsufficientItems): writeError(w,409,"insufficient_items")
@@ -595,6 +599,7 @@ func (s *Server) tradeOwnedMarketItem(w http.ResponseWriter,r *http.Request,buy 
 	if err!=nil {
 		switch {
 		case errors.Is(err,game.ErrPlayerNotFound):writeError(w,404,"character_not_found")
+		case errors.Is(err,game.ErrPlayerDefeated): writeError(w,409,"player_defeated")
 		case errors.Is(err,game.ErrUnknownMerchantItem):writeError(w,404,"item_not_traded")
 		case errors.Is(err,game.ErrInvalidItemQuantity):writeError(w,422,"invalid_quantity")
 		case errors.Is(err,game.ErrInsufficientCurrency):writeError(w,409,"insufficient_coins")
@@ -625,6 +630,7 @@ func (s *Server) writeEquipmentResult(w http.ResponseWriter,player game.Player,e
 	if err!=nil {
 		switch {
 		case errors.Is(err,game.ErrPlayerNotFound):writeError(w,404,"character_not_found")
+		case errors.Is(err,game.ErrPlayerDefeated): writeError(w,409,"player_defeated")
 		case errors.Is(err,game.ErrItemNotEquippable):writeError(w,422,"item_not_equippable")
 		case errors.Is(err,game.ErrEquipmentSlotEmpty):writeError(w,409,"equipment_slot_empty")
 		case errors.Is(err,game.ErrInvalidEquipmentSlot):writeError(w,422,"invalid_equipment_slot")
