@@ -63,6 +63,8 @@ Send `Authorization: Bearer <accessToken>`:
 - `GET /api/v1/account/characters/{characterId}/chat/local?after={messageId}&limit=50`
 - `POST /api/v1/account/characters/{characterId}/chat/local` with `{"message":"Hello, zone!"}`.
 - `POST /api/v1/account/characters/{characterId}/inventory/use/{itemId}` — consume an owned item effect such as a healing potion.
+- `POST /api/v1/account/characters/{characterId}/presence/heartbeat` — refresh the authenticated character's 20-second active-zone lease; returns 204.
+- `GET /api/v1/account/characters/{characterId}/presence` — list up to 100 other active characters in the same zone, exposing only character ID, display name, zone and position.
 - `POST /api/v1/account/characters/{characterId}/presence/heartbeat` — refresh this owned character's zone presence lease.
 - `GET /api/v1/account/characters/{characterId}/presence` — list up to 100 active characters in the same zone; account IDs and private state are never returned.
 
