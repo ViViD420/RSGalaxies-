@@ -23,7 +23,7 @@ type executor interface {
 	ExecContext(ctx context.Context, query string, args ...any) (sql.Result, error)
 }
 
-const playerColumns = "id, name, created_at, skills, inventory, bank, zone_id, position_x, position_z, last_move_at"
+const playerColumns = "id, name, created_at, skills, inventory, bank, coins, zone_id, position_x, position_z, last_move_at"
 
 func scanPlayer(row scanner) (game.Player, error) {
 	var id, name, zoneID string
