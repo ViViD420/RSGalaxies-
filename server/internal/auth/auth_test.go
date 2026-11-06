@@ -4,6 +4,7 @@ import (
 	"encoding/hex"
 	"errors"
 	"testing"
+	"strings"
 )
 
 func TestPBKDF2SHA256KnownVector(t *testing.T) {
@@ -35,6 +36,9 @@ func TestPasswordValidationAndMalformedHash(t *testing.T) {
 	}
 	if _, err := VerifyPassword("not-a-hash", "anything"); !errors.Is(err, ErrInvalidHash) {
 		t.Fatalf("malformed hash error = %v", err)
+	}
+	if _, err := VerifyPassword("not-a-hash", strings.Repeat("x", maxPasswordBytes+1)); !errors.Is(err, ErrInvalidPassword) {
+		t.Fatalf("oversized password error = %v", err)
 	}
 }
 
