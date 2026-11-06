@@ -23,7 +23,7 @@ type executor interface {
 	ExecContext(ctx context.Context, query string, args ...any) (sql.Result, error)
 }
 
-const playerColumns = "id, name, created_at, skills, inventory, bank, coins, equipment, zone_id, position_x, position_z, last_move_at"
+const playerColumns = "id, name, created_at, skills, inventory, bank, coins, equipment, zone_id, position_x, position_z, last_move_at, health, last_combat_at"
 
 func scanPlayer(row scanner) (game.Player, error) {
 	var id, name, zoneID string
@@ -31,14 +31,16 @@ func scanPlayer(row scanner) (game.Player, error) {
 	var skillsJSON, inventoryJSON, bankJSON, equipmentJSON []byte
 	var x, z float64
 	var coins int64
-	if err := row.Scan(&id, &name, &createdAt, &skillsJSON, &inventoryJSON, &bankJSON, &coins, &equipmentJSON, &zoneID, &x, &z, &lastMoveAt); err != nil {
+	var health int
+	var lastCombatAt time.Time
+	if err := row.Scan(&id, &name, &createdAt, &skillsJSON, &inventoryJSON, &bankJSON, &coins, &equipmentJSON, &zoneID, &x, &z, &lastMoveAt, &health, &lastCombatAt); err != nil {
 		if errors.Is(err, sql.ErrNoRows) { return game.Player{}, game.ErrPlayerNotFound }
 		return game.Player{}, fmt.Errorf("scan player: %w", err)
 	}
 	player := game.Player{
 		ID: game.PlayerID(id), Name: name, CreatedAt: createdAt.UTC(),
 		Position: game.WorldPosition{ZoneID: zoneID, X: x, Z: z},
-		LastMoveAt: lastMoveAt.UTC(), Coins: coins,
+		LastMoveAt: lastMoveAt.UTC(), Coins: coins, Health: health, LastCombatAt: lastCombatAt.UTC(),
 	}
 	if err := json.Unmarshal(skillsJSON, &player.Skills); err != nil { return game.Player{}, fmt.Errorf("decode player skills: %w", err) }
 	if err := json.Unmarshal(inventoryJSON, &player.Inventory); err != nil { return game.Player{}, fmt.Errorf("decode player inventory: %w", err) }
@@ -61,10 +63,10 @@ func (r *PlayerRepository) Create(ctx context.Context, player game.Player) error
 	equipment, err := json.Marshal(player.Equipment)
 	if err != nil { return fmt.Errorf("encode equipment: %w", err) }
 	_, err = r.db.ExecContext(ctx, `INSERT INTO players
-		(id, name, created_at, skills, inventory, bank, coins, equipment, zone_id, position_x, position_z, last_move_at)
-		VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12)`,
+		(id, name, created_at, skills, inventory, bank, coins, equipment, zone_id, position_x, position_z, last_move_at, health, last_combat_at)
+		VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14)`,
 		string(player.ID), player.Name, player.CreatedAt, string(skills), string(inventory), string(bank), player.Coins, string(equipment),
-		player.Position.ZoneID, player.Position.X, player.Position.Z, player.LastMoveAt)
+		player.Position.ZoneID, player.Position.X, player.Position.Z, player.LastMoveAt, player.Health, player.LastCombatAt)
 	if err != nil {
 		var pgErr *pgconn.PgError
 		if errors.As(err, &pgErr) && pgErr.Code == "23505" { return game.ErrPlayerAlreadyExists }
@@ -103,9 +105,9 @@ func updatePlayer(ctx context.Context, exec executor, player game.Player) error 
 	equipment, err := json.Marshal(player.Equipment)
 	if err != nil { return fmt.Errorf("encode equipment: %w", err) }
 	_, err = exec.ExecContext(ctx, `UPDATE players SET skills=$2, inventory=$3, bank=$4, coins=$5, equipment=$6, zone_id=$7,
-		position_x=$8, position_z=$9, last_move_at=$10 WHERE id=$1`,
+		position_x=$8, position_z=$9, last_move_at=$10, health=$11, last_combat_at=$12 WHERE id=$1`,
 		string(player.ID), string(skills), string(inventory), string(bank), player.Coins, string(equipment), player.Position.ZoneID,
-		player.Position.X, player.Position.Z, player.LastMoveAt)
+		player.Position.X, player.Position.Z, player.LastMoveAt, player.Health, player.LastCombatAt)
 	if err != nil { return fmt.Errorf("update player: %w", err) }
 	return nil
 }
