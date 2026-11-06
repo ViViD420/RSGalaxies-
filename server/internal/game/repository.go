@@ -62,7 +62,7 @@ func (r *MemoryPlayerRepository) MovePlayer(_ context.Context, id PlayerID, x, z
 		return Player{}, ErrPlayerNotFound
 	}
 	if err := player.MoveTo(x, z, now); err != nil {
-		return Player{}, err
+		return clonePlayer(player), err
 	}
 	r.players[id] = clonePlayer(player)
 	return clonePlayer(player), nil
