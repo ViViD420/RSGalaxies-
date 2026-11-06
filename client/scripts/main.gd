@@ -393,6 +393,8 @@ func _on_movement_completed(result: int, response_code: int, _headers: PackedStr
 		status_label.text = "Server: movement corrected by world rules"
 
 func _start_gathering() -> void:
+	if gather_request != null:
+		gather_request.queue_free()
 	gather_request = HTTPRequest.new()
 	add_child(gather_request)
 	gather_request.request_completed.connect(_on_gather_completed)
@@ -646,6 +648,7 @@ func _expire_session() -> void:
 func _show_character_selection(characters: Array) -> void:
 	if movement_timer != null:
 		movement_timer.stop()
+	movement_pending = false
 	player_id = ""
 	interaction_pending = false
 	if character_panel != null:
