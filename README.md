@@ -6,7 +6,7 @@ An original persistent-world sandbox MMORPG combining long-term skill progressio
 
 ## Project status
 
-**Foundation and progression prototype — in progress.** The Go server supports character creation, ten data-driven skills, deterministic XP-to-level progression and a development-only XP award route. Player data is in memory and resets when the process stops. PostgreSQL, authentication, secure sessions, validated gameplay actions, realtime multiplayer and the world client are not yet implemented.
+**Foundation and progression prototype — in progress.** The Go server supports character creation, ten data-driven skills, deterministic XP-to-level progression, a starter world zone, server-validated movement, two resource nodes, stack-count inventory and a basic gathering loop. The Godot 4.3 client has a 3D movement prototype, touch controls and browser export. Player and world data are in memory and reset when the process stops. PostgreSQL, authentication, secure sessions, combat, crafting, realtime multiplayer and production deployment are not yet implemented.
 
 ## Design pillars
 
@@ -27,7 +27,7 @@ An original persistent-world sandbox MMORPG combining long-term skill progressio
 
 ## Work from a phone or browser
 
-A development container is configured for GitHub Codespaces. On the repository page, open **Code**, choose **Codespaces**, and create a codespace on main. Setup installs Go dependencies and runs tests and vet. Codespaces availability and usage limits depend on the GitHub account.
+A development container is configured for GitHub Codespaces. On the repository page, open **Code**, choose **Codespaces**, and create a codespace on main. Setup installs Go and Godot, runs server checks and exports the Web client. When the workspace starts, it launches the Go API and browser prototype on forwarded ports 8080 and 8000. Codespaces availability and usage limits depend on the GitHub account.
 
 ## Run the development server
 
