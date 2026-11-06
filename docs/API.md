@@ -9,6 +9,7 @@ The world service listens on port 8080 by default. Responses are JSON unless the
 
 ## Public catalogs
 
+- `GET /api/v1/world/catalog` — consolidated bootstrap payload containing skills, zones, gathering nodes, items, enemies, crafting recipes and stations.
 - `GET /api/v1/world/catalog` — consolidated skills, zones, gathering nodes, items/prices, enemies, recipes, stations and starting coin balance.
 - `GET /api/v1/skills`
 - `GET /api/v1/world/zones`
