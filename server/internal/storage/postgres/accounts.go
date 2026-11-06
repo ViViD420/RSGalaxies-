@@ -83,7 +83,8 @@ func (r *AccountRepository) Login(ctx context.Context, email, password string, n
 	var disabledAt sql.NullTime
 	err = r.db.QueryRowContext(ctx, `SELECT id,email,password_hash,created_at,disabled_at FROM accounts WHERE LOWER(email)=$1`, email).
 		Scan(&account.ID,&account.Email,&passwordHash,&account.CreatedAt,&disabledAt)
-	if err != nil { return auth.Account{}, "", ErrInvalidCredentials }
+	if errors.Is(err, sql.ErrNoRows) { return auth.Account{}, "", ErrInvalidCredentials }
+	if err != nil { return auth.Account{}, "", fmt.Errorf("load account for login: %w", err) }
 	if disabledAt.Valid { return auth.Account{}, "", ErrInvalidCredentials }
 	valid, err := auth.VerifyPassword(passwordHash,password)
 	if err != nil || !valid { return auth.Account{}, "", ErrInvalidCredentials }
