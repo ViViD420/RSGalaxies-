@@ -17,7 +17,7 @@ Open `client/` in Godot 4.3 or newer and run the main scene. Start the Go world 
 
 - Account registration/login, account-owned character list, character creation/selection, switching and sign-out.
 - Authenticated, server-validated movement and safe-spawn recovery.
-- Gathering targets and their resource visuals load from the server's public node catalog; woodcutting and stone gathering, copper mining, smelting and smithing are included in the starter zone.
+- Gathering targets and their resource visuals load from the server's public node catalog; woodcutting, stone gathering, copper mining and foraging are included in the starter zone. The workbench and forge are also positioned from the server's crafting-station catalog.
 - Workbench and forge recipes with server-validated ingredients, skill levels, range and output capacity.
 - Persistent inventory, 100-slot bank, coin wallet and merchant purchases/sales. The bag/bank panel supports item search, resource/equipment/consumable filters and sorting by name or carried/banked quantity.
 - Equipment slots, gear bonuses and simple equipped-item visuals.
