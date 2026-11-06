@@ -647,7 +647,16 @@ func _on_gather_completed(result: int, response_code: int, _headers: PackedStrin
 		var error_code := str(payload.get("error", "gathering_failed"))
 		var message := "Interaction: " + error_code.replace("_", " ")
 		status_label.text = message
-		if interaction_type == "market_buy" or interaction_type == "market_sell":
+		if interaction_type == "rest":
+		_update_inventory(player_data.get("inventory", {}), player_data.get("bank", {}), player_data.get("coins", current_coins), player_data.get("equipment", {}), payload.get("health", player_data.get("health", current_health)))
+		var position_data: Variant = player_data.get("position", {})
+		if position_data is Dictionary:
+			_apply_server_position(position_data, true)
+		status_label.text = "Rested • Health restored to " + str(current_health)
+		if movement_timer == null or movement_timer.is_stopped():
+			_start_movement_sync()
+		return
+	if interaction_type == "market_buy" or interaction_type == "market_sell":
 			market_status_label.text = message
 		if interaction_type == "gear_equip" or interaction_type == "gear_unequip":
 			equipment_status_label.text = message
