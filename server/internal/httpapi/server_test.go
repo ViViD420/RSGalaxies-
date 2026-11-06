@@ -97,6 +97,11 @@ func TestProductionDisablesDevelopmentAwardEndpoint(t *testing.T) {
 	if gather.Code != http.StatusNotFound && gather.Code != http.StatusMethodNotAllowed {
 		t.Fatalf("production gathering route status = %d, want route unavailable", gather.Code)
 	}
+	craft := httptest.NewRecorder()
+	handler.ServeHTTP(craft, httptest.NewRequest(http.MethodPost, "/api/v1/players/player/craft/basic-plank", nil))
+	if craft.Code != http.StatusNotFound && craft.Code != http.StatusMethodNotAllowed {
+		t.Fatalf("production crafting route status = %d, want route unavailable", craft.Code)
+	}
 }
 
 func TestDevelopmentCORSPreflight(t *testing.T) {
