@@ -568,12 +568,11 @@ func (s *Server) allowAuthAttempt(w http.ResponseWriter,r *http.Request,limit in
  }
  window,ok:=s.authAttempts[key]
  if !ok && len(s.authAttempts)>=maxAuthRateKeys {
-  oldestKey:=""
-  var oldest time.Time
-  for candidate,candidateWindow:=range s.authAttempts {
-   if oldestKey==""||candidateWindow.started.Before(oldest) { oldestKey=candidate;oldest=candidateWindow.started }
-  }
-  if oldestKey!="" { delete(s.authAttempts,oldestKey) }
+  // Preserve active windows for known addresses instead of evicting them
+  // under a high-cardinality attack. Unknown keys fail closed until windows expire.
+  w.Header().Set("Retry-After","60")
+  writeError(w,http.StatusTooManyRequests,"rate_limited")
+  return false
  }
  if !ok||now.Sub(window.started)>=time.Minute { window=authAttemptWindow{started:now} }
  if window.count>=limit {
