@@ -3,6 +3,7 @@ package httpapi
 import (
 	"time"
 	"bytes"
+	"context"
 	"encoding/json"
 	"net/http"
 	"net/http/httptest"
@@ -182,7 +183,7 @@ func TestCraftingCreatesOutputAndConsumesIngredients(t *testing.T) {
 	if err != nil { t.Fatal(err) }
 	player.Position.Z = 2
 	player.Inventory["softwood_log"] = 2
-	if err := repository.Create(nil, player); err != nil { t.Fatal(err) }
+	if err := repository.Create(context.Background(), player); err != nil { t.Fatal(err) }
 	handler := New(repository).Routes()
 
 	recipes := httptest.NewRecorder()
