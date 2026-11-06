@@ -90,6 +90,14 @@ var interaction_pending := false
 var interaction_type := "gather"
 var api_base_url := "http://127.0.0.1:8080"
 
+func _new_api_request(timeout_seconds: float = 8.0) -> HTTPRequest:
+	var request := HTTPRequest.new()
+	request.timeout = timeout_seconds
+	# Authenticated API requests must not forward bearer credentials through redirects.
+	request.max_redirects = 0
+	return request
+
+
 func _ready() -> void:
 	_setup_input_actions()
 	_build_world()
@@ -559,7 +567,7 @@ func _connect_api() -> void:
 		var forwarded_api_origin: Variant = JavaScriptBridge.eval("window.location.origin.replace('-8000.', '-8080.')")
 		if forwarded_api_origin is String and not forwarded_api_origin.is_empty():
 			api_base_url = forwarded_api_origin
-	api_request = HTTPRequest.new()
+	api_request = _new_api_request()
 	add_child(api_request)
 	api_request.request_completed.connect(_on_api_request_completed)
 	var error := api_request.request(api_base_url + "/healthz")
