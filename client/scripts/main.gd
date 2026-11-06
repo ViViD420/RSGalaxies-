@@ -1789,6 +1789,8 @@ func _update_remote_player_visuals(delta: float) -> void:
 func _start_trade_polling() -> void:
 	if player_id.is_empty() or auth_token.is_empty():
 		return
+	if trade_button != null:
+		trade_button.visible = true
 	if trade_request == null:
 		trade_request = _new_api_request()
 		add_child(trade_request)
@@ -1824,6 +1826,7 @@ func _stop_trade_polling() -> void:
 		trade_panel.visible = false
 	if trade_button != null:
 		trade_button.text = "Trade"
+		trade_button.visible = false
 	if trade_status_label != null:
 		trade_status_label.text = "No active trade"
 
