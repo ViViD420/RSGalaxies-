@@ -1,6 +1,6 @@
 # Player-to-Player Trade Design
 
-Status: invite/accept/read API slice implemented; escrow offer updates, confirmations, settlement, cancellation and Godot trade UI are not implemented. Do not enable player trading for production until the full lifecycle and required tests are complete.
+Status: PostgreSQL-backed invite, accept, escrow offer replacement, two-sided revision confirmation, atomic settlement, cancellation, expiry release and active-trade recovery are implemented with account-scoped routes. Godot trade UI, production abuse/load testing and broader multiplayer presence validation remain. Do not enable public production trading until those gates are complete.
 
 ## Goals
 
