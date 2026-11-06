@@ -4,10 +4,10 @@ Last updated: 2026-11-06
 
 ## Project identity
 
-- Name: **RS Galaxies**
 - Repository: https://github.com/ViViD420/RSGalaxies-
-- Default branch: main
-- Standalone project. Never reuse or modify the separate GalaxyMMO repository.
+- Owner: ViViD420
+- Branch: main
+- This is a standalone original MMORPG project. Never reuse or modify the separate GalaxyMMO repository.
 
 ## Product direction
 
@@ -15,57 +15,63 @@ An original sandbox MMORPG combining long-form skill progression and item gamepl
 
 ## Current implementation
 
-### Server
-- Go development server with player creation, retrieval and listing.
-- Ten stable skills: combat, cooking, crafting, farming, foraging, mining, ranged, scavenging, smithing and woodcutting.
-- Deterministic cumulative XP curve, levels 1–99 and 200,000,000 XP cap.
-- Player creation initializes all skills at level one.
-- Domain XP validation, level-up detection and atomic in-memory awards.
-- Defensive copying of skill and inventory maps, plus stable player listing.
-- One bounded world zone, spawn point and server-time-based movement speed/bounds validation.
-- Starter item definitions, stack-count inventory, persistent 100-slot bank storage with validated deposit/withdraw operations, and a coin wallet with transactional merchant buy/sell trades.
-- Two gathering nodes (tree and stone) with interaction range, three charges, timed respawn and atomic inventory/XP rewards.
-- One frontier workbench and a basic plank recipe: consume two softwood logs, create one wooden plank and award Crafting XP. Crafting checks station range, skill level, ingredient counts and output stack capacity atomically.
-- HTTP routes expose public skills, world zones, gathering nodes, items and crafting definitions. Player-specific routes and development-only XP, movement, gathering and crafting routes are all disabled when RS_GALAXIES_ENV=production until authentication and character ownership are implemented.
-- Domain, API, movement, gathering, crafting, PostgreSQL persistence and repository concurrency tests.
-- Go CI runs tests with the race detector and go vet.
+### Go world server
 
-### Client
-- Godot 4.3 provisional client prototype.
-- Procedurally generated test floor, placeholder character, third-person orbit camera, keyboard movement, touchscreen D-pad, USE and jump buttons.
-- Account login/registration UI, account character discovery/creation, bearer-authenticated movement, gathering and crafting, sign-out, and session-expiry recovery.
-- The client keeps the bearer token in memory only; users sign in again after app restart.
-- Inventory HUD shows collected starter resources.
-- Headless Godot validation and Web export workflow. The corrected Godot CI installer now downloads the official 4.3 release and export templates.
-- This is still a movement/gathering proof of concept, not a fully replicated production MMO client.
+- Go authoritative world API, domain model and PostgreSQL persistence.
+- Ten skills, level 1–99, cumulative XP curve and 200,000,000 XP cap.
+- Defensive in-memory repository copies and concurrency-safe experience awards.
+- Starter zone, spawn point, server-time movement validation and world bounds.
+- Tree and stone gathering nodes with range checks, charges, respawn and atomic inventory/XP rewards.
+- Starter workbench and basic plank recipe; crafting validates range, level, ingredients and stack capacity.
+- Player inventory, 100-slot bank storage and coin wallet. New characters start with 100 coins.
+- Starter merchant catalog with server-defined buy/sell prices. Buy/sell operations update coins and inventory atomically.
+- PostgreSQL migrations 0001–0004 cover player state, gathering, accounts/sessions, character ownership, bank storage and currency.
+- PostgreSQL transactions and row locks protect XP, movement, gathering, crafting, bank transfers and market trades.
+- Account authentication: PBKDF2-HMAC-SHA-256 with 600,000 iterations and random salts; opaque 256-bit bearer tokens stored only as SHA-256 digests; fixed 30-day expiry; logout revocation; last-used updates; maximum 10 active sessions per account; old-session pruning; dummy PBKDF2 work for unknown/disabled login accounts.
+- Account-owned character CRUD and gameplay operations use account ownership in SQL predicates and row-locked transactions.
+- Authenticated routes cover login/register/logout/me, character list/create/read, skills/XP, movement, gathering, crafting, bank deposits/withdrawals and merchant trades.
+- Legacy unscoped player-ID and development mutation routes remain disabled in production. Production registration is disabled unless explicitly enabled.
+- Auth routes have per-process IP/path throttling. Production CORS uses an exact-origin allowlist. Security response headers and no-store responses are applied.
+- Public catalog routes include skills, world zones, gathering nodes, items, crafting definitions and merchant prices.
 
-### Development environment
-- .devcontainer/ configures a GitHub Codespaces Go/Godot/PostgreSQL workspace using Docker Compose.
-- Docker Compose runs PostgreSQL 16 with separate development and integration-test databases. A named volume preserves the development database across Codespaces stops/restarts.
-- setup.sh installs OS dependencies, Godot 4.3 and export templates, then runs race-enabled Go tests (including PostgreSQL integration), vet, a headless Godot import and a Web export.
-- start.sh launches the Go API and exported browser prototype automatically on Codespaces startup.
-- Ports 8000 and 8080 are forwarded; the Web client derives the API origin from the Codespaces hostname, and the development API enables CORS.
-- Repository work can be done in GitHub/Codespaces through a browser; no local PC installation is required.
+### Godot client
 
-## Limits and decisions
+- Godot 4.3 third-person 3D prototype with keyboard, mouse, touch movement and jump.
+- Account login/registration, multi-character selection and additional character creation.
+- Bearer-authenticated movement, gathering, crafting, bank transfers and merchant buy/sell panel.
+- Starter bank chest and merchant stall in the test world; coin, bag and bank counts appear in the HUD.
+- Market panel loads item names and prices from the server catalog.
+- Sign-out and session-expiry recovery. Access tokens are held in memory only; the user signs in again after restarting the client.
+- This remains a small gameplay prototype, not a full multiplayer client or final art direction.
 
-- Go is the server language. Godot is provisional pending real-phone validation of camera, movement and Web export.
-- PostgreSQL persistence is implemented and used in Codespaces. Standalone local runs fall back to in-memory storage unless RS_GALAXIES_DATABASE_URL is configured.
-- All player-specific APIs and XP/movement/gathering/crafting shortcuts are disabled in production until authentication and character ownership are implemented.
-- Production startup fails closed if RS_GALAXIES_DATABASE_URL is missing; PostgreSQL connection and migrations must succeed before the HTTP service starts.
-- Account authentication now includes PBKDF2-HMAC-SHA-256 password hashing (600,000 iterations, random salt), opaque 256-bit bearer sessions stored by SHA-256 digest, PostgreSQL accounts/sessions, 30-day expiry, last-used updates, logout revocation, generic login failures, account-owned character CRUD and account-scoped XP/movement/gathering/crafting/bank/market transactions. Active sessions are capped at 10 per account with oldest-session pruning; unknown/disabled login attempts receive dummy PBKDF2 work to reduce timing-based account enumeration. Registration is gated off by default in production. A per-process auth throttle and explicit production CORS allowlist are implemented. Email verification, password recovery, MFA, distributed rate limiting, admin disable tooling and public registration readiness remain incomplete.
-- Account API reference is in docs/API.md; authentication threat boundaries and enablement decisions are in docs/ACCOUNT_AUTH_DESIGN.md. Realtime replication, production operations, NPCs, combat, additional recipes and player trading also remain incomplete.
-- Go CI runs #117–#122 passed, including race-enabled Go tests, PostgreSQL account/session and ownership integration tests, and go vet. The timestamp precision regression was corrected and passed run #78. The client workflow was repaired after discovering its former container tag did not exist; the replacement workflow installs the official Godot 4.3 binary and export templates. Client run #24 passed import and Web export validation for the account UI; run #25 validates the latest small client lifecycle cleanup.
+### Development environment and CI
+
+- .devcontainer/ provides a GitHub Codespaces Go/Godot/PostgreSQL workspace with separate development and integration-test databases.
+- Codespaces setup installs Godot 4.3 and export templates, runs race-enabled Go tests, go vet, headless project import and Web export.
+- .env.example contains local-only sample settings; docs/API.md, docs/ACCOUNT_AUTH_DESIGN.md and docs/DEPLOYMENT.md describe routes, security boundaries and deployment.
+- Go server CI runs race-enabled unit/integration tests against PostgreSQL and go vet. Server runs #161 and #162 passed; run #163 is validating the latest currency-overflow test.
+- Godot client CI uses the official Godot 4.3 release and export templates. Client runs #40 and #41 passed, including market catalog loading and character-panel lifecycle updates.
+
+## Production safeguards and remaining launch gates
+
+- Production startup requires RS_GALAXIES_DATABASE_URL; startup pings PostgreSQL and applies migrations before serving.
+- Production CORS is configured through exact comma-separated RS_GALAXIES_ALLOWED_ORIGINS.
+- Keep RS_GALAXIES_ENABLE_REGISTRATION unset until email verification, password recovery, distributed edge rate limiting, monitoring and admin account-disable/recovery operations exist.
+- Email verification, password reset/recovery, MFA, distributed rate limiting, admin account tools and security/load review remain incomplete.
+- The current in-process auth throttle is only a local safety net; production still needs trusted edge controls.
+- The Godot client does not persist access tokens across launches. Secure platform-specific persistence is a future decision.
+- No remote-player replication, NPC behaviors, combat, equipment, housing, settlements, player-to-player trading, advanced item instances or large-scale world streaming yet.
+- The account APIs require PostgreSQL. The server's in-memory-only development mode does not register account routes.
 
 ## Next engineering tasks
 
-1. Verify the movement timestamp precision fix in GitHub Actions; investigate any remaining Go/PostgreSQL failures.
-2. Validate the account login and world interactions in the auto-launched browser build on a real phone; refine touch controls and camera feel.
-3. Add email verification, password recovery, MFA, distributed abuse controls and admin account operations before enabling public registration.
-4. Add client bank UI and character selection/deletion; then add equipment, currency and player trading.
-4. Add item instances, equipment, bank storage, currency and atomic player trading.
-5. Expand the playable loop with more recipes, tools, resource tiers, NPCs and combat.
+1. Finish validating the latest Go run #163; fix any new failure before extending the economy.
+2. Add merchant/bank usability improvements and a real-phone pass on the Godot Web client.
+3. Add email verification, password recovery, MFA, distributed abuse controls and administrative account operations before enabling public registration.
+4. Add equipment slots, item instances, currency sinks and player-to-player trade with escrow/transaction safety.
+5. Expand professions, gathering tiers, recipes, NPCs, combat, housing and settlements.
+6. Plan remote-player replication and scalable world/zone ownership.
 
 ## Continuation instruction
 
-Always inspect this file and current repository state first. Work only in ViViD420/RSGalaxies-. Update this handoff after each meaningful milestone. Never assume GalaxyMMO code or decisions apply here.
+Always inspect this file, current repository HEAD and recent CI first. Work only in ViViD420/RSGalaxies-. Update this handoff after meaningful milestones. Never assume GalaxyMMO code or decisions apply here.
