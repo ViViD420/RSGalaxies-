@@ -25,11 +25,11 @@ An original sandbox MMORPG combining long-form skill progression and item gamepl
 - Starter workbench and forge; recipes cover basic planks, copper smelting and a crafted training sword. Crafting validates range, skill level, ingredients and output stack capacity.
 - Player inventory, 100-slot bank storage, coin wallet and persistent equipment slots. New characters start with 100 coins.
 - Starter merchant catalog with server-defined buy/sell prices. Buy/sell operations update coins and inventory atomically.
-- PostgreSQL migrations 0001–0005 cover player state, gathering, accounts/sessions, character ownership, bank storage, currency and equipment.
-- PostgreSQL transactions and row locks protect XP, movement, gathering, crafting, bank transfers, market trades and equipment changes.
+- PostgreSQL migrations 0001–0006 cover player state, gathering, accounts/sessions, character ownership, bank storage, currency, equipment, health and shared enemy spawn state.
+- PostgreSQL transactions and row locks protect XP, movement, gathering, crafting, bank transfers, market trades, equipment changes and PvE combat.
 - Account authentication: PBKDF2-HMAC-SHA-256 with 600,000 iterations and random salts; opaque 256-bit bearer tokens stored only as SHA-256 digests; fixed 30-day expiry; logout revocation; last-used updates; maximum 10 active sessions per account; old-session pruning; dummy PBKDF2 work for unknown/disabled login accounts.
 - Account-owned character CRUD and gameplay operations use account ownership in SQL predicates and row-locked transactions.
-- Authenticated routes cover login/register/logout/me, character list/create/read, skills/XP, movement, gathering, crafting, bank deposits/withdrawals, merchant trades and equipment equip/unequip.
+- Authenticated routes cover login/register/logout/me, character list/create/read, skills/XP, movement, gathering, crafting, bank deposits/withdrawals, merchant trades, equipment equip/unequip, combat attacks and safe-spawn rest.
 - Legacy unscoped player-ID and development mutation routes remain disabled in production. Production registration is disabled unless explicitly enabled.
 - Auth routes have per-process IP/path throttling. Production CORS uses an exact-origin allowlist. Security response headers and no-store responses are applied.
 - Public catalog routes include skills, world zones, gathering nodes, items, crafting definitions and merchant prices.
@@ -38,6 +38,7 @@ An original sandbox MMORPG combining long-form skill progression and item gamepl
 
 - Godot 4.3 third-person 3D prototype with keyboard, mouse, touch movement and jump.
 - Account login/registration, multi-character selection and additional character creation.
+- Server-driven enemy visuals, combat attacks, damage/loot/XP feedback, health HUD and a Rest control for safe-zone recovery/respawn.
 - Bearer-authenticated movement, gathering, crafting, bank transfers, merchant buy/sell panel and equipment panel.
 - Starter bank chest and merchant stall in the test world; coin balance, attack/defense bonuses, bag and bank counts appear in the HUD.
 - Market panel loads item names and prices from the server catalog.
@@ -65,7 +66,7 @@ An original sandbox MMORPG combining long-form skill progression and item gamepl
 
 ## Next engineering tasks
 
-1. Add PostgreSQL integration coverage for the new copper gathering/smithing progression; then build the first server-authoritative PvE combat loop.
+1. Validate the first server-authoritative PvE combat loop, including enemy spawn persistence, cooldowns, loot and safe-spawn recovery.
 2. Add merchant/bank usability improvements and a real-phone pass on the Godot Web client.
 3. Add email verification, password recovery, MFA, distributed abuse controls and administrative account operations before enabling public registration.
 4. Add equipment visuals, item instances/durability, combat calculations, currency sinks and player-to-player trade with escrow/transaction safety.
