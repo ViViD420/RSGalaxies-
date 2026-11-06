@@ -72,3 +72,31 @@ func TestCreatePlayerRejectsTrailingJSONData(t *testing.T) {
 		if response.Code!=http.StatusBadRequest{t.Fatalf("body %q: status=%d want=%d",body,response.Code,http.StatusBadRequest)}
 	}
 }
+
+func TestProductionDisablesDevelopmentAwardEndpoint(t *testing.T) {
+	t.Setenv("RS_GALAXIES_ENV", "production")
+	handler := New(game.NewMemoryPlayerRepository()).Routes()
+	request := httptest.NewRequest(http.MethodPost, "/api/v1/players/player/skills/mining/experience", bytes.NewBufferString(`{"amount":10}`))
+	response := httptest.NewRecorder()
+	handler.ServeHTTP(response, request)
+	if response.Code != http.StatusMethodNotAllowed && response.Code != http.StatusNotFound {
+		t.Fatalf("production development route status = %d, want route unavailable", response.Code)
+	}
+	if response.Header().Get("Access-Control-Allow-Origin") != "" {
+		t.Fatal("production response unexpectedly enabled development CORS")
+	}
+}
+
+func TestDevelopmentCORSPreflight(t *testing.T) {
+	t.Setenv("RS_GALAXIES_ENV", "development")
+	handler := New(game.NewMemoryPlayerRepository()).Routes()
+	request := httptest.NewRequest(http.MethodOptions, "/api/v1/players", nil)
+	response := httptest.NewRecorder()
+	handler.ServeHTTP(response, request)
+	if response.Code != http.StatusNoContent {
+		t.Fatalf("preflight status = %d, want %d", response.Code, http.StatusNoContent)
+	}
+	if response.Header().Get("Access-Control-Allow-Origin") != "*" {
+		t.Fatal("development CORS origin header missing")
+	}
+}
