@@ -25,6 +25,7 @@ func main() {
 
 	var players game.PlayerRepository = game.NewMemoryPlayerRepository()
 	var database *sql.DB
+	var accountRepository *postgres.AccountRepository
 	databaseURL := os.Getenv("RS_GALAXIES_DATABASE_URL")
 	if os.Getenv("RS_GALAXIES_ENV") == "production" && databaseURL == "" {
 		log.Fatal("RS_GALAXIES_DATABASE_URL is required in production")
@@ -49,14 +50,20 @@ func main() {
 			log.Fatalf("migrate PostgreSQL: %v", err)
 		}
 		players = postgres.NewPlayerRepository(database)
+		accountRepository = postgres.NewAccountRepository(database)
 		log.Print("using PostgreSQL player/world persistence")
 	} else {
 		log.Print("using in-memory development storage; set RS_GALAXIES_DATABASE_URL for PostgreSQL")
 	}
 
+	api := httpapi.New(players)
+	if accountRepository != nil {
+		api = httpapi.NewWithAccounts(players, accountRepository, accountRepository)
+	}
+
 	server := &http.Server{
 		Addr:              address,
-		Handler:           httpapi.New(players).Routes(),
+		Handler:           api.Routes(),
 		ReadHeaderTimeout: 5 * time.Second,
 		ReadTimeout:       10 * time.Second,
 		WriteTimeout:      10 * time.Second,
