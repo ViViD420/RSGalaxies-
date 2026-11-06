@@ -54,7 +54,7 @@ func HashPassword(password string) (string, error) {
 
 // VerifyPassword validates a password hash in constant time.
 func VerifyPassword(encoded, password string) (bool, error) {
-	if len(password) > maxPasswordBytes { return false, ErrInvalidPassword }
+	if len(password) < 12 || len(password) > maxPasswordBytes { return false, ErrInvalidPassword }
 	parts := strings.Split(encoded, "$")
 	if len(parts) != 5 || parts[0] != "rsg" || parts[1] != "pbkdf2-sha256" {
 		return false, ErrInvalidHash
