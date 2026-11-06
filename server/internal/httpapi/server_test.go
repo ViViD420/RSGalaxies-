@@ -295,6 +295,17 @@ func TestAuthenticatedCharacterLifecycleAndOwnership(t *testing.T) {
 	var player game.Player
 	if err:=json.Unmarshal(create.Body.Bytes(),&player);err!=nil{t.Fatal(err)}
 	characters.players[registration.Account.ID][player.ID].Inventory["softwood_log"]=3
+	buy:=httptest.NewRecorder()
+	buyRequest:=httptest.NewRequest(http.MethodPost,"/api/v1/account/characters/"+string(player.ID)+"/market/buy/rough_stone",bytes.NewBufferString(`{"quantity":2}`))
+	buyRequest.Header.Set("Authorization","Bearer "+registration.AccessToken)
+	handler.ServeHTTP(buy,buyRequest)
+	if buy.Code!=http.StatusOK{t.Fatalf("market buy status=%d body=%s",buy.Code,buy.Body.String())}
+	sell:=httptest.NewRecorder()
+	sellRequest:=httptest.NewRequest(http.MethodPost,"/api/v1/account/characters/"+string(player.ID)+"/market/sell/rough_stone",bytes.NewBufferString(`{"quantity":1}`))
+	sellRequest.Header.Set("Authorization","Bearer "+registration.AccessToken)
+	handler.ServeHTTP(sell,sellRequest)
+	if sell.Code!=http.StatusOK{t.Fatalf("market sell status=%d body=%s",sell.Code,sell.Body.String())}
+	if characters.players[registration.Account.ID][player.ID].Coins!=95||characters.players[registration.Account.ID][player.ID].Inventory["rough_stone"]!=1{t.Fatal("market transactions did not update currency and inventory")}
 	deposit:=httptest.NewRecorder()
 	depositRequest:=httptest.NewRequest(http.MethodPost,"/api/v1/account/characters/"+string(player.ID)+"/bank/deposit",bytes.NewBufferString(`{"itemId":"softwood_log","quantity":2}`))
 	depositRequest.Header.Set("Authorization","Bearer "+registration.AccessToken)
@@ -408,4 +419,11 @@ func (s *testCharacterStore) TransferBankItemForAccount(_ context.Context,accoun
  var err error
  if deposit{err=player.DepositItem(itemID,quantity)}else{err=player.WithdrawItem(itemID,quantity)}
  if err!=nil{return player,err};s.players[accountID][id]=player;return player,nil
+}
+
+func (s *testCharacterStore) TradeItemForAccount(_ context.Context,accountID string,id game.PlayerID,itemID string,quantity int,buy bool)(game.Player,int64,error){
+ player,ok:=s.players[accountID][id];if !ok{return game.Player{},0,game.ErrPlayerNotFound}
+ var amount int64;var err error
+ if buy{amount,err=player.BuyItem(itemID,quantity)}else{amount,err=player.SellItem(itemID,quantity)}
+ if err!=nil{return player,0,err};s.players[accountID][id]=player;return player,amount,nil
 }
