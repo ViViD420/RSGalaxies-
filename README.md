@@ -69,3 +69,11 @@ Create a character with POST /api/v1/players and JSON body {"name":"Wayfarer"}. 
 6. Keep this repository and all project artifacts independent.
 
 See docs/ARCHITECTURE.md, docs/ROADMAP.md and docs/SESSION_HANDOFF.md.
+
+
+## API and security design
+
+- [HTTP API reference](docs/API.md)
+- [Account authentication and session design](docs/ACCOUNT_AUTH_DESIGN.md)
+- [Architecture](docs/ARCHITECTURE.md)
+- [Development roadmap](docs/ROADMAP.md)
