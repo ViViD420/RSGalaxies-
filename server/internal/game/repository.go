@@ -118,6 +118,8 @@ func (r *MemoryPlayerRepository) Craft(_ context.Context, id PlayerID, recipeID 
 
 func clonePlayer(player Player) Player {
 	cloned := player
+	cloned.Equipment = make(map[string]string, len(player.Equipment))
+	for slot, itemID := range player.Equipment { cloned.Equipment[slot] = itemID }
 	cloned.Bank = make(map[string]int, len(player.Bank))
 	for id, quantity := range player.Bank { cloned.Bank[id] = quantity }
 	cloned.Inventory = make(map[string]int, len(player.Inventory))
