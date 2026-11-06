@@ -31,7 +31,7 @@ func (p *Player) MoveTo(x, z float64, now time.Time) error {
 	if x < zone.Bounds.MinX || x > zone.Bounds.MaxX || z < zone.Bounds.MinZ || z > zone.Bounds.MaxZ {
 		return ErrOutsideWorld
 	}
-	elapsed := now.Sub(p.lastMoveAt)
+	elapsed := now.Sub(p.LastMoveAt)
 	if elapsed <= 0 {
 		return ErrInvalidMovement
 	}
