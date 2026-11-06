@@ -13,6 +13,8 @@ var logout_button: Button
 var character_button: Button
 var equipment_button: Button
 var rest_button: Button
+var bag_button: Button
+var inventory_panel: PanelContainer
 var equipment_panel: PanelContainer
 var equipment_item_select: OptionButton
 var equipment_slot_select: OptionButton
@@ -393,6 +395,17 @@ func _build_hud() -> void:
 
 	_build_chat_panel(layer)
 	_build_auth_panel(layer)
+	bag_button = Button.new()
+	bag_button.text = "Bag"
+	bag_button.anchor_left = 1.0
+	bag_button.anchor_right = 1.0
+	bag_button.offset_left = -598
+	bag_button.offset_top = 18
+	bag_button.offset_right = -488
+	bag_button.offset_bottom = 62
+	bag_button.visible = false
+	bag_button.pressed.connect(_show_inventory_panel)
+	layer.add_child(bag_button)
 	rest_button = Button.new()
 	rest_button.text = "Rest"
 	rest_button.anchor_left = 1.0
@@ -494,6 +507,7 @@ func _on_api_request_completed(result: int, response_code: int, _headers: Packed
 			character_button.visible = false
 			equipment_button.visible = false
 			rest_button.visible = false
+			bag_button.visible = false
 			if character_panel != null:
 				character_panel.visible = false
 			_stop_chat()
@@ -841,6 +855,8 @@ func _update_inventory(inventory_data: Variant, bank_data: Variant = {}, coins_d
 		int(current_bank.get("copper_ore", 0)),
 		int(current_bank.get("copper_bar", 0))
 	]
+	if inventory_panel != null and inventory_panel.visible:
+		_show_inventory_panel()
 
 func _apply_server_position(position_data: Dictionary, force: bool) -> void:
 	var target := Vector3(
@@ -943,12 +959,17 @@ func _activate_character(character_data: Dictionary) -> void:
 		character_panel.visible = false
 	if equipment_panel != null:
 		equipment_panel.visible = false
+	if inventory_panel != null:
+		inventory_panel.visible = false
 	if market_panel != null:
 		market_panel.visible = false
+	if inventory_panel != null:
+		inventory_panel.visible = false
 	logout_button.visible = true
 	character_button.visible = true
 	equipment_button.visible = true
 	rest_button.visible = true
+	bag_button.visible = true
 	_start_movement_sync()
 	_start_gathering()
 	_start_chat()
@@ -998,6 +1019,8 @@ func _expire_session() -> void:
 		market_panel.visible = false
 	if equipment_panel != null:
 		equipment_panel.visible = false
+	if inventory_panel != null:
+		inventory_panel.visible = false
 	status_label.text = "Server: session expired"
 	auth_status_label.text = "Your session expired. Please sign in again."
 
@@ -1005,6 +1028,8 @@ func _show_character_selection(characters: Array) -> void:
 	_stop_chat()
 	if market_panel != null:
 		market_panel.visible = false
+	if inventory_panel != null:
+		inventory_panel.visible = false
 	if movement_timer != null:
 		movement_timer.stop()
 	movement_pending = false
@@ -1020,6 +1045,7 @@ func _show_character_selection(characters: Array) -> void:
 	character_button.visible = false
 	equipment_button.visible = false
 	rest_button.visible = false
+	bag_button.visible = false
 	var column := VBoxContainer.new()
 	character_panel.add_child(column)
 	var heading := Label.new()
@@ -1149,6 +1175,8 @@ func _submit_market_trade(buy: bool) -> void:
 func _show_equipment_panel(message: String = "") -> void:
 	if market_panel != null:
 		market_panel.visible = false
+	if inventory_panel != null:
+		inventory_panel.visible = false
 	if equipment_panel != null:
 		equipment_panel.queue_free()
 	equipment_panel = PanelContainer.new()
@@ -1401,4 +1429,55 @@ func _on_chat_send_completed(result: int, response_code: int, _headers: PackedSt
 		chat_status_label.text = "Chat cooldown • wait a moment"
 	else:
 		chat_status_label.text = "Chat: " + str(payload.get("error", "send_failed") if payload is Dictionary else "send_failed")
+
+
+func _show_inventory_panel() -> void:
+	if market_panel != null:
+		market_panel.visible = false
+	if equipment_panel != null:
+		equipment_panel.visible = false
+	if inventory_panel != null:
+		inventory_panel.queue_free()
+	inventory_panel = PanelContainer.new()
+	inventory_panel.position = Vector2(18, 155)
+	inventory_panel.custom_minimum_size = Vector2(360, 300)
+	var column := VBoxContainer.new()
+	inventory_panel.add_child(column)
+	var heading := Label.new()
+	heading.text = "INVENTORY & BANK"
+	heading.add_theme_font_size_override("font_size", 18)
+	column.add_child(heading)
+	var summary := Label.new()
+	summary.text = "Health %d/%d  •  Coins %d" % [current_health, game_max_health, current_coins]
+	column.add_child(summary)
+	var scroll := ScrollContainer.new()
+	scroll.custom_minimum_size = Vector2(330, 190)
+	scroll.size_flags_vertical = Control.SIZE_EXPAND_FILL
+	column.add_child(scroll)
+	var items_column := VBoxContainer.new()
+	items_column.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	scroll.add_child(items_column)
+	var displayed := false
+	for item in market_catalog:
+		if not item is Dictionary:
+			continue
+		var item_id := str(item.get("id", ""))
+		var carried := int(current_inventory.get(item_id, 0))
+		var banked := int(current_bank.get(item_id, 0))
+		if carried == 0 and banked == 0:
+			continue
+		var item_name := str(item.get("name", item_id))
+		var item_label := Label.new()
+		item_label.text = item_name + "  •  Bag " + str(carried) + "  •  Bank " + str(banked)
+		items_column.add_child(item_label)
+		displayed = true
+	if not displayed:
+		var empty_label := Label.new()
+		empty_label.text = "Your bags and bank are empty."
+		items_column.add_child(empty_label)
+	var close_button := Button.new()
+	close_button.text = "Close"
+	close_button.pressed.connect(func() -> void: inventory_panel.visible = false)
+	column.add_child(close_button)
+	auth_panel.get_parent().add_child(inventory_panel)
 
