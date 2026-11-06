@@ -725,8 +725,29 @@ func _on_gather_completed(result: int, response_code: int, _headers: PackedStrin
 			market_status_label.text = message
 		if interaction_type == "gear_equip" or interaction_type == "gear_unequip":
 			equipment_status_label.text = message
+		if interaction_type == "combat":
+			if error_code == "combat_cooldown":
+				status_label.text = "Combat: wait for your next attack"
+			elif error_code == "enemy_respawning":
+				status_label.text = "Combat: this creature is recovering"
+			elif error_code == "player_defeated":
+				status_label.text = "Defeated • use Rest to respawn"
 		return
 	var player_data: Dictionary = payload.get("character", payload.get("player", {}))
+	if interaction_type == "combat":
+		var combat: Dictionary = payload.get("combat", {})
+		_update_inventory(player_data.get("inventory", {}), player_data.get("bank", {}), player_data.get("coins", current_coins), player_data.get("equipment", {}), player_data.get("health", current_health))
+		var combat_message := "Hit for " + str(combat.get("damageDealt", 0)) + " • Enemy HP " + str(combat.get("enemyHealth", 0)) + " • Your HP " + str(current_health)
+		if bool(combat.get("enemyDefeated", false)):
+			combat_message = "Enemy defeated • +" + str(combat.get("experience", 0)) + " Combat XP"
+			if not str(combat.get("lootItemId", "")).is_empty():
+				combat_message += " • Loot: " + str(combat.get("lootItemId", "")).replace("_", " ")
+		if bool(combat.get("playerDefeated", false)):
+			combat_message = "You were defeated • use Rest to respawn"
+			if movement_timer != null:
+				movement_timer.stop()
+		status_label.text = "Combat: " + combat_message
+		return
 	if interaction_type == "rest":
 		_update_inventory(player_data.get("inventory", {}), player_data.get("bank", {}), player_data.get("coins", current_coins), player_data.get("equipment", {}), payload.get("health", player_data.get("health", current_health)))
 		var position_data: Variant = player_data.get("position", {})
