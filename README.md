@@ -6,7 +6,7 @@ An original persistent-world sandbox MMORPG combining long-term skill progressio
 
 ## Project status
 
-**Foundation and progression prototype — in progress.** The Go server supports character creation, ten data-driven skills, deterministic XP-to-level progression, a starter world zone, server-validated movement, two resource nodes, stack-count inventory, a gathering loop and a first workbench crafting recipe. The Godot 4.3 client has a 3D movement prototype, touch controls and browser export. Player and world data are in memory and reset when the process stops. PostgreSQL, authentication, secure sessions, combat, broader crafting, realtime multiplayer and production deployment are not yet implemented.
+**Foundation and progression prototype — in progress.** The Go server supports character creation, ten data-driven skills, deterministic XP-to-level progression, a starter world zone, server-validated movement, two resource nodes, stack-count inventory, a gathering loop and a first workbench crafting recipe. The Godot 4.3 client has a 3D movement prototype, touch controls and browser export. A PostgreSQL repository and schema migration are implemented; the Codespaces workspace runs a persistent Postgres volume. Standalone local runs still fall back to in-memory storage unless RS_GALAXIES_DATABASE_URL is set. Authentication, secure sessions, combat, broader crafting, realtime multiplayer and production deployment are not yet implemented.
 
 ## Design pillars
 
@@ -27,7 +27,7 @@ An original persistent-world sandbox MMORPG combining long-term skill progressio
 
 ## Work from a phone or browser
 
-A development container is configured for GitHub Codespaces. On the repository page, open **Code**, choose **Codespaces**, and create a codespace on main. Setup installs Go and Godot, runs server checks and exports the Web client. When the workspace starts, it launches the Go API and browser prototype on forwarded ports 8080 and 8000. Codespaces availability and usage limits depend on the GitHub account.
+A development container is configured for GitHub Codespaces. On the repository page, open **Code**, choose **Codespaces**, and create a codespace on main. Setup starts a PostgreSQL service, installs Go and Godot, runs race-enabled server tests (including database integration) and exports the Web client. When the workspace starts, it launches the Go API and browser prototype on forwarded ports 8080 and 8000. Codespaces availability and usage limits depend on the GitHub account.
 
 ## Run the development server
 
