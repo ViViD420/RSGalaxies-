@@ -46,6 +46,8 @@ Send `Authorization: Bearer <accessToken>`:
 - `POST /api/v1/account/characters/{characterId}/move` with `{"x":1.0,"z":2.0}`
 - `POST /api/v1/account/characters/{characterId}/gather/{nodeId}`
 - `POST /api/v1/account/characters/{characterId}/craft/{recipeId}`
+- `POST /api/v1/account/characters/{characterId}/bank/deposit` with `{"itemId":"softwood_log","quantity":10}`
+- `POST /api/v1/account/characters/{characterId}/bank/withdraw` with `{"itemId":"softwood_log","quantity":10}`
 
 Every character operation is scoped by the authenticated account in its SQL query or transaction. A character belonging to another account is reported as not found.
 
