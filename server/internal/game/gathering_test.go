@@ -48,6 +48,7 @@ func TestGatheringRejectsOutOfRangeAndFullInventory(t *testing.T) {
 	now := time.Now()
 	player, _ := NewPlayer("p-1", "Wayfarer", now)
 	node, _ := FindGatheringNode("tree-001")
+	player.Position.X = -20
 	if _, _, err := player.Gather(node, GatheringNodeState{}, now); !errors.Is(err, ErrGatheringOutOfRange) {
 		t.Fatalf("out-of-range error = %v", err)
 	}
