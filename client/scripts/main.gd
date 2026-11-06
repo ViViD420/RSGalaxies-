@@ -549,6 +549,8 @@ func _on_gather_completed(result: int, response_code: int, _headers: PackedStrin
 		status_label.text = message
 		if interaction_type == "market_buy" or interaction_type == "market_sell":
 			market_status_label.text = message
+		if interaction_type == "gear_equip" or interaction_type == "gear_unequip":
+			equipment_status_label.text = message
 		return
 	var player_data: Dictionary = payload.get("character", payload.get("player", {}))
 	if interaction_type == "market_buy" or interaction_type == "market_sell":
@@ -558,6 +560,14 @@ func _on_gather_completed(result: int, response_code: int, _headers: PackedStrin
 		var trade_message := trade_action + " " + str(trade.get("quantity", 1)) + " " + str(trade.get("itemId", "item")).replace("_", " ") + " for " + str(trade.get("coins", 0)) + " coins"
 		status_label.text = "Trader: " + trade_message
 		market_status_label.text = trade_message + " • Balance: " + str(current_coins)
+		return
+	if interaction_type == "gear_equip" or interaction_type == "gear_unequip":
+		var bonuses: Dictionary = payload.get("bonuses", {})
+		_update_inventory(player_data.get("inventory", {}), player_data.get("bank", {}), player_data.get("coins", current_coins), payload.get("equipment", player_data.get("equipment", {})))
+		var equipment_message := "Equipment updated • ATK +" + str(bonuses.get("attack", current_attack_bonus)) + " DEF +" + str(bonuses.get("defense", current_defense_bonus))
+		status_label.text = equipment_message
+		equipment_status_label.text = equipment_message
+		_show_equipment_panel()
 		return
 	if interaction_type == "bank_deposit" or interaction_type == "bank_withdraw":
 		var bank_action := "Deposited" if interaction_type == "bank_deposit" else "Withdrew"
@@ -694,10 +704,12 @@ func _activate_character(character_data: Dictionary) -> void:
 	if spawn is Dictionary:
 		_apply_server_position(spawn, true)
 	status_label.text = "Server: connected • account character ready"
-	_update_inventory(character_data.get("inventory", {}), character_data.get("bank", {}))
+	_update_inventory(character_data.get("inventory", {}), character_data.get("bank", {}), character_data.get("coins", current_coins), character_data.get("equipment", {}))
 	auth_panel.visible = false
 	if character_panel != null:
 		character_panel.visible = false
+	if equipment_panel != null:
+		equipment_panel.visible = false
 	if market_panel != null:
 		market_panel.visible = false
 	logout_button.visible = true
@@ -747,6 +759,8 @@ func _expire_session() -> void:
 		character_panel.visible = false
 	if market_panel != null:
 		market_panel.visible = false
+	if equipment_panel != null:
+		equipment_panel.visible = false
 	status_label.text = "Server: session expired"
 	auth_status_label.text = "Your session expired. Please sign in again."
 
@@ -808,6 +822,8 @@ func _show_character_selection(characters: Array) -> void:
 
 
 func _show_market_panel() -> void:
+	if equipment_panel != null:
+		equipment_panel.visible = false
 	if market_panel != null:
 		market_panel.visible = true
 		market_status_label.text = "Coins: " + str(current_coins)
@@ -889,4 +905,85 @@ func _submit_market_trade(buy: bool) -> void:
 
 
 
+
+
+func _show_equipment_panel() -> void:
+	if market_panel != null:
+		market_panel.visible = false
+	if equipment_panel != null:
+		equipment_panel.queue_free()
+	equipment_panel = PanelContainer.new()
+	equipment_panel.position = Vector2(420, 390)
+	equipment_panel.custom_minimum_size = Vector2(320, 260)
+	var column := VBoxContainer.new()
+	equipment_panel.add_child(column)
+	var heading := Label.new()
+	heading.text = "EQUIPMENT"
+	heading.add_theme_font_size_override("font_size", 18)
+	column.add_child(heading)
+	var current_label := Label.new()
+	current_label.text = "Equipped: " + str(current_equipment)
+	current_label.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+	column.add_child(current_label)
+	equipment_item_select = OptionButton.new()
+	equipment_item_select.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	for item in market_catalog:
+		if item is Dictionary:
+			var item_id := str(item.get("id", ""))
+			if str(item.get("equipmentSlot", "")) != "" and int(current_inventory.get(item_id, 0)) > 0:
+				equipment_item_select.add_item(str(item.get("name", item_id)))
+				equipment_item_select.set_item_metadata(equipment_item_select.item_count - 1, item_id)
+	column.add_child(equipment_item_select)
+	var equip_button := Button.new()
+	equip_button.text = "Equip selected item"
+	equip_button.disabled = equipment_item_select.item_count == 0
+	equip_button.pressed.connect(_submit_equip_item)
+	column.add_child(equip_button)
+	equipment_slot_select = OptionButton.new()
+	for slot in ["main_hand", "head", "body", "feet"]:
+		equipment_slot_select.add_item(slot.capitalize())
+		equipment_slot_select.set_item_metadata(equipment_slot_select.item_count - 1, slot)
+	column.add_child(equipment_slot_select)
+	var unequip_button := Button.new()
+	unequip_button.text = "Unequip selected slot"
+	unequip_button.pressed.connect(_submit_unequip_item)
+	column.add_child(unequip_button)
+	var close_button := Button.new()
+	close_button.text = "Close"
+	close_button.pressed.connect(func() -> void: equipment_panel.visible = false)
+	column.add_child(close_button)
+	equipment_status_label = Label.new()
+	equipment_status_label.text = "Buy starter gear from the trader to equip it."
+	equipment_status_label.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+	column.add_child(equipment_status_label)
+	auth_panel.get_parent().add_child(equipment_panel)
+
+func _submit_equip_item() -> void:
+	var item_id := str(equipment_item_select.get_selected_metadata())
+	if item_id.is_empty():
+		equipment_status_label.text = "Choose an item from your inventory."
+		return
+	_submit_equipment_request("equip", item_id)
+
+func _submit_unequip_item() -> void:
+	var slot := str(equipment_slot_select.get_selected_metadata())
+	if slot.is_empty():
+		equipment_status_label.text = "Choose an equipment slot."
+		return
+	_submit_equipment_request("unequip", slot)
+
+func _submit_equipment_request(action: String, item_or_slot: String) -> void:
+	interaction_type = "gear_equip" if action == "equip" else "gear_unequip"
+	var route := "equipment/" + action + "/" + item_or_slot
+	var error := gather_request.request(
+		api_base_url + "/api/v1/account/characters/" + player_id + "/" + route,
+		_api_headers(),
+		HTTPClient.METHOD_POST,
+		""
+	)
+	if error == OK:
+		interaction_pending = true
+		equipment_status_label.text = "Updating equipment..."
+	else:
+		equipment_status_label.text = "Could not send equipment request."
 
