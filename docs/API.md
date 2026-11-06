@@ -49,7 +49,7 @@ Send `Authorization: Bearer <accessToken>`:
 
 Every character operation is scoped by the authenticated account in its SQL query or transaction. A character belonging to another account is reported as not found.
 
-Sessions expire after 30 days. The server stores only a SHA-256 digest of the random 256-bit token. Logout revokes that digest server-side.
+Sessions expire after 30 days. The server stores only a SHA-256 digest of the random 256-bit token. Each account is limited to 10 active sessions; creating another prunes the oldest. Logout revokes the digest server-side.
 
 ## Production configuration
 
