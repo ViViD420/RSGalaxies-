@@ -22,6 +22,7 @@ func (s *Server) Routes() http.Handler {
 	mux := http.NewServeMux()
 	mux.HandleFunc("GET /healthz", s.health)
 	mux.HandleFunc("GET /api/v1/skills", s.listSkills)
+	mux.HandleFunc("GET /api/v1/world/zones", s.listWorldZones)
 	mux.HandleFunc("GET /api/v1/players", s.listPlayers)
 	mux.HandleFunc("POST /api/v1/players", s.createPlayer)
 	mux.HandleFunc("GET /api/v1/players/{id}", s.getPlayer)
@@ -29,12 +30,17 @@ func (s *Server) Routes() http.Handler {
 	// This shortcut is disabled in production; real XP must come from validated gameplay actions.
 	if os.Getenv("RS_GALAXIES_ENV") != "production" {
 		mux.HandleFunc("POST /api/v1/players/{id}/skills/{skill}/experience", s.awardExperience)
+		mux.HandleFunc("POST /api/v1/players/{id}/move", s.movePlayer)
 	}
 	return securityHeaders(mux)
 }
 
 func (s *Server) health(w http.ResponseWriter, _ *http.Request) { writeJSON(w,200,map[string]string{"status":"ok","service":"rs-galaxies-world"}) }
 func (s *Server) listSkills(w http.ResponseWriter, _ *http.Request) { writeJSON(w,200,map[string]any{"skills":game.SkillDefinitions(),"maxLevel":game.MaxSkillLevel,"maxExperience":game.MaxSkillExperience}) }
+func (s *Server) listWorldZones(w http.ResponseWriter, _ *http.Request) {
+	writeJSON(w, http.StatusOK, map[string]any{"zones": game.WorldZones()})
+}
+
 func (s *Server) listPlayers(w http.ResponseWriter,r *http.Request) {
 	players,err:=s.players.List(r.Context());if err!=nil{log.Printf("list players: %v",err);writeError(w,500,"internal_error");return};writeJSON(w,200,map[string]any{"players":players})
 }
