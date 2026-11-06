@@ -1,6 +1,7 @@
 package httpapi
 
 import (
+	"time"
 	"bytes"
 	"encoding/json"
 	"net/http"
@@ -171,6 +172,33 @@ func TestGatheringCreatesInventoryAndAwardsSkillExperience(t *testing.T) {
 	if err := json.Unmarshal(gathered.Body.Bytes(), &result); err != nil { t.Fatal(err) }
 	if result.Player.Inventory["softwood_log"] != 1 || result.Player.Skills["woodcutting"].Experience != 25 {
 		t.Fatalf("gather transaction incomplete: inventory=%v skill=%+v", result.Player.Inventory, result.Player.Skills["woodcutting"])
+	}
+}
+
+
+func TestCraftingCreatesOutputAndConsumesIngredients(t *testing.T) {
+	repository := game.NewMemoryPlayerRepository()
+	player, err := game.NewPlayer("p-craft", "Wayfarer", time.Now())
+	if err != nil { t.Fatal(err) }
+	player.Position.Z = 2
+	player.Inventory["softwood_log"] = 2
+	if err := repository.Create(nil, player); err != nil { t.Fatal(err) }
+	handler := New(repository).Routes()
+
+	recipes := httptest.NewRecorder()
+	handler.ServeHTTP(recipes, httptest.NewRequest(http.MethodGet, "/api/v1/crafting/recipes", nil))
+	if recipes.Code != http.StatusOK { t.Fatalf("recipes status = %d", recipes.Code) }
+	stations := httptest.NewRecorder()
+	handler.ServeHTTP(stations, httptest.NewRequest(http.MethodGet, "/api/v1/crafting/stations", nil))
+	if stations.Code != http.StatusOK { t.Fatalf("stations status = %d", stations.Code) }
+
+	crafted := httptest.NewRecorder()
+	handler.ServeHTTP(crafted, httptest.NewRequest(http.MethodPost, "/api/v1/players/p-craft/craft/basic-plank", nil))
+	if crafted.Code != http.StatusOK { t.Fatalf("craft status = %d body = %s", crafted.Code, crafted.Body.String()) }
+	var result struct { Player game.Player `json:"player"` }
+	if err := json.Unmarshal(crafted.Body.Bytes(), &result); err != nil { t.Fatal(err) }
+	if result.Player.Inventory["softwood_log"] != 0 || result.Player.Inventory["wooden_plank"] != 1 {
+		t.Fatalf("craft inventory incorrect: %v", result.Player.Inventory)
 	}
 }
 
