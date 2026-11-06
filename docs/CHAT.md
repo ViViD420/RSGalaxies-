@@ -6,7 +6,7 @@
 - Sending and reading require account-owned character routes; the server derives the zone and sender identity from the character record rather than trusting client-supplied values.
 - Messages are trimmed, control characters are removed, and the content is limited to 240 Unicode characters.
 - Each character has a two-second send cooldown enforced transactionally in PostgreSQL.
-- Reads use an ascending message-ID cursor and return at most 50 messages per request.
+- Reads use an ascending message-ID cursor and return at most 50 messages per request. A new client (cursor `0`) receives the newest 50 messages in chronological order, then polls forward from the returned cursor.
 - The Godot client polls every two seconds, appends only messages newer than its last cursor, and holds the access token in memory.
 
 ## API
