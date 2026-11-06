@@ -65,6 +65,8 @@ The Godot client trade panel displays the other character's public name, both st
 - Crash/restart recovery preserves open escrow and expiry behavior.
 - Race-enabled Go tests and PostgreSQL integration tests pass before production routes are registered.
 
-## Release boundary
+## Implementation status and release boundary
 
-Do not enable player-to-player trading until persistence, ownership checks, escrow accounting, transaction locking, concurrency tests and a Godot client path are all complete. The merchant system remains separate and unchanged.
+The initial backend and Godot client vertical slice is implemented. PostgreSQL enforces participant ownership and one active trade per character; the repository uses row locks and revision checks; offers are escrowed; confirmations settle atomically; cancellation and periodic expiry return escrow; character writes preserve reserved stack and coin capacity. The client polls for an active trade after login/reconnect and refreshes inventory when escrow changes.
+
+Before public production enablement, complete concurrency, crash/restart, cancel-versus-confirm, expiry-versus-confirm and full refund-capacity tests, plus real-device client validation. Keep trading disabled in production configuration until those gates pass. The merchant system remains separate and unchanged.
