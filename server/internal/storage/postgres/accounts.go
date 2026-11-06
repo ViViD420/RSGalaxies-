@@ -347,7 +347,7 @@ func (r *AccountRepository) SendLocalChatForAccount(ctx context.Context,accountI
 }
 
 func (r *AccountRepository) ListLocalChatForAccount(ctx context.Context,accountID string,id game.PlayerID,afterID int64,limit int)([]game.ChatMessage,error){
-	if afterID<0||limit<1||limit>50{return nil,game.ErrInvalidChatMessage}
+	if afterID<0||limit<1||limit>50{return nil,game.ErrInvalidChatCursor}
 	var zoneID string
 	err:=r.db.QueryRowContext(ctx,`SELECT zone_id FROM players WHERE account_id=$1 AND id=$2`,accountID,string(id)).Scan(&zoneID)
 	if errors.Is(err,sql.ErrNoRows){return nil,game.ErrPlayerNotFound}
