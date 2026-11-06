@@ -10,6 +10,7 @@ type ItemDefinition struct {
 var itemDefinitions = []ItemDefinition{
 	{ID: "softwood_log", Name: "Softwood Log", Description: "A freshly harvested log suitable for basic woodworking.", MaxStack: 100},
 	{ID: "rough_stone", Name: "Rough Stone", Description: "An uncut stone gathered from exposed deposits.", MaxStack: 100},
+	{ID: "wooden_plank", Name: "Wooden Plank", Description: "A simple processed timber component for basic construction.", MaxStack: 100},
 }
 
 func ItemDefinitions() []ItemDefinition {
