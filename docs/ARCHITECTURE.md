@@ -50,7 +50,7 @@ The current development API exposes:
 - `GET /api/v1/players/{id}/skills`
 - Development-only `POST` routes for XP awards, movement and gathering.
 
-The first world slice contains one bounded zone, a spawn point, server-time-validated horizontal movement, two starter resource nodes, stack-count inventory and XP rewards. Resource gathering updates player inventory, skill XP and node charges under one repository lock. Resource nodes have limited charges and timed respawn. These systems are in-memory development implementations, not durable multiplayer services. Development state-changing shortcuts are not registered when RS_GALAXIES_ENV=production.
+The first world slice contains one bounded zone, a spawn point, server-time-validated horizontal movement, two starter resource nodes, stack-count inventory and XP rewards. Resource gathering updates player inventory, skill XP and node charges under one repository lock; resource nodes have limited charges and timed respawn. A first workbench recipe consumes two logs to create a wooden plank and award Crafting XP. Crafting checks station range, skill level, ingredient counts and output stack capacity before committing the inventory/XP change. These systems are in-memory development implementations, not durable multiplayer services. Development state-changing shortcuts are not registered when RS_GALAXIES_ENV=production.
 
 ## Data ownership and transaction strategy
 
