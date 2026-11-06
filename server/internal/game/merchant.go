@@ -15,6 +15,7 @@ var (
 )
 
 func (p *Player) BuyItem(itemID string, quantity int) (int64,error) {
+	if err:=p.CanAct();err!=nil{return 0,err}
 	if quantity<=0{return 0,ErrInvalidItemQuantity}
 	item,ok:=FindItem(itemID);if !ok||item.BuyPrice<=0{return 0,ErrUnknownMerchantItem}
 	if quantity>item.MaxStack{return 0,ErrMerchantStackFull}
@@ -29,6 +30,7 @@ func (p *Player) BuyItem(itemID string, quantity int) (int64,error) {
 }
 
 func (p *Player) SellItem(itemID string, quantity int) (int64,error) {
+	if err:=p.CanAct();err!=nil{return 0,err}
 	if quantity<=0{return 0,ErrInvalidItemQuantity}
 	item,ok:=FindItem(itemID);if !ok||item.SellPrice<=0{return 0,ErrUnknownMerchantItem}
 	if quantity>item.MaxStack{return 0,ErrMerchantStackFull}
