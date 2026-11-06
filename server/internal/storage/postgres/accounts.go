@@ -536,13 +536,17 @@ func readTradeSnapshot(ctx context.Context,q tradeQueryer,accountID,tradeID stri
 		if err:=rows.Scan(&participant.CharacterID,&participant.Name,&participant.Role,&confirmed,&participant.Offer.Coins);err!=nil{return game.TradeSnapshot{},fmt.Errorf("scan trade participant: %w",err)}
 		participant.Offer.Items=make(map[string]int)
 		participant.Confirmed=confirmed.Valid&&confirmed.Int64==snapshot.Revision
+		snapshot.Participants=append(snapshot.Participants,participant)
+	}
+	if err:=rows.Err();err!=nil{return game.TradeSnapshot{},fmt.Errorf("iterate trade participants: %w",err)}
+	if err:=rows.Close();err!=nil{return game.TradeSnapshot{},fmt.Errorf("close trade participants: %w",err)}
+	for i:=range snapshot.Participants {
+		participant:=&snapshot.Participants[i]
 		itemRows,itemErr:=q.QueryContext(ctx,`SELECT item_id,quantity FROM player_trade_escrow_items WHERE trade_id=$1 AND owner_character_id=$2 ORDER BY item_id`,tradeID,string(participant.CharacterID))
 		if itemErr!=nil{return game.TradeSnapshot{},fmt.Errorf("read trade escrow items: %w",itemErr)}
 		for itemRows.Next(){var itemID string;var quantity int;if itemErr:=itemRows.Scan(&itemID,&quantity);itemErr!=nil{itemRows.Close();return game.TradeSnapshot{},itemErr};participant.Offer.Items[itemID]=quantity}
 		if itemErr:=itemRows.Err();itemErr!=nil{itemRows.Close();return game.TradeSnapshot{},itemErr}
 		itemRows.Close()
-		snapshot.Participants=append(snapshot.Participants,participant)
 	}
-	if err:=rows.Err();err!=nil{return game.TradeSnapshot{},fmt.Errorf("iterate trade participants: %w",err)}
 	return snapshot,nil
 }
