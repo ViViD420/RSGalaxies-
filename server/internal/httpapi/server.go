@@ -25,6 +25,8 @@ func (s *Server) Routes() http.Handler {
 	mux.HandleFunc("GET /api/v1/world/zones", s.listWorldZones)
 	mux.HandleFunc("GET /api/v1/world/nodes", s.listGatheringNodes)
 	mux.HandleFunc("GET /api/v1/items", s.listItems)
+	mux.HandleFunc("GET /api/v1/crafting/recipes", s.listCraftingRecipes)
+	mux.HandleFunc("GET /api/v1/crafting/stations", s.listCraftingStations)
 	mux.HandleFunc("GET /api/v1/players", s.listPlayers)
 	mux.HandleFunc("POST /api/v1/players", s.createPlayer)
 	mux.HandleFunc("GET /api/v1/players/{id}", s.getPlayer)
@@ -34,6 +36,7 @@ func (s *Server) Routes() http.Handler {
 		mux.HandleFunc("POST /api/v1/players/{id}/skills/{skill}/experience", s.awardExperience)
 		mux.HandleFunc("POST /api/v1/players/{id}/move", s.movePlayer)
 		mux.HandleFunc("POST /api/v1/players/{id}/gather/{nodeID}", s.gather)
+		mux.HandleFunc("POST /api/v1/players/{id}/craft/{recipeID}", s.craft)
 	}
 	return securityHeaders(mux)
 }
@@ -51,6 +54,15 @@ func (s *Server) listGatheringNodes(w http.ResponseWriter, _ *http.Request) {
 
 func (s *Server) listItems(w http.ResponseWriter, _ *http.Request) {
 	writeJSON(w, http.StatusOK, map[string]any{"items": game.ItemDefinitions()})
+}
+
+
+func (s *Server) listCraftingRecipes(w http.ResponseWriter, _ *http.Request) {
+	writeJSON(w, http.StatusOK, map[string]any{"recipes": game.CraftingRecipes()})
+}
+
+func (s *Server) listCraftingStations(w http.ResponseWriter, _ *http.Request) {
+	writeJSON(w, http.StatusOK, map[string]any{"stations": game.CraftingStations()})
 }
 
 func (s *Server) listPlayers(w http.ResponseWriter,r *http.Request) {
@@ -89,6 +101,32 @@ func (s *Server) awardExperience(w http.ResponseWriter,r *http.Request) {
 		default:log.Printf("award experience: %v",err);writeError(w,500,"internal_error")};return
 	}
 	writeJSON(w,200,map[string]any{"player":player,"skill":player.Skills[strings.ToLower(strings.TrimSpace(r.PathValue("skill")))],"leveledUp":leveled})
+}
+
+
+func (s *Server) craft(w http.ResponseWriter, r *http.Request) {
+	player, result, err := s.players.Craft(r.Context(), game.PlayerID(strings.TrimSpace(r.PathValue("id"))), r.PathValue("recipeID"), s.now())
+	if err != nil {
+		switch {
+		case errors.Is(err, game.ErrPlayerNotFound):
+			writeError(w, http.StatusNotFound, "player_not_found")
+		case errors.Is(err, game.ErrUnknownCraftingRecipe), errors.Is(err, game.ErrUnknownCraftingStation):
+			writeError(w, http.StatusNotFound, "crafting_definition_not_found")
+		case errors.Is(err, game.ErrCraftingOutOfRange):
+			writeError(w, http.StatusUnprocessableEntity, "crafting_out_of_range")
+		case errors.Is(err, game.ErrInsufficientIngredients):
+			writeError(w, http.StatusUnprocessableEntity, "insufficient_ingredients")
+		case errors.Is(err, game.ErrCraftingSkillTooLow):
+			writeError(w, http.StatusUnprocessableEntity, "crafting_skill_too_low")
+		case errors.Is(err, game.ErrCraftingOutputFull), errors.Is(err, game.ErrExperienceOverflow):
+			writeError(w, http.StatusConflict, "crafting_capacity_reached")
+		default:
+			log.Printf("craft item: %v", err)
+			writeError(w, http.StatusInternalServerError, "internal_error")
+		}
+		return
+	}
+	writeJSON(w, http.StatusOK, map[string]any{"player": player, "crafting": result})
 }
 
 func (s *Server) gather(w http.ResponseWriter, r *http.Request) {
