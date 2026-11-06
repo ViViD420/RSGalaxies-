@@ -487,3 +487,14 @@ func (s *testCharacterStore) RestForAccount(_ context.Context,accountID string,i
  player,ok:=s.players[accountID][id];if !ok{return game.Player{},game.ErrPlayerNotFound}
  if err:=player.Rest();err!=nil{return player,err};s.players[accountID][id]=player;return player,nil
 }
+
+func TestEnemyCatalogIsPublic(t *testing.T) {
+ t.Setenv("RS_GALAXIES_ENV","production")
+ handler:=New(game.NewMemoryPlayerRepository()).Routes()
+ response:=httptest.NewRecorder()
+ handler.ServeHTTP(response,httptest.NewRequest(http.MethodGet,"/api/v1/combat/enemies",nil))
+ if response.Code!=http.StatusOK{t.Fatalf("enemy catalog status=%d body=%s",response.Code,response.Body.String())}
+ var payload struct{Enemies []game.EnemyDefinition `json:"enemies"`}
+ if err:=json.Unmarshal(response.Body.Bytes(),&payload);err!=nil{t.Fatal(err)}
+ if len(payload.Enemies)!=2{t.Fatalf("enemy definitions=%d want=2",len(payload.Enemies))}
+}
