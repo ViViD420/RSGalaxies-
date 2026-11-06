@@ -336,7 +336,7 @@ func TestPostgresPlayerTradeEscrowSchemaEnforcesReservationsAndPositiveBalances(
 		VALUES($1,$2,'softwood_log',2)`, tradeID, string(firstPlayer.ID)); err != nil { t.Fatal(err) }
 
 	if _, err := db.ExecContext(ctx, `UPDATE player_trade_offers SET offered_coins=50 WHERE trade_id=$1 AND character_id=$2`, tradeID, string(firstPlayer.ID)); err != nil { t.Fatal(err) }
-	overfilled := clonePlayer(firstPlayer)
+	overfilled := cloneTradeTestPlayer(firstPlayer)
 	overfilled.Inventory["softwood_log"] = 99
 	tx, err := db.BeginTx(ctx, nil)
 	if err != nil { t.Fatal(err) }
@@ -471,4 +471,13 @@ func TestPostgresExpiredTradeReturnsEscrowExactlyOnce(t *testing.T) {
 	if err!=nil||count!=0{t.Fatalf("repeat expiry count=%d err=%v",count,err)}
 	stillRestored,err:=repo.GetCharacter(ctx,first.ID,initiator.ID);if err!=nil{t.Fatal(err)}
 	if stillRestored.Inventory["softwood_log"]!=4||stillRestored.Coins!=game.StartingCoins{t.Fatalf("escrow was restored more than once: %+v",stillRestored)}
+}
+
+func cloneTradeTestPlayer(player game.Player) game.Player {
+	inventory := make(map[string]int, len(player.Inventory))
+	for itemID, quantity := range player.Inventory {
+		inventory[itemID] = quantity
+	}
+	player.Inventory = inventory
+	return player
 }
