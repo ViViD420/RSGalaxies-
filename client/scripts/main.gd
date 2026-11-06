@@ -84,6 +84,7 @@ var trade_offer_items_label: Label
 var trade_editor_trade_id := ""
 var trade_editor_revision := -1
 var trade_status_label: Label
+var trade_invite_button: Button
 var trade_accept_button: Button
 var trade_update_button: Button
 var trade_confirm_button: Button
@@ -1915,10 +1916,10 @@ func _build_trade_panel() -> void:
 	trade_offer_items_label.custom_minimum_size = Vector2(380, 42)
 	column.add_child(trade_offer_items_label)
 	var actions := HBoxContainer.new()
-	var invite_button := Button.new()
-	invite_button.text = "Invite"
-	invite_button.pressed.connect(func() -> void: _send_trade_action("invite"))
-	actions.add_child(invite_button)
+	trade_invite_button = Button.new()
+	trade_invite_button.text = "Invite"
+	trade_invite_button.pressed.connect(func() -> void: _send_trade_action("invite"))
+	actions.add_child(trade_invite_button)
 	trade_accept_button = Button.new()
 	trade_accept_button.text = "Accept"
 	trade_accept_button.visible = false
@@ -2199,6 +2200,7 @@ func _render_trade_snapshot() -> void:
 			trade_coins_input.text = "0"
 		_update_trade_offer_items_label()
 		_refresh_trade_items()
+		trade_invite_button.visible = true
 		trade_accept_button.visible = false
 		trade_update_button.visible = false
 		trade_confirm_button.visible = false
@@ -2251,6 +2253,7 @@ Your offer: " + own_offer
 		lines += "
 Their offer: " + other_offer
 	trade_status_label.text = lines
+	trade_invite_button.visible = false
 	trade_accept_button.visible = status == "pending" and own_role == "target"
 	trade_update_button.visible = status == "open"
 	trade_confirm_button.visible = status == "open"
