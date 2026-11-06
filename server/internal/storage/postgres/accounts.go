@@ -282,3 +282,21 @@ func (r *AccountRepository) TradeItemForAccount(ctx context.Context,accountID st
 	if err:=tx.Commit();err!=nil{return game.Player{},0,fmt.Errorf("commit owned market trade: %w",err)}
 	return player,amount,nil
 }
+
+func (r *AccountRepository) EquipItemForAccount(ctx context.Context,accountID string,id game.PlayerID,itemID string)(game.Player,error){
+	tx,err:=r.db.BeginTx(ctx,nil);if err!=nil{return game.Player{},err};defer tx.Rollback()
+	player,err:=r.lockOwnedPlayer(ctx,tx,accountID,id);if err!=nil{return game.Player{},err}
+	if err:=player.EquipItem(itemID);err!=nil{return player,err}
+	if err:=updateOwnedPlayer(ctx,tx,accountID,player);err!=nil{return game.Player{},err}
+	if err:=tx.Commit();err!=nil{return game.Player{},fmt.Errorf("commit equipment change: %w",err)}
+	return player,nil
+}
+
+func (r *AccountRepository) UnequipItemForAccount(ctx context.Context,accountID string,id game.PlayerID,slot string)(game.Player,error){
+	tx,err:=r.db.BeginTx(ctx,nil);if err!=nil{return game.Player{},err};defer tx.Rollback()
+	player,err:=r.lockOwnedPlayer(ctx,tx,accountID,id);if err!=nil{return game.Player{},err}
+	if err:=player.UnequipItem(slot);err!=nil{return player,err}
+	if err:=updateOwnedPlayer(ctx,tx,accountID,player);err!=nil{return game.Player{},err}
+	if err:=tx.Commit();err!=nil{return game.Player{},fmt.Errorf("commit equipment change: %w",err)}
+	return player,nil
+}
