@@ -567,7 +567,7 @@ func _on_gather_completed(result: int, response_code: int, _headers: PackedStrin
 		var equipment_message := "Equipment updated • ATK +" + str(bonuses.get("attack", current_attack_bonus)) + " DEF +" + str(bonuses.get("defense", current_defense_bonus))
 		status_label.text = equipment_message
 		equipment_status_label.text = equipment_message
-		_show_equipment_panel()
+		_show_equipment_panel(equipment_message)
 		return
 	if interaction_type == "bank_deposit" or interaction_type == "bank_withdraw":
 		var bank_action := "Deposited" if interaction_type == "bank_deposit" else "Withdrew"
@@ -907,7 +907,7 @@ func _submit_market_trade(buy: bool) -> void:
 
 
 
-func _show_equipment_panel() -> void:
+func _show_equipment_panel(message: String = "") -> void:
 	if market_panel != null:
 		market_panel.visible = false
 	if equipment_panel != null:
@@ -953,7 +953,7 @@ func _show_equipment_panel() -> void:
 	close_button.pressed.connect(func() -> void: equipment_panel.visible = false)
 	column.add_child(close_button)
 	equipment_status_label = Label.new()
-	equipment_status_label.text = "Buy starter gear from the trader to equip it."
+	equipment_status_label.text = message if not message.is_empty() else "Buy starter gear from the trader to equip it."
 	equipment_status_label.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
 	column.add_child(equipment_status_label)
 	auth_panel.get_parent().add_child(equipment_panel)
