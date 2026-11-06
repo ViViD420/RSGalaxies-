@@ -254,3 +254,16 @@ func createSession(ctx context.Context,tx *sql.Tx,accountID string,tokenHash []b
 	if _,err:=tx.ExecContext(ctx,`DELETE FROM account_sessions WHERE account_id=$1 AND (expires_at<=$2 OR revoked_at<$2-INTERVAL '7 days')`,accountID,now);err!=nil{return fmt.Errorf("prune expired account sessions: %w",err)}
 	return nil
 }
+
+func (r *AccountRepository) TransferBankItemForAccount(ctx context.Context, accountID string, id game.PlayerID, itemID string, quantity int, deposit bool) (game.Player, error) {
+	tx, err := r.db.BeginTx(ctx, nil)
+	if err != nil { return game.Player{}, err }
+	defer tx.Rollback()
+	player, err := r.lockOwnedPlayer(ctx, tx, accountID, id)
+	if err != nil { return game.Player{}, err }
+	if deposit { err = player.DepositItem(itemID, quantity) } else { err = player.WithdrawItem(itemID, quantity) }
+	if err != nil { return player, err }
+	if err := updateOwnedPlayer(ctx, tx, accountID, player); err != nil { return game.Player{}, err }
+	if err := tx.Commit(); err != nil { return game.Player{}, fmt.Errorf("commit owned bank transfer: %w", err) }
+	return player, nil
+}
