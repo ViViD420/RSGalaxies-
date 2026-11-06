@@ -52,14 +52,14 @@ An original sandbox MMORPG combining long-form skill progression and item gamepl
 - PostgreSQL persistence is implemented and used in Codespaces. Standalone local runs fall back to in-memory storage unless RS_GALAXIES_DATABASE_URL is configured.
 - All player-specific APIs and XP/movement/gathering/crafting shortcuts are disabled in production until authentication and character ownership are implemented.
 - Production startup fails closed if RS_GALAXIES_DATABASE_URL is missing; PostgreSQL connection and migrations must succeed before the HTTP service starts.
-- Authentication, secure sessions, realtime replication, production operations, NPCs, combat, additional recipes, player trading and production hardening remain incomplete.
+- Account-authentication foundations now include PBKDF2-HMAC-SHA-256 password hashing (600,000 iterations, random salt), opaque 256-bit session token generation and digest-only storage helpers, with unit tests and a documented account/session security design. Account persistence, HTTP registration/login/logout, expiry/revocation enforcement, character ownership checks and production route enablement remain incomplete. Realtime replication, production operations, NPCs, combat, additional recipes and player trading also remain incomplete.
 - Code and PostgreSQL integration tests are committed. GitHub Actions run #77 (commit 6e9ca12) failed in the PostgreSQL integration test. The movement timestamp assertion compared a nanosecond-precision Go time with PostgreSQL TIMESTAMPTZ's microsecond precision. The test now normalizes its timestamp to microseconds before asserting persistence; the corrective commit's CI result must be checked before treating this as resolved. Runs #73–#76 passed.
 
 ## Next engineering tasks
 
 1. Verify the movement timestamp precision fix in GitHub Actions; investigate any remaining Go/PostgreSQL failures.
 2. Validate the auto-launched browser build, gathering and crafting loops on a real phone; refine touch controls and camera feel.
-3. Design and implement account authentication, secure sessions and character ownership checks; keep player routes disabled in production until ownership enforcement is tested.
+3. Add account/session PostgreSQL migrations and transactional repositories, then registration/login/logout handlers and account-scoped character access; keep player routes disabled in production until ownership enforcement is tested.
 4. Add item instances, equipment, bank storage, currency and atomic player trading.
 5. Expand the playable loop with more recipes, tools, resource tiers, NPCs and combat.
 
