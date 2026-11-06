@@ -15,6 +15,9 @@ func Migrate(ctx context.Context, db *sql.DB) error {
 	tx, err := db.BeginTx(ctx, nil)
 	if err != nil { return fmt.Errorf("begin migration: %w", err) }
 	defer tx.Rollback()
+	if _, err := tx.ExecContext(ctx, "SELECT pg_advisory_xact_lock(728194632)"); err != nil {
+		return fmt.Errorf("lock migrations: %w", err)
+	}
 
 	if _, err := tx.ExecContext(ctx, `CREATE TABLE IF NOT EXISTS schema_migrations (
 		version INTEGER PRIMARY KEY,
