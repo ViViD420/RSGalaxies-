@@ -2034,7 +2034,7 @@ func _on_trade_request_completed(result: int, response_code: int, _headers: Pack
 	current_trade = payload
 	_render_trade_snapshot()
 	var completed_status := str(current_trade.get("status", ""))
-	if completed_status == "completed" or completed_status == "cancelled" or completed_status == "expired":
+	if trade_action == "invite" or trade_action == "accept" or trade_action == "update" or completed_status == "completed" or completed_status == "cancelled" or completed_status == "expired":
 		_refresh_character_after_trade()
 	if trade_button != null and str(current_trade.get("status", "")) == "pending":
 		trade_button.text = "Trade • 1"
