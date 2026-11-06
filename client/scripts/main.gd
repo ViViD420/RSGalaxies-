@@ -1776,6 +1776,302 @@ func _update_remote_player_visuals(delta: float) -> void:
 		remote.position = remote.position.lerp(target, clampf(delta * 5.0, 0.0, 1.0))
 
 
+func _start_trade_polling() -> void:
+	if player_id.is_empty() or auth_token.is_empty():
+		return
+	if trade_request == null:
+		trade_request = _new_api_request()
+		add_child(trade_request)
+		trade_request.request_completed.connect(_on_trade_request_completed)
+	if trade_poll_timer == null:
+		trade_poll_timer = Timer.new()
+		trade_poll_timer.wait_time = 3.0
+		trade_poll_timer.timeout.connect(_poll_active_trade)
+		add_child(trade_poll_timer)
+	trade_poll_timer.start()
+	_poll_active_trade()
+
+
+func _stop_trade_polling() -> void:
+	if trade_poll_timer != null:
+		trade_poll_timer.stop()
+		trade_poll_timer.queue_free()
+		trade_poll_timer = null
+	if trade_request != null:
+		if trade_request.get_http_client_status() != HTTPClient.STATUS_DISCONNECTED:
+			trade_request.cancel_request()
+		trade_request.queue_free()
+		trade_request = null
+	trade_pending = false
+	current_trade.clear()
+	if trade_button != null:
+		trade_button.text = "Trade"
+	if trade_status_label != null:
+		trade_status_label.text = "No active trade"
+
+
+func _poll_active_trade() -> void:
+	if player_id.is_empty() or trade_pending or trade_request == null:
+		return
+	trade_action = "poll"
+	var url := api_base_url + "/api/v1/account/characters/" + player_id + "/trades/active"
+	var error := trade_request.request(url, _api_headers())
+	if error == OK:
+		trade_pending = true
+
+
+func _toggle_trade_panel() -> void:
+	if trade_panel != null and trade_panel.visible:
+		trade_panel.visible = false
+		return
+	if inventory_panel != null:
+		inventory_panel.visible = false
+	if skills_panel != null:
+		skills_panel.visible = false
+	if equipment_panel != null:
+		equipment_panel.visible = false
+	if market_panel != null:
+		market_panel.visible = false
+	if trade_panel == null:
+		_build_trade_panel()
+	trade_panel.visible = true
+	_refresh_trade_targets()
+	_refresh_trade_items()
+	_render_trade_snapshot()
+
+
+func _build_trade_panel() -> void:
+	trade_panel = PanelContainer.new()
+	trade_panel.position = Vector2(410, 145)
+	trade_panel.custom_minimum_size = Vector2(410, 390)
+	var column := VBoxContainer.new()
+	trade_panel.add_child(column)
+	var heading := Label.new()
+	heading.text = "PLAYER TRADE"
+	heading.add_theme_font_size_override("font_size", 18)
+	column.add_child(heading)
+	var target_label := Label.new()
+	target_label.text = "Nearby player"
+	column.add_child(target_label)
+	trade_target_select = OptionButton.new()
+	trade_target_select.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	column.add_child(trade_target_select)
+	var item_label := Label.new()
+	item_label.text = "Offer one inventory stack (or coins only)"
+	column.add_child(item_label)
+	trade_item_select = OptionButton.new()
+	trade_item_select.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	column.add_child(trade_item_select)
+	var quantity_row := HBoxContainer.new()
+	var quantity_label := Label.new()
+	quantity_label.text = "Quantity"
+	quantity_row.add_child(quantity_label)
+	trade_quantity_input = LineEdit.new()
+	trade_quantity_input.text = "1"
+	trade_quantity_input.custom_minimum_size = Vector2(75, 0)
+	quantity_row.add_child(trade_quantity_input)
+	var coins_label := Label.new()
+	coins_label.text = "Coins"
+	quantity_row.add_child(coins_label)
+	trade_coins_input = LineEdit.new()
+	trade_coins_input.text = "0"
+	trade_coins_input.custom_minimum_size = Vector2(90, 0)
+	quantity_row.add_child(trade_coins_input)
+	column.add_child(quantity_row)
+	var actions := HBoxContainer.new()
+	var invite_button := Button.new()
+	invite_button.text = "Invite"
+	invite_button.pressed.connect(func() -> void: _send_trade_action("invite"))
+	actions.add_child(invite_button)
+	trade_accept_button = Button.new()
+	trade_accept_button.text = "Accept"
+	trade_accept_button.visible = false
+	trade_accept_button.pressed.connect(func() -> void: _send_trade_action("accept"))
+	actions.add_child(trade_accept_button)
+	trade_update_button = Button.new()
+	trade_update_button.text = "Update"
+	trade_update_button.visible = false
+	trade_update_button.pressed.connect(func() -> void: _send_trade_action("update"))
+	actions.add_child(trade_update_button)
+	trade_confirm_button = Button.new()
+	trade_confirm_button.text = "Confirm"
+	trade_confirm_button.visible = false
+	trade_confirm_button.pressed.connect(func() -> void: _send_trade_action("confirm"))
+	actions.add_child(trade_confirm_button)
+	trade_cancel_button = Button.new()
+	trade_cancel_button.text = "Cancel"
+	trade_cancel_button.visible = false
+	trade_cancel_button.pressed.connect(func() -> void: _send_trade_action("cancel"))
+	actions.add_child(trade_cancel_button)
+	column.add_child(actions)
+	trade_status_label = Label.new()
+	trade_status_label.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+	trade_status_label.custom_minimum_size = Vector2(380, 125)
+	column.add_child(trade_status_label)
+	var close_button := Button.new()
+	close_button.text = "Close"
+	close_button.pressed.connect(func() -> void: trade_panel.visible = false)
+	column.add_child(close_button)
+	auth_panel.get_parent().add_child(trade_panel)
+
+
+func _refresh_trade_targets() -> void:
+	if trade_target_select == null:
+		return
+	trade_target_select.clear()
+	var ids: Array = remote_player_names.keys()
+	ids.sort()
+	for character_id in ids:
+		trade_target_select.add_item(str(remote_player_names[character_id]))
+		trade_target_select.set_item_metadata(trade_target_select.item_count - 1, str(character_id))
+
+
+func _refresh_trade_items() -> void:
+	if trade_item_select == null:
+		return
+	trade_item_select.clear()
+	trade_item_select.add_item("No item")
+	trade_item_select.set_item_metadata(0, "")
+	var equipped: Array = current_equipment.values()
+	var item_ids: Array = current_inventory.keys()
+	item_ids.sort()
+	for item_id in item_ids:
+		if int(current_inventory.get(item_id, 0)) <= 0 or equipped.has(item_id):
+			continue
+		trade_item_select.add_item(str(item_id).replace("_", " ") + "  ×" + str(current_inventory[item_id]))
+		trade_item_select.set_item_metadata(trade_item_select.item_count - 1, str(item_id))
+
+
+func _send_trade_action(action: String) -> void:
+	if trade_request == null or trade_pending or player_id.is_empty():
+		return
+	var url := api_base_url + "/api/v1/account/characters/" + player_id + "/trades"
+	var method := HTTPClient.METHOD_POST
+	var body := ""
+	if action == "invite":
+		if trade_target_select == null or trade_target_select.item_count == 0:
+			trade_status_label.text = "No nearby player is available to invite."
+			return
+		var target_id := str(trade_target_select.get_selected_metadata())
+		if target_id.is_empty():
+			trade_status_label.text = "Select a nearby player first."
+			return
+		url += "/invite/" + target_id
+	elif action == "accept":
+		var trade_id := str(current_trade.get("id", ""))
+		if trade_id.is_empty():
+			return
+		url += "/" + trade_id + "/accept"
+	elif action == "update" or action == "confirm" or action == "cancel":
+		var active_id := str(current_trade.get("id", ""))
+		if active_id.is_empty():
+			return
+		url += "/" + active_id + "/" + action
+		if action == "update":
+			method = HTTPClient.METHOD_PUT
+	else:
+		return
+
+	if action == "invite" or action == "accept" or action == "update":
+		var quantity_text := trade_quantity_input.text.strip_edges()
+		var coins_text := trade_coins_input.text.strip_edges()
+		if not quantity_text.is_valid_int() or not coins_text.is_valid_int():
+			trade_status_label.text = "Enter whole-number quantities and coins."
+			return
+		var quantity := int(quantity_text)
+		var coins := int(coins_text)
+		if coins < 0 or coins > current_coins:
+			trade_status_label.text = "Coin offer exceeds your available balance."
+			return
+		var item_id := str(trade_item_select.get_selected_metadata()) if trade_item_select != null else ""
+		var items: Dictionary = {}
+		if not item_id.is_empty():
+			if quantity < 1 or quantity > int(current_inventory.get(item_id, 0)):
+				trade_status_label.text = "Item quantity exceeds your available stack."
+				return
+			items[item_id] = quantity
+		var request_data: Dictionary = {"offer": {"items": items, "coins": coins}}
+		if action == "update":
+			request_data["revision"] = int(current_trade.get("revision", 0))
+		body = JSON.stringify(request_data)
+	elif action == "confirm":
+		body = JSON.stringify({"revision": int(current_trade.get("revision", 0))})
+
+	trade_action = action
+	var error := trade_request.request(url, _api_headers(), method, body)
+	if error == OK:
+		trade_pending = true
+		trade_status_label.text = "Sending trade " + action + "..."
+
+
+func _on_trade_request_completed(result: int, response_code: int, _headers: PackedStringArray, body: PackedByteArray) -> void:
+	trade_pending = false
+	if player_id.is_empty():
+		return
+	if response_code == 401:
+		_expire_session()
+		return
+	var payload: Variant = JSON.parse_string(body.get_string_from_utf8())
+	if trade_action == "poll" and response_code == 404:
+		current_trade.clear()
+		_render_trade_snapshot()
+		return
+	if result != HTTPRequest.RESULT_SUCCESS or response_code < 200 or response_code >= 300 or not payload is Dictionary:
+		var error_code := str(payload.get("error", "trade_unavailable")) if payload is Dictionary else "trade_unavailable"
+		if trade_status_label != null:
+			trade_status_label.text = "Trade: " + error_code.replace("_", " ")
+		return
+	current_trade = payload
+	_render_trade_snapshot()
+	if trade_button != null and str(current_trade.get("status", "")) == "pending":
+		trade_button.text = "Trade • 1"
+	elif trade_button != null:
+		trade_button.text = "Trade"
+
+
+func _render_trade_snapshot() -> void:
+	if trade_status_label == null:
+		return
+	if current_trade.is_empty():
+		trade_status_label.text = "No active trade. Invite a nearby player to begin."
+		trade_accept_button.visible = false
+		trade_update_button.visible = false
+		trade_confirm_button.visible = false
+		trade_cancel_button.visible = false
+		return
+	var status := str(current_trade.get("status", "unknown"))
+	var revision := int(current_trade.get("revision", 0))
+	var participants: Variant = current_trade.get("participants", [])
+	var own_role := ""
+	var other_name := "another player"
+	var own_offer := ""
+	var other_offer := ""
+	for participant in participants:
+		if not participant is Dictionary:
+			continue
+		var offer: Dictionary = participant.get("offer", {})
+		var offer_text := str(offer.get("items", {})) + " • " + str(offer.get("coins", 0)) + " coins"
+		if str(participant.get("characterId", "")) == player_id:
+			own_role = str(participant.get("role", ""))
+			own_offer = offer_text
+		else:
+			other_name = str(participant.get("name", other_name))
+			other_offer = offer_text
+	var lines := "Trade with " + other_name + "
+Status: " + status.capitalize() + "  •  Revision " + str(revision)
+	if not own_offer.is_empty():
+		lines += "
+Your offer: " + own_offer
+	if not other_offer.is_empty():
+		lines += "
+Their offer: " + other_offer
+	trade_status_label.text = lines
+	trade_accept_button.visible = status == "pending" and own_role == "target"
+	trade_update_button.visible = status == "open"
+	trade_confirm_button.visible = status == "open"
+	trade_cancel_button.visible = status == "open" or status == "pending"
+
+
 func _build_chat_panel(layer: CanvasLayer) -> void:
 	chat_panel = PanelContainer.new()
 	chat_panel.position = Vector2(18, 430)
