@@ -1801,8 +1801,8 @@ func _on_skills_completed(result: int, response_code: int, _headers: PackedStrin
 		progress_bar.show_percentage = false
 		if level >= 99:
 			progress_bar.min_value = 0
-			progress_bar.max_value = 1
-			progress_bar.value = 1
+			progress_bar.max_value = 200000000
+			progress_bar.value = clampi(experience, 0, 200000000)
 		else:
 			var level_start := _experience_for_level(level)
 			var next_level := _experience_for_level(level + 1)
@@ -1812,7 +1812,7 @@ func _on_skills_completed(result: int, response_code: int, _headers: PackedStrin
 		skill_column.add_child(progress_bar)
 		var detail := Label.new()
 		if level >= 99:
-			detail.text = str(experience) + " / 200,000,000 XP • Level cap"
+			detail.text = str(experience) + " XP • " + str(maxi(200000000 - experience, 0)) + " to XP cap"
 		else:
 			var remaining := maxi(_experience_for_level(level + 1) - experience, 0)
 			detail.text = str(experience) + " XP • " + str(remaining) + " to level " + str(level + 1)
