@@ -25,7 +25,11 @@ func main() {
 
 	var players game.PlayerRepository = game.NewMemoryPlayerRepository()
 	var database *sql.DB
-	if databaseURL := os.Getenv("RS_GALAXIES_DATABASE_URL"); databaseURL != "" {
+	databaseURL := os.Getenv("RS_GALAXIES_DATABASE_URL")
+	if os.Getenv("RS_GALAXIES_ENV") == "production" && databaseURL == "" {
+		log.Fatal("RS_GALAXIES_DATABASE_URL is required in production")
+	}
+	if databaseURL != "" {
 		var err error
 		database, err = sql.Open("pgx", databaseURL)
 		if err != nil {
