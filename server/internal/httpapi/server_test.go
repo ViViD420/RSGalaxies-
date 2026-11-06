@@ -373,3 +373,20 @@ func TestAuthenticationRegistrationRateLimit(t *testing.T) {
   if response.Code!=want{t.Fatalf("attempt %d status=%d want=%d body=%s",i+1,response.Code,want,response.Body.String())}
  }
 }
+
+func TestProductionCORSUsesExplicitOriginAllowlist(t *testing.T) {
+ t.Setenv("RS_GALAXIES_ENV","production")
+ t.Setenv("RS_GALAXIES_ALLOWED_ORIGINS","https://game.example.test, https://admin.example.test")
+ handler:=New(game.NewMemoryPlayerRepository()).Routes()
+ allowed:=httptest.NewRequest(http.MethodOptions,"/api/v1/skills",nil)
+ allowed.Header.Set("Origin","https://game.example.test")
+ allowed.Header.Set("Access-Control-Request-Headers","authorization")
+ response:=httptest.NewRecorder();handler.ServeHTTP(response,allowed)
+ if response.Code!=http.StatusNoContent{t.Fatalf("allowed preflight status=%d",response.Code)}
+ if response.Header().Get("Access-Control-Allow-Origin")!="https://game.example.test"{t.Fatal("configured production origin was not allowed")}
+ if !strings.Contains(response.Header().Get("Access-Control-Allow-Headers"),"Authorization"){t.Fatal("production CORS omitted Authorization")}
+ blocked:=httptest.NewRequest(http.MethodOptions,"/api/v1/skills",nil)
+ blocked.Header.Set("Origin","https://untrusted.example.test")
+ blockedResponse:=httptest.NewRecorder();handler.ServeHTTP(blockedResponse,blocked)
+ if blockedResponse.Header().Get("Access-Control-Allow-Origin")!=""{t.Fatal("unconfigured production origin was allowed")}
+}
