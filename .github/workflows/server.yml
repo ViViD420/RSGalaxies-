@@ -13,13 +13,32 @@ on:
 jobs:
   test:
     runs-on: ubuntu-latest
+    env:
+      RS_GALAXIES_TEST_DATABASE_URL: postgres://rsgalaxies:rsgalaxies-dev-only@localhost:5432/rsgalaxies_test?sslmode=disable
+    services:
+      postgres:
+        image: postgres:16
+        env:
+          POSTGRES_USER: rsgalaxies
+          POSTGRES_PASSWORD: rsgalaxies-dev-only
+          POSTGRES_DB: rsgalaxies_test
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U rsgalaxies -d rsgalaxies_test"
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-go@v5
         with:
           go-version: "1.23.x"
           cache-dependency-path: server/go.mod
-      - name: Test
+      - name: Download dependencies
+        working-directory: server
+        run: go mod download
+      - name: Test (race detector and PostgreSQL integration)
         working-directory: server
         run: go test -race ./...
       - name: Vet
