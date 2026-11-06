@@ -63,6 +63,14 @@ var chat_poll_pending := false
 var chat_send_pending := false
 var chat_active_character_id := ""
 var chat_lines: Array[String] = []
+var presence_heartbeat_request: HTTPRequest
+var presence_roster_request: HTTPRequest
+var presence_heartbeat_timer: Timer
+var presence_roster_timer: Timer
+var presence_heartbeat_pending := false
+var presence_roster_pending := false
+var remote_player_nodes: Dictionary = {}
+var remote_player_targets: Dictionary = {}
 var presence_request: HTTPRequest
 var presence_timer: Timer
 var presence_pending := false
@@ -91,7 +99,8 @@ func _ready() -> void:
 	_build_hud()
 	_connect_api()
 
-func _process(_delta: float) -> void:
+func _process(delta: float) -> void:
+	_update_remote_player_visuals(delta)
 	if Input.is_action_just_pressed("interact") and not player_id.is_empty() and not interaction_pending:
 		_request_interaction()
 
@@ -561,6 +570,7 @@ func _on_api_request_completed(result: int, response_code: int, _headers: Packed
 	if api_stage == "logout":
 		if result == HTTPRequest.RESULT_SUCCESS and response_code == 204:
 			auth_token = ""
+			_stop_presence()
 			player_id = ""
 			if movement_timer != null:
 				movement_timer.stop()
@@ -1102,6 +1112,7 @@ func _logout() -> void:
 		status_label.text = "Sign out failed; try again."
 
 func _activate_character(character_data: Dictionary) -> void:
+	_stop_presence()
 	_stop_skills_request()
 	if movement_timer != null:
 		movement_timer.stop()
@@ -1135,6 +1146,7 @@ func _activate_character(character_data: Dictionary) -> void:
 	_start_presence_sync()
 	_start_gathering()
 	_start_chat()
+	_start_presence()
 
 func _request_character_list() -> void:
 	api_stage = "list_characters"
@@ -1449,6 +1461,165 @@ func _rest_character() -> void:
 		status_label.text = "Resting at the frontier spawn..."
 	else:
 		status_label.text = "Could not send rest request."
+
+
+func _start_presence() -> void:
+	_stop_presence()
+	if player_id.is_empty() or auth_token.is_empty():
+		return
+	presence_heartbeat_request = HTTPRequest.new()
+	add_child(presence_heartbeat_request)
+	presence_heartbeat_request.request_completed.connect(_on_presence_heartbeat_completed)
+	presence_roster_request = HTTPRequest.new()
+	add_child(presence_roster_request)
+	presence_roster_request.request_completed.connect(_on_presence_roster_completed)
+	presence_heartbeat_timer = Timer.new()
+	presence_heartbeat_timer.wait_time = 5.0
+	presence_heartbeat_timer.timeout.connect(_send_presence_heartbeat)
+	add_child(presence_heartbeat_timer)
+	presence_roster_timer = Timer.new()
+	presence_roster_timer.wait_time = 3.0
+	presence_roster_timer.timeout.connect(_poll_zone_presence)
+	add_child(presence_roster_timer)
+	presence_heartbeat_timer.start()
+	presence_roster_timer.start()
+	_send_presence_heartbeat()
+	_poll_zone_presence()
+
+
+func _stop_presence() -> void:
+	if presence_heartbeat_timer != null:
+		presence_heartbeat_timer.stop()
+		presence_heartbeat_timer.queue_free()
+		presence_heartbeat_timer = null
+	if presence_roster_timer != null:
+		presence_roster_timer.stop()
+		presence_roster_timer.queue_free()
+		presence_roster_timer = null
+	if presence_heartbeat_request != null:
+		if presence_heartbeat_request.get_http_client_status() != HTTPClient.STATUS_DISCONNECTED:
+			presence_heartbeat_request.cancel_request()
+		presence_heartbeat_request.queue_free()
+		presence_heartbeat_request = null
+	if presence_roster_request != null:
+		if presence_roster_request.get_http_client_status() != HTTPClient.STATUS_DISCONNECTED:
+			presence_roster_request.cancel_request()
+		presence_roster_request.queue_free()
+		presence_roster_request = null
+	presence_heartbeat_pending = false
+	presence_roster_pending = false
+	for remote in remote_player_nodes.values():
+		if is_instance_valid(remote):
+			remote.queue_free()
+	remote_player_nodes.clear()
+	remote_player_targets.clear()
+
+
+func _send_presence_heartbeat() -> void:
+	if player_id.is_empty() or presence_heartbeat_pending or presence_heartbeat_request == null:
+		return
+	var url := api_base_url + "/api/v1/account/characters/" + player_id + "/presence/heartbeat"
+	var error := presence_heartbeat_request.request(url, _api_headers(), HTTPClient.METHOD_POST, "")
+	if error == OK:
+		presence_heartbeat_pending = true
+
+
+func _on_presence_heartbeat_completed(result: int, response_code: int, _headers: PackedStringArray, _body: PackedByteArray) -> void:
+	presence_heartbeat_pending = false
+	if player_id.is_empty():
+		return
+	if response_code == 401:
+		_expire_session()
+		return
+	if result != HTTPRequest.RESULT_SUCCESS or response_code != 204:
+		if response_code == 404:
+			_stop_presence()
+		return
+
+
+func _poll_zone_presence() -> void:
+	if player_id.is_empty() or presence_roster_pending or presence_roster_request == null:
+		return
+	var url := api_base_url + "/api/v1/account/characters/" + player_id + "/presence"
+	var error := presence_roster_request.request(url, _api_headers())
+	if error == OK:
+		presence_roster_pending = true
+
+
+func _on_presence_roster_completed(result: int, response_code: int, _headers: PackedStringArray, body: PackedByteArray) -> void:
+	presence_roster_pending = false
+	if player_id.is_empty():
+		return
+	if response_code == 401:
+		_expire_session()
+		return
+	if result != HTTPRequest.RESULT_SUCCESS or response_code != 200:
+		return
+	var payload: Variant = JSON.parse_string(body.get_string_from_utf8())
+	if not payload is Dictionary:
+		return
+	var players: Variant = payload.get("players", [])
+	if not players is Array:
+		return
+	var seen: Dictionary = {}
+	for remote_data in players:
+		if not remote_data is Dictionary:
+			continue
+		var character_id := str(remote_data.get("characterId", ""))
+		if character_id.is_empty() or character_id == player_id:
+			continue
+		var zone_id := str(remote_data.get("zoneId", ""))
+		if zone_id.is_empty():
+			continue
+		seen[character_id] = true
+		var target := Vector3(float(remote_data.get("x", 0.0)), 0.05, float(remote_data.get("z", 0.0)))
+		if not remote_player_nodes.has(character_id):
+			_create_remote_player_visual(character_id, str(remote_data.get("name", "Wayfarer")), target)
+		remote_player_targets[character_id] = target
+	for character_id in remote_player_nodes.keys():
+		if not seen.has(character_id):
+			var stale: Node3D = remote_player_nodes[character_id]
+			if is_instance_valid(stale):
+				stale.queue_free()
+			remote_player_nodes.erase(character_id)
+			remote_player_targets.erase(character_id)
+	if status_label != null:
+		status_label.text = "Server: connected • " + str(remote_player_nodes.size()) + " nearby player(s)"
+
+
+func _create_remote_player_visual(character_id: String, display_name: String, at: Vector3) -> void:
+	var remote := Node3D.new()
+	remote.name = "Remote_" + character_id
+	remote.position = at
+	var body := MeshInstance3D.new()
+	var mesh := CapsuleMesh.new()
+	mesh.radius = 0.32
+	mesh.height = 1.35
+	body.mesh = mesh
+	body.position.y = 0.68
+	var material := StandardMaterial3D.new()
+	material.albedo_color = Color(0.18, 0.55, 0.78)
+	material.roughness = 0.8
+	body.material_override = material
+	remote.add_child(body)
+	var label := Label3D.new()
+	label.text = display_name
+	label.position.y = 1.65
+	label.billboard = BaseMaterial3D.BILLBOARD_ENABLED
+	label.font_size = 28
+	remote.add_child(label)
+	add_child(remote)
+	remote_player_nodes[character_id] = remote
+
+
+func _update_remote_player_visuals(delta: float) -> void:
+	for character_id in remote_player_nodes.keys():
+		var remote: Node3D = remote_player_nodes[character_id]
+		if not is_instance_valid(remote):
+			continue
+		var target: Vector3 = remote_player_targets.get(character_id, remote.position)
+		remote.position = remote.position.lerp(target, clampf(delta * 5.0, 0.0, 1.0))
+
 
 func _build_chat_panel(layer: CanvasLayer) -> void:
 	chat_panel = PanelContainer.new()
