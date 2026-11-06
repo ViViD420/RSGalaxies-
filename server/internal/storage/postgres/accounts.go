@@ -20,11 +20,11 @@ import (
 const SessionLifetime = 30 * 24 * time.Hour
 
 var (
-	ErrAccountExists = errors.New("account already exists")
-	ErrAccountNotFound = errors.New("account not found")
-	ErrInvalidCredentials = errors.New("invalid email or password")
-	ErrInvalidEmail = errors.New("invalid email address")
-	ErrSessionNotFound = errors.New("session not found or expired")
+	ErrAccountExists = auth.ErrAccountExists
+	ErrAccountNotFound = auth.ErrAccountNotFound
+	ErrInvalidCredentials = auth.ErrInvalidCredentials
+	ErrInvalidEmail = auth.ErrInvalidEmail
+	ErrSessionNotFound = auth.ErrSessionNotFound
 )
 
 type AccountRepository struct { db *sql.DB }
