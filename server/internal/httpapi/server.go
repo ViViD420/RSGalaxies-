@@ -27,12 +27,12 @@ func (s *Server) Routes() http.Handler {
 	mux.HandleFunc("GET /api/v1/items", s.listItems)
 	mux.HandleFunc("GET /api/v1/crafting/recipes", s.listCraftingRecipes)
 	mux.HandleFunc("GET /api/v1/crafting/stations", s.listCraftingStations)
-	mux.HandleFunc("GET /api/v1/players", s.listPlayers)
-	mux.HandleFunc("POST /api/v1/players", s.createPlayer)
-	mux.HandleFunc("GET /api/v1/players/{id}", s.getPlayer)
-	mux.HandleFunc("GET /api/v1/players/{id}/skills", s.getPlayerSkills)
-	// Development-only mutation shortcuts are disabled in production until authenticated gameplay actions are ready.
+	// Player APIs are development-only until account authentication and character ownership are implemented.
 	if os.Getenv("RS_GALAXIES_ENV") != "production" {
+		mux.HandleFunc("GET /api/v1/players", s.listPlayers)
+		mux.HandleFunc("POST /api/v1/players", s.createPlayer)
+		mux.HandleFunc("GET /api/v1/players/{id}", s.getPlayer)
+		mux.HandleFunc("GET /api/v1/players/{id}/skills", s.getPlayerSkills)
 		mux.HandleFunc("POST /api/v1/players/{id}/skills/{skill}/experience", s.awardExperience)
 		mux.HandleFunc("POST /api/v1/players/{id}/move", s.movePlayer)
 		mux.HandleFunc("POST /api/v1/players/{id}/gather/{nodeID}", s.gather)
