@@ -68,6 +68,7 @@ func (s *Server) Routes() http.Handler {
 	mux.HandleFunc("GET /healthz", s.health)
 	mux.HandleFunc("GET /readyz", s.ready)
 	mux.HandleFunc("GET /api/v1/skills", s.listSkills)
+	mux.HandleFunc("GET /api/v1/world/catalog", s.listWorldCatalog)
 	mux.HandleFunc("GET /api/v1/world/zones", s.listWorldZones)
 	mux.HandleFunc("GET /api/v1/world/nodes", s.listGatheringNodes)
 	mux.HandleFunc("GET /api/v1/items", s.listItems)
@@ -140,6 +141,19 @@ func (s *Server) ready(w http.ResponseWriter,r *http.Request) {
 	writeJSON(w,http.StatusOK,map[string]string{"status":"ready"})
 }
 func (s *Server) listSkills(w http.ResponseWriter, _ *http.Request) { writeJSON(w,200,map[string]any{"skills":game.SkillDefinitions(),"maxLevel":game.MaxSkillLevel,"maxExperience":game.MaxSkillExperience}) }
+func (s *Server) listWorldCatalog(w http.ResponseWriter, _ *http.Request) {
+	writeJSON(w,http.StatusOK,map[string]any{
+		"skills":game.SkillDefinitions(),
+		"zones":game.WorldZones(),
+		"nodes":game.GatheringNodes(),
+		"items":game.ItemDefinitions(),
+		"startingCoins":game.StartingCoins,
+		"enemies":game.EnemyDefinitions(),
+		"recipes":game.CraftingRecipes(),
+		"stations":game.CraftingStations(),
+	})
+}
+
 func (s *Server) listWorldZones(w http.ResponseWriter, _ *http.Request) {
 	writeJSON(w, http.StatusOK, map[string]any{"zones": game.WorldZones()})
 }
