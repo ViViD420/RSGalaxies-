@@ -23,7 +23,7 @@ func TestMerchantRejectsInvalidTradesWithoutChangingBalances(t *testing.T) {
 		{"insufficient items",func()error{_,err:=player.SellItem("softwood_log",1);return err},ErrInsufficientItems},
 		{"unknown item",func()error{_,err:=player.BuyItem("unknown",1);return err},ErrUnknownMerchantItem},
 		{"zero quantity",func()error{_,err:=player.SellItem("rough_stone",0);return err},ErrInvalidItemQuantity},
-		{"inventory full",func()error{player.Inventory["wooden_plank"]=99;_,err:=player.BuyItem("wooden_plank",2);return err},ErrInventoryStackFull},
+		{"inventory full",func()error{player.Coins=100;player.Inventory["wooden_plank"]=99;_,err:=player.BuyItem("wooden_plank",2);return err},ErrInventoryStackFull},
 	}
 	for _,test:=range tests{t.Run(test.name,func(t *testing.T){coins:=player.Coins;inventory:=clonePlayer(player).Inventory
 		if err:=test.run();!errors.Is(err,test.want){t.Fatalf("error=%v want=%v",err,test.want)}
