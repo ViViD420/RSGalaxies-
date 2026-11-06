@@ -24,6 +24,9 @@ func TestPasswordHashAndVerify(t *testing.T) {
 	if err != nil || !ok {
 		t.Fatalf("valid password rejected: ok=%v err=%v", ok, err)
 	}
+	if _, err := VerifyPassword(encoded, "short"); !errors.Is(err, ErrInvalidPassword) {
+		t.Fatalf("short verification password error = %v", err)
+	}
 	ok, err = VerifyPassword(encoded, "a-different-password")
 	if err != nil || ok {
 		t.Fatalf("wrong password accepted: ok=%v err=%v", ok, err)
