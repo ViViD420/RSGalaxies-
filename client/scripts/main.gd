@@ -690,6 +690,7 @@ func _on_api_request_completed(result: int, response_code: int, _headers: Packed
 		var nodes: Variant = payload.get("nodes", [])
 		if nodes is Array:
 			gathering_catalog = nodes
+			_build_gathering_node_visuals()
 		auth_panel.visible = true
 		status_label.text = "Server: ready • sign in to continue"
 		return
