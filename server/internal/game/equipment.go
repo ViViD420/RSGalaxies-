@@ -32,7 +32,7 @@ func (p *Player) EquipItem(itemID string) error {
 
 func (p *Player) UnequipItem(slot string) error {
 	slot=strings.ToLower(strings.TrimSpace(slot))
-	if slot==""{return ErrInvalidEquipmentSlot}
+	if slot!="main_hand"&&slot!="head"&&slot!="body"&&slot!="feet"{return ErrInvalidEquipmentSlot}
 	itemID,ok:=p.Equipment[slot]
 	if !ok||itemID==""{return ErrEquipmentSlotEmpty}
 	item,ok:=FindItem(itemID)
