@@ -6,7 +6,7 @@ An original persistent-world sandbox MMORPG combining long-term skill progressio
 
 ## Project status
 
-**Foundation and progression prototype — in progress.** The Go server supports character creation, ten data-driven skills, deterministic XP-to-level progression, a starter world zone, server-validated movement, two resource nodes, stack-count inventory and a basic gathering loop. The Godot 4.3 client has a 3D movement prototype, touch controls and browser export. Player and world data are in memory and reset when the process stops. PostgreSQL, authentication, secure sessions, combat, crafting, realtime multiplayer and production deployment are not yet implemented.
+**Foundation and progression prototype — in progress.** The Go server supports character creation, ten data-driven skills, deterministic XP-to-level progression, a starter world zone, server-validated movement, two resource nodes, stack-count inventory, a gathering loop and a first workbench crafting recipe. The Godot 4.3 client has a 3D movement prototype, touch controls and browser export. Player and world data are in memory and reset when the process stops. PostgreSQL, authentication, secure sessions, combat, broader crafting, realtime multiplayer and production deployment are not yet implemented.
 
 ## Design pillars
 
@@ -57,7 +57,7 @@ The server listens on http://localhost:8080 by default. Set RS_GALAXIES_ADDR to 
 - POST /api/v1/players/{id}/gather/{nodeID} — development gathering action that updates inventory and XP.
 - POST /api/v1/players/{id}/craft/{recipeID} — development crafting action that consumes ingredients and creates outputs.
 
-Create a character with POST /api/v1/players and JSON body {"name":"Wayfarer"}. The XP curve is cumulative and deterministic, with levels 1–99 and a 200,000,000 XP cap. Development-only XP, movement and gathering shortcuts are disabled when RS_GALAXIES_ENV=production; production use still requires authentication and durable persistence.
+Create a character with POST /api/v1/players and JSON body {"name":"Wayfarer"}. The XP curve is cumulative and deterministic, with levels 1–99 and a 200,000,000 XP cap. Development-only XP, movement, gathering and crafting shortcuts are disabled when RS_GALAXIES_ENV=production; production use still requires authentication and durable persistence.
 
 ## Engineering rules
 
