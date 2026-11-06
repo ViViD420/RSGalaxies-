@@ -33,7 +33,7 @@
 
 ## Milestone 4: Inventory, equipment and economy
 
-- [x] Starter item catalog, stack-count inventory and server-side stack validation.
+- [x] Starter item catalog, stack-count inventory, server-side stack validation and consumable healing potions.
 - [x] Persistent 100-slot bank with atomic deposit/withdraw operations.
 - [x] Persistent coin wallet, starter merchant catalog and atomic buy/sell transactions.
 - [x] Equipment slots, equip/unequip transactions and derived attack/defense bonuses.
