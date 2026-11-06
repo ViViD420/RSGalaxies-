@@ -60,7 +60,7 @@ Send `Authorization: Bearer <accessToken>`:
 - `POST /api/v1/account/characters/{characterId}/chat/local` with `{"message":"Hello, zone!"}`.
 - `POST /api/v1/account/characters/{characterId}/inventory/use/{itemId}` — consume an owned item effect such as a healing potion.
 
-Every character operation is scoped by the authenticated account in its SQL query or transaction. A character belonging to another account is reported as not found.
+A new local-chat reader starts with `after=0` and receives the latest 50 zone messages in chronological order; later requests fetch newer IDs from the returned cursor. Every character operation is scoped by the authenticated account in its SQL query or transaction. A character belonging to another account is reported as not found.
 
 New characters start with 100 coins; starter merchant prices are part of the public item catalog. Purchases and sales atomically update the owned character's coin balance and inventory. Sessions expire after 30 days. The server stores only a SHA-256 digest of the random 256-bit token. Each account is limited to 10 active sessions; creating another prunes the oldest. Logout revokes the digest server-side.
 
