@@ -439,3 +439,6 @@ func TestMarketCatalogIsPublicAndContainsServerPrices(t *testing.T) {
  if len(payload.Items)!=3||payload.StartingCoins!=game.StartingCoins{t.Fatalf("unexpected market catalog: %+v",payload)}
  if payload.Items[0].BuyPrice<=payload.Items[0].SellPrice{t.Fatal("merchant catalog should expose a grounded buy/sell spread")}
 }
+
+func (s *testCharacterStore) EquipItemForAccount(_ context.Context, accountID string, id game.PlayerID, itemID string) (game.Player,error) { player,ok:=s.players[accountID][id]; if !ok{return game.Player{},game.ErrPlayerNotFound}; if err:=player.EquipItem(itemID);err!=nil{return player,err};s.players[accountID][id]=player;return player,nil }
+func (s *testCharacterStore) UnequipItemForAccount(_ context.Context, accountID string, id game.PlayerID, slot string) (game.Player,error) { player,ok:=s.players[accountID][id]; if !ok{return game.Player{},game.ErrPlayerNotFound}; if err:=player.UnequipItem(slot);err!=nil{return player,err};s.players[accountID][id]=player;return player,nil }
