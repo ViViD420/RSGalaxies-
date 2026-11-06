@@ -40,6 +40,8 @@ func (p *Player) AwardExperience(skillID string, amount int) (bool, error) {
 	if amount <= 0 { return false, ErrInvalidExperience }
 	current := p.Skills[skillID]
 	if current.Experience > MaxSkillExperience-amount { return false, ErrExperienceOverflow }
+	if p.Skills == nil { p.Skills = make(map[string]SkillProgress, len(skillDefinitions)) }
+	if current.Level == 0 { current.Level = 1 }
 	nextXP := current.Experience + amount
 	nextLevel := LevelForExperience(nextXP)
 	leveled := nextLevel > current.Level
