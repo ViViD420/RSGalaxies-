@@ -842,6 +842,10 @@ func (s *Server) acceptOwnedTradeInvite(w http.ResponseWriter,r *http.Request) {
 		case errors.Is(err,game.ErrTradeNotFound),errors.Is(err,game.ErrTradeNotParticipant):writeError(w,404,"trade_not_found")
 		case errors.Is(err,game.ErrTradeExpired):writeError(w,410,"trade_expired")
 		case errors.Is(err,game.ErrTradeNotAccepted):writeError(w,409,"trade_not_pending")
+		case errors.Is(err,game.ErrTradeParticipantUnavailable):writeError(w,409,"trade_partner_unavailable")
+		case errors.Is(err,game.ErrTradeOutOfRange):writeError(w,409,"trade_partner_out_of_range")
+		case errors.Is(err,game.ErrTradeDifferentZone):writeError(w,409,"trade_partner_in_different_zone")
+		case errors.Is(err,game.ErrPlayerDefeated):writeError(w,409,"character_defeated")
 		default:log.Printf("accept trade invitation: %v",err);writeError(w,500,"internal_error")
 		}
 		return
