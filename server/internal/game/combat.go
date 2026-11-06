@@ -77,6 +77,7 @@ func (p *Player) AttackEnemy(enemy EnemyDefinition,state EnemyState,now time.Tim
 	if p.Position.ZoneID!=enemy.Position.ZoneID||math.Hypot(p.Position.X-enemy.Position.X,p.Position.Z-enemy.Position.Z)>enemy.InteractionRange{return CombatResult{},state,ErrEnemyOutOfRange}
 	if !p.LastCombatAt.IsZero()&&now.Sub(p.LastCombatAt)<CombatCooldown{return CombatResult{},state,ErrCombatCooldown}
 	if !state.Initialized{state.Health=enemy.MaxHealth;state.Initialized=true}
+	if state.Health>enemy.MaxHealth{state.Health=enemy.MaxHealth}
 	if state.Health<=0{
 		if now.Before(state.RespawnAt){return CombatResult{},state,ErrEnemyRespawning}
 		state.Health=enemy.MaxHealth
