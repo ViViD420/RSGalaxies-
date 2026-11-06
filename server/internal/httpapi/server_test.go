@@ -442,6 +442,27 @@ func (s *testCharacterStore) CraftForAccount(_ context.Context, accountID string
  return game.Player{},game.CraftingResult{},game.ErrPlayerNotFound
 }
 
+func TestProductionTradingRequiresExplicitEnablement(t *testing.T) {
+	t.Setenv("RS_GALAXIES_ENV", "production")
+	t.Setenv("RS_GALAXIES_ENABLE_TRADING", "")
+	handler := NewWithAccounts(game.NewMemoryPlayerRepository(), newTestAccountStore(), newTestCharacterStore()).Routes()
+	request := httptest.NewRequest(http.MethodPost, "/api/v1/account/characters/character-a/trades/invite/character-b", bytes.NewBufferString(`{"offer":{"items":{},"coins":0}}`))
+	response := httptest.NewRecorder()
+	handler.ServeHTTP(response, request)
+	if response.Code != http.StatusNotFound && response.Code != http.StatusMethodNotAllowed {
+		t.Fatalf("production trading should be disabled by default, status=%d", response.Code)
+	}
+
+	t.Setenv("RS_GALAXIES_ENABLE_TRADING", "true")
+	handler = NewWithAccounts(game.NewMemoryPlayerRepository(), newTestAccountStore(), newTestCharacterStore()).Routes()
+	request = httptest.NewRequest(http.MethodPost, "/api/v1/account/characters/character-a/trades/invite/character-b", bytes.NewBufferString(`{"offer":{"items":{},"coins":0}}`))
+	response = httptest.NewRecorder()
+	handler.ServeHTTP(response, request)
+	if response.Code != http.StatusUnauthorized {
+		t.Fatalf("explicitly enabled trade route should require authentication, status=%d body=%s", response.Code, response.Body.String())
+	}
+}
+
 func TestProductionRegistrationIsDisabledByDefault(t *testing.T) {
  t.Setenv("RS_GALAXIES_ENV","production")
  t.Setenv("RS_GALAXIES_ENABLE_REGISTRATION","")
