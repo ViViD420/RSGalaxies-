@@ -6,6 +6,8 @@ import (
 	"time"
 )
 
+const MaxTradeOfferItems = 20
+
 const (
 	TradeLifetime = 5 * time.Minute
 	TradeInteractionRange = 6.0
@@ -100,6 +102,7 @@ func ValidateTradeInvite(initiator,target Player) error {
 func ValidateTradeOffer(player Player,offer TradeOffer)error{
 	if err:=player.CanAct();err!=nil{return err}
 	if offer.Coins<0||offer.Coins>player.Coins{return ErrInsufficientCurrency}
+	if len(offer.Items)>MaxTradeOfferItems{return ErrInvalidTradeOffer}
 	for itemID,quantity:=range offer.Items{
 		item,ok:=FindItem(itemID)
 		if !ok||quantity<=0||quantity>item.MaxStack{return ErrInvalidTradeOffer}
