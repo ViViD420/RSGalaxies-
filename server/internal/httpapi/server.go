@@ -6,6 +6,7 @@ import (
 	"encoding/json"
 	"errors"
 	"log"
+	"io"
 	"net/http"
 	"strings"
 	"time"
@@ -58,8 +59,8 @@ func (s *Server) createPlayer(w http.ResponseWriter, r *http.Request) {
 		writeError(w, http.StatusBadRequest, "invalid_json")
 		return
 	}
-	if err := decoder.Decode(&struct{}{}); err == nil {
-		writeError(w, http.StatusBadRequest, "multiple_json_values")
+	if err := decoder.Decode(&struct{}{}); err != io.EOF {
+		writeError(w, http.StatusBadRequest, "invalid_json")
 		return
 	}
 
