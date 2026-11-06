@@ -17,6 +17,7 @@ var character_name_input: LineEdit
 var auth_token := ""
 var current_inventory: Dictionary = {}
 var current_bank: Dictionary = {}
+var current_coins := 0
 var api_request: HTTPRequest
 var movement_request: HTTPRequest
 var gather_request: HTTPRequest
@@ -95,6 +96,7 @@ func _build_world() -> void:
 	_add_stone_deposit(Vector3(-2.0, 0.0, 0.0))
 	_add_workbench(Vector3(0.0, 0.0, 4.0))
 	_add_bank_chest(Vector3(0.0, 0.0, -4.0))
+	_add_merchant_stall(Vector3(4.0, 0.0, 0.0))
 
 	player_node = PLAYER_SCENE.instantiate() as CharacterBody3D
 	player_node.position = Vector3(0.0, 0.05, 0.0)
@@ -150,6 +152,41 @@ func _add_workbench(at: Vector3) -> void:
 			bench.add_child(leg)
 	add_child(bench)
 
+
+
+func _add_merchant_stall(at: Vector3) -> void:
+	var stall := Node3D.new()
+	stall.position = at
+	var wood := StandardMaterial3D.new()
+	wood.albedo_color = Color(0.30, 0.19, 0.10)
+	var fabric := StandardMaterial3D.new()
+	fabric.albedo_color = Color(0.58, 0.32, 0.16)
+	var counter := MeshInstance3D.new()
+	var counter_mesh := BoxMesh.new()
+	counter_mesh.size = Vector3(2.2, 1.0, 0.9)
+	counter.mesh = counter_mesh
+	counter.position.y = 0.5
+	counter.material_override = wood
+	stall.add_child(counter)
+	var canopy := MeshInstance3D.new()
+	var canopy_mesh := BoxMesh.new()
+	canopy_mesh.size = Vector3(2.8, 0.18, 1.8)
+	canopy.mesh = canopy_mesh
+	canopy.position.y = 2.4
+	canopy.material_override = fabric
+	stall.add_child(canopy)
+	for x_offset in [-1.2, 1.2]:
+		for z_offset in [-0.7, 0.7]:
+			var post := MeshInstance3D.new()
+			var post_mesh := CylinderMesh.new()
+			post_mesh.top_radius = 0.07
+			post_mesh.bottom_radius = 0.07
+			post_mesh.height = 2.3
+			post.mesh = post_mesh
+			post.position = Vector3(x_offset, 1.15, z_offset)
+			post.material_override = wood
+			stall.add_child(post)
+	add_child(stall)
 
 func _add_bank_chest(at: Vector3) -> void:
 	var chest := Node3D.new()
@@ -404,8 +441,27 @@ func _request_interaction() -> void:
 	var stone_distance := Vector2(player_node.global_position.x + 2.0, player_node.global_position.z).length()
 	var bench_distance := Vector2(player_node.global_position.x, player_node.global_position.z - 4.0).length()
 	var bank_distance := Vector2(player_node.global_position.x, player_node.global_position.z + 4.0).length()
+	var merchant_distance := Vector2(player_node.global_position.x - 4.0, player_node.global_position.z).length()
 	var error := OK
-	if bank_distance <= 3.0 and bank_distance <= bench_distance and bank_distance <= tree_distance and bank_distance <= stone_distance:
+	if merchant_distance <= 3.0 and merchant_distance <= bank_distance and merchant_distance <= bench_distance and merchant_distance <= tree_distance and merchant_distance <= stone_distance:
+		var selected_item := ""
+		interaction_type = "market_sell"
+		for item_id in ["rough_stone", "softwood_log", "wooden_plank"]:
+			if int(current_inventory.get(item_id, 0)) > 0:
+				selected_item = item_id
+				break
+		if selected_item.is_empty():
+			interaction_type = "market_buy"
+			selected_item = "softwood_log"
+		var market_action := "sell" if interaction_type == "market_sell" else "buy"
+		status_label.text = "Frontier trader: " + market_action + "ing " + selected_item.replace("_", " ") + "..."
+		error = gather_request.request(
+			api_base_url + "/api/v1/account/characters/" + player_id + "/market/" + market_action + "/" + selected_item,
+			PackedStringArray(["Content-Type: application/json", "Authorization: Bearer " + auth_token]),
+			HTTPClient.METHOD_POST,
+			JSON.stringify({"quantity": 1})
+		)
+	elif bank_distance <= 3.0 and bank_distance <= bench_distance and bank_distance <= tree_distance and bank_distance <= stone_distance:
 		var selected_item := ""
 		interaction_type = "bank_deposit"
 		for item_id in ["softwood_log", "rough_stone", "wooden_plank"]:
@@ -470,10 +526,16 @@ func _on_gather_completed(result: int, response_code: int, _headers: PackedStrin
 		status_label.text = "Interaction: " + error_code.replace("_", " ")
 		return
 	var player_data: Dictionary = payload.get("character", payload.get("player", {}))
+	if interaction_type == "market_buy" or interaction_type == "market_sell":
+		var trade: Dictionary = payload.get("trade", {})
+		var trade_action := "Bought" if interaction_type == "market_buy" else "Sold"
+		_update_inventory(payload.get("inventory", player_data.get("inventory", {})), player_data.get("bank", {}), payload.get("coins", player_data.get("coins", current_coins)))
+		status_label.text = "Trader: " + trade_action + " " + str(trade.get("quantity", 1)) + " " + str(trade.get("itemId", "item")).replace("_", " ") + " • " + str(trade.get("coins", 0)) + " coins"
+		return
 	if interaction_type == "bank_deposit" or interaction_type == "bank_withdraw":
 		var bank_action := "Deposited" if interaction_type == "bank_deposit" else "Withdrew"
 		var item_bank: Variant = payload.get("bank", player_data.get("bank", {}))
-		_update_inventory(payload.get("inventory", player_data.get("inventory", {})), item_bank)
+		_update_inventory(payload.get("inventory", player_data.get("inventory", {})), item_bank, player_data.get("coins", current_coins))
 		status_label.text = "Bank: " + bank_action + " one item"
 		return
 	if interaction_type == "craft":
@@ -483,14 +545,17 @@ func _on_gather_completed(result: int, response_code: int, _headers: PackedStrin
 		var gathering: Dictionary = payload.get("gathering", {})
 		var item_name := "Softwood Log" if gathering.get("itemId") == "softwood_log" else "Rough Stone"
 		status_label.text = "Gathered " + item_name + "  •  +" + str(gathering.get("experience", 0)) + " " + str(gathering.get("skillId", "")) + " XP"
-	_update_inventory(player_data.get("inventory", {}), player_data.get("bank", {}))
+	_update_inventory(player_data.get("inventory", {}), player_data.get("bank", {}), player_data.get("coins", current_coins))
 
-func _update_inventory(inventory_data: Variant, bank_data: Variant = {}) -> void:
+func _update_inventory(inventory_data: Variant, bank_data: Variant = {}, coins_data: Variant = null) -> void:
 	if not inventory_data is Dictionary:
 		return
 	current_inventory = inventory_data.duplicate()
 	current_bank = bank_data.duplicate() if bank_data is Dictionary else {}
-	inventory_label.text = "Bag L:%d P:%d S:%d  •  Bank L:%d P:%d S:%d" % [
+	if coins_data != null:
+		current_coins = int(coins_data)
+	inventory_label.text = "Coins %d • Bag L:%d P:%d S:%d • Bank L:%d P:%d S:%d" % [
+		current_coins,
 		int(current_inventory.get("softwood_log", 0)),
 		int(current_inventory.get("wooden_plank", 0)),
 		int(current_inventory.get("rough_stone", 0)),
