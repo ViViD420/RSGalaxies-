@@ -793,7 +793,7 @@ func TestAuthenticatedTradeInvitationAcceptanceAndPrivacy(t *testing.T) {
 	foreign:=httptest.NewRecorder();foreignRequest:=httptest.NewRequest(http.MethodGet,"/api/v1/account/trades/"+trade.ID,nil)
 	foreignRequest.Header.Set("Authorization","Bearer "+outsiderToken);handler.ServeHTTP(foreign,foreignRequest)
 	if foreign.Code!=http.StatusNotFound{t.Fatalf("outsider trade read status=%d body=%s",foreign.Code,foreign.Body.String())}
-	accept:=httptest.NewRecorder();acceptRequest:=httptest.NewRequest(http.MethodPost,"/api/v1/account/characters/"+string(second.ID)+"/trades/"+trade.ID+"/accept",bytes.NewBufferString(`{"offer":{"items":{},"coins":0}}`))
+	accept:=httptest.NewRecorder();acceptRequest:=httptest.NewRequest(http.MethodPost,"/api/v1/account/trades/"+trade.ID+"/characters/"+string(second.ID)+"/accept",bytes.NewBufferString(`{"offer":{"items":{},"coins":0}}`))
 	acceptRequest.Header.Set("Authorization","Bearer "+secondToken);handler.ServeHTTP(accept,acceptRequest)
 	if accept.Code!=http.StatusOK{t.Fatalf("accept status=%d body=%s",accept.Code,accept.Body.String())}
 	var accepted game.TradeSnapshot;if err:=json.Unmarshal(accept.Body.Bytes(),&accepted);err!=nil{t.Fatal(err)}
