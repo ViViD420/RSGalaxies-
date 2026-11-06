@@ -6,7 +6,46 @@ import (
 	"time"
 )
 
+const (
+	TradeLifetime = 5 * time.Minute
+	TradeInteractionRange = 6.0
+)
+
+type TradeStatus string
+
+const (
+	TradePending TradeStatus = "pending"
+	TradeOpen TradeStatus = "open"
+	TradeCompleted TradeStatus = "completed"
+	TradeCancelled TradeStatus = "cancelled"
+	TradeExpired TradeStatus = "expired"
+)
+
+type TradeParticipant struct {
+	CharacterID PlayerID `json:"characterId"`
+	CharacterName string `json:"characterName"`
+	Role string `json:"role"`
+	Offer TradeOffer `json:"offer"`
+	Confirmed bool `json:"confirmed"`
+}
+
+type TradeSnapshot struct {
+	ID string `json:"id"`
+	Status TradeStatus `json:"status"`
+	Revision int64 `json:"revision"`
+	ExpiresAt time.Time `json:"expiresAt"`
+	Participants []TradeParticipant `json:"participants"`
+}
+
 var (
+	ErrTradeNotFound = errors.New("trade not found")
+	ErrTradeNotParticipant = errors.New("character is not a trade participant")
+	ErrTradeInvalidState = errors.New("trade is not in the required state")
+	ErrTradeExpired = errors.New("trade has expired")
+	ErrTradeOutOfRange = errors.New("trade participants are too far apart")
+	ErrTradeAlreadyActive = errors.New("character already has an active trade")
+	ErrTradeStaleRevision = errors.New("trade revision is stale")
+	ErrTradeSelf = errors.New("cannot trade with the same character")
 	ErrInvalidTradeOffer = errors.New("invalid trade offer")
 	ErrTradeItemEquipped = errors.New("equipped items cannot be traded")
 	ErrTradeOfferCapacity = errors.New("trade offer exceeds inventory or currency capacity")
