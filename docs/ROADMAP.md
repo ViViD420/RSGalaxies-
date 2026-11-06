@@ -47,7 +47,7 @@
 - [x] Persistent coin wallet, starter merchant catalog and atomic buy/sell transactions.
 - [x] Equipment slots, equip/unequip transactions and derived attack/defense bonuses.
 - [ ] Unique item instances, durability, binding, item modifiers and richer stack management.
-- [ ] Currency ledger, player-to-player trading with escrow and anti-duplication guarantees (design baseline: `docs/PLAYER_TRADE_DESIGN.md`).
+- [ ] Currency ledger, player-to-player trading with escrow and anti-duplication guarantees (backend and Godot multi-item UI vertical slice implemented; concurrency, restart-recovery, abuse/load and real-device gates remain; see `docs/PLAYER_TRADE_DESIGN.md`).
 - [ ] Regional supply, market discovery, currency sinks and player-run shops.
 
 ## Milestone 5: Social sandbox
