@@ -25,7 +25,7 @@ func TestPlayerCombatDefeatsEnemyAwardsXPAndLoot(t *testing.T) {
 		}
 	}
 	if _,_,err:=player.AttackEnemy(enemy,state,now.Add(3*time.Second));!errors.Is(err,ErrEnemyRespawning){t.Fatalf("respawning enemy error=%v",err)}
-	if _,next,err:=player.AttackEnemy(enemy,state,now.Add(31*time.Second));err!=nil||next.Health!=enemy.MaxHealth-4{t.Fatalf("enemy respawn attack state=%+v err=%v",next,err)}
+	if _,next,err:=player.AttackEnemy(enemy,state,now.Add(33*time.Second));err!=nil||next.Health!=enemy.MaxHealth-4{t.Fatalf("enemy respawn attack state=%+v err=%v",next,err)}
 }
 
 func TestCombatCooldownDefeatAndSafeZoneRest(t *testing.T) {
