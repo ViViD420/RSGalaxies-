@@ -2223,6 +2223,8 @@ func _render_trade_snapshot() -> void:
 			continue
 		var offer: Dictionary = participant.get("offer", {})
 		var offer_text := str(offer.get("items", {})) + " • " + str(offer.get("coins", 0)) + " coins"
+		if bool(participant.get("confirmed", false)):
+			offer_text += " • CONFIRMED"
 		if str(participant.get("characterId", "")) == player_id:
 			own_role = str(participant.get("role", ""))
 			own_offer = offer_text
