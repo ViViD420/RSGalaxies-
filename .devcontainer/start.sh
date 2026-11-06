@@ -9,7 +9,7 @@ if ! curl -fsS http://127.0.0.1:8080/healthz >/dev/null 2>&1; then
 fi
 
 mkdir -p client/build/web
-godot --headless --path client --export-release "Web" client/build/web/index.html
+(cd client && godot --headless --path . --export-release "Web" build/web/index.html)
 (cd client/build/web && nohup python3 -m http.server 8000 --bind 0.0.0.0 > /tmp/rs-galaxies-web.log 2>&1 < /dev/null &)
 
 echo "RS Galaxies browser prototype: open forwarded port 8000."
