@@ -22,14 +22,16 @@ An original sandbox MMORPG combining long-form skill progression and item gamepl
 - Player creation initializes all skills at level one.
 - Domain XP validation, level-up detection and atomic in-memory awards.
 - Defensive copying of player skill maps and stable player listing.
-- HTTP routes for skill catalog, player skills and development-only XP awards. The XP shortcut is disabled when RS_GALAXIES_ENV=production.
+- HTTP routes for skill catalog, world zones, player skills and development-only XP awards/movement. Development shortcuts are disabled when RS_GALAXIES_ENV=production.
+- World zone bounds, default spawn point and server-time-based movement speed/bounds validation. Repository movement updates are atomic.
 - Domain, API and repository concurrency tests.
 - Go CI runs tests with the race detector and go vet.
 
 ### Client
 - Godot 4.3 prototype in client/.
 - Procedurally generated test floor, placeholder character, third-person orbit camera, keyboard movement and touchscreen D-pad/jump controls; touch drag or mouse controls the camera.
-- Startup HTTP health check against the Go service.
+- Startup character creation and HTTP health check against the Go service; client position is periodically sent to the server and checked against movement rules.
+- Touchscreen D-pad/jump buttons and touch-drag camera controls.
 - Headless Godot validation and Web export workflow.
 - This is a movement/API proof of concept, not a final client or a network-authoritative character controller.
 
@@ -43,7 +45,7 @@ An original sandbox MMORPG combining long-form skill progression and item gamepl
 - Go is the server language. Godot is the provisional client engine, pending camera, movement and web/mobile export validation.
 - Storage is in memory; data is lost when the server stops.
 - The XP-award HTTP endpoint is development-only and must not be exposed publicly. Production XP must come from validated game actions.
-- PostgreSQL, authentication, secure sessions, realtime networking, production persistence, world simulation and server-authoritative movement are not implemented.
+- PostgreSQL, authentication, secure sessions, realtime replication, production persistence, NPCs, gathering and combat are not implemented. Movement synchronization is a development prototype, not authenticated production multiplayer.
 - Code and tests are committed, but GitHub Actions execution results have not yet been inspected in this session. Do not claim CI passes until verified.
 
 ## Next engineering tasks
