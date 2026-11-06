@@ -4,6 +4,7 @@ import (
 	"context"
 	"sort"
 	"sync"
+	"time"
 )
 
 type PlayerRepository interface {
@@ -11,6 +12,7 @@ type PlayerRepository interface {
 	Get(ctx context.Context, id PlayerID) (Player, error)
 	List(ctx context.Context) ([]Player, error)
 	AwardExperience(ctx context.Context, id PlayerID, skillID string, amount int) (Player, bool, error)
+	MovePlayer(ctx context.Context, id PlayerID, x, z float64, now time.Time) (Player, error)
 }
 
 type MemoryPlayerRepository struct { mu sync.RWMutex; players map[PlayerID]Player }
@@ -50,6 +52,20 @@ func (r *MemoryPlayerRepository) AwardExperience(_ context.Context, id PlayerID,
 	if err != nil { return Player{}, false, err }
 	r.players[id] = clonePlayer(player)
 	return clonePlayer(player), leveled, nil
+}
+
+func (r *MemoryPlayerRepository) MovePlayer(_ context.Context, id PlayerID, x, z float64, now time.Time) (Player, error) {
+	r.mu.Lock()
+	defer r.mu.Unlock()
+	player, ok := r.players[id]
+	if !ok {
+		return Player{}, ErrPlayerNotFound
+	}
+	if err := player.MoveTo(x, z, now); err != nil {
+		return Player{}, err
+	}
+	r.players[id] = clonePlayer(player)
+	return clonePlayer(player), nil
 }
 
 func clonePlayer(player Player) Player {
