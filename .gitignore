@@ -1,0 +1,24 @@
+# Go
+/server/bin/
+/server/dist/
+/server/coverage.out
+/server/*.test
+
+# Unreal / game-engine generated content (if selected later)
+/client/Binaries/
+/client/DerivedDataCache/
+/client/Intermediate/
+/client/Saved/
+/client/.vs/
+
+# Editors and operating systems
+.vscode/
+.idea/
+.DS_Store
+Thumbs.db
+
+# Local configuration and secrets
+.env
+.env.*
+!.env.example
+*.local
