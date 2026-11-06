@@ -352,8 +352,18 @@ func (r *AccountRepository) ListLocalChatForAccount(ctx context.Context,accountI
 	err:=r.db.QueryRowContext(ctx,`SELECT zone_id FROM players WHERE account_id=$1 AND id=$2`,accountID,string(id)).Scan(&zoneID)
 	if errors.Is(err,sql.ErrNoRows){return nil,game.ErrPlayerNotFound}
 	if err!=nil{return nil,fmt.Errorf("resolve chat character zone: %w",err)}
-	rows,err:=r.db.QueryContext(ctx,`SELECT id,zone_id,sender_character_id,sender_character_name,message,created_at
-		FROM chat_messages WHERE zone_id=$1 AND id>$2 ORDER BY id ASC LIMIT $3`,zoneID,afterID,limit)
+	var rows *sql.Rows
+	if afterID==0 {
+		// A new client should see the newest bounded history, not the oldest
+		// rows in the zone (which could leave it permanently behind the live cursor).
+		rows,err=r.db.QueryContext(ctx,`SELECT id,zone_id,sender_character_id,sender_character_name,message,created_at
+			FROM (SELECT id,zone_id,sender_character_id,sender_character_name,message,created_at
+				FROM chat_messages WHERE zone_id=$1 ORDER BY id DESC LIMIT $2) recent
+			ORDER BY id ASC`,zoneID,limit)
+	} else {
+		rows,err=r.db.QueryContext(ctx,`SELECT id,zone_id,sender_character_id,sender_character_name,message,created_at
+			FROM chat_messages WHERE zone_id=$1 AND id>$2 ORDER BY id ASC LIMIT $3`,zoneID,afterID,limit)
+	}
 	if err!=nil{return nil,fmt.Errorf("list local chat messages: %w",err)}
 	defer rows.Close()
 	messages:=make([]game.ChatMessage,0)
