@@ -391,7 +391,8 @@ func (r *AccountRepository) HeartbeatPresenceForAccount(ctx context.Context,acco
 	_,err=tx.ExecContext(ctx,`INSERT INTO zone_presence(character_id,account_id,zone_id,position_x,position_z,last_seen_at)
 		VALUES($1,$2,$3,$4,$5,$6)
 		ON CONFLICT(character_id) DO UPDATE SET account_id=EXCLUDED.account_id,zone_id=EXCLUDED.zone_id,
-		position_x=EXCLUDED.position_x,position_z=EXCLUDED.position_z,last_seen_at=EXCLUDED.last_seen_at`,
+		position_x=EXCLUDED.position_x,position_z=EXCLUDED.position_z,last_seen_at=EXCLUDED.last_seen_at
+		WHERE zone_presence.last_seen_at <= EXCLUDED.last_seen_at - INTERVAL '1 second'`,
 		string(player.ID),accountID,player.Position.ZoneID,player.Position.X,player.Position.Z,now.UTC())
 	if err!=nil{return fmt.Errorf("upsert character presence: %w",err)}
 	if _,err:=tx.ExecContext(ctx,`DELETE FROM zone_presence WHERE last_seen_at < $1`,now.UTC().Add(-5*time.Minute));err!=nil{return fmt.Errorf("prune stale character presence: %w",err)}
