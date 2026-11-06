@@ -39,6 +39,8 @@ type characterStore interface {
 	UseItemForAccount(context.Context, string, game.PlayerID, string) (game.Player, int, error)
 }
 
+const maxAuthRateKeys = 10000
+
 type authAttemptWindow struct { started time.Time; count int }
 
 type Server struct {
@@ -543,6 +545,14 @@ func (s *Server) allowAuthAttempt(w http.ResponseWriter,r *http.Request,limit in
   if now.Sub(window.started)>=time.Minute { delete(s.authAttempts,candidate) }
  }
  window,ok:=s.authAttempts[key]
+ if !ok && len(s.authAttempts)>=maxAuthRateKeys {
+  oldestKey:=""
+  var oldest time.Time
+  for candidate,candidateWindow:=range s.authAttempts {
+   if oldestKey==""||candidateWindow.started.Before(oldest) { oldestKey=candidate;oldest=candidateWindow.started }
+  }
+  if oldestKey!="" { delete(s.authAttempts,oldestKey) }
+ }
  if !ok||now.Sub(window.started)>=time.Minute { window=authAttemptWindow{started:now} }
  if window.count>=limit {
   retry:=int(window.started.Add(time.Minute).Sub(now).Seconds())
