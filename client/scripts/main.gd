@@ -881,6 +881,7 @@ func _expire_session() -> void:
 	auth_panel.visible = true
 	logout_button.visible = false
 	character_button.visible = false
+	rest_button.visible = false
 	if character_panel != null:
 		character_panel.visible = false
 	if market_panel != null:
