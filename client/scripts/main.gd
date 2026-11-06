@@ -1703,8 +1703,7 @@ func _on_presence_roster_completed(result: int, response_code: int, _headers: Pa
 				stale.queue_free()
 			remote_player_nodes.erase(character_id)
 			remote_player_targets.erase(character_id)
-	if status_label != null:
-		if presence_label != null:
+	if presence_label != null:
 		presence_label.text = "Nearby players: " + str(remote_player_nodes.size())
 
 
