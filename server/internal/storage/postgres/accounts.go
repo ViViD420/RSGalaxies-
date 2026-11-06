@@ -161,3 +161,69 @@ func (r *AccountRepository) ListCharacters(ctx context.Context, accountID string
 }
 
 
+
+func (r *AccountRepository) lockOwnedPlayer(ctx context.Context, tx *sql.Tx, accountID string, id game.PlayerID) (game.Player,error) {
+	query := "SELECT "+playerColumns+" FROM players WHERE account_id=$1 AND id=$2 FOR UPDATE"
+	return scanPlayer(tx.QueryRowContext(ctx,query,accountID,string(id)))
+}
+
+func updateOwnedPlayer(ctx context.Context, tx *sql.Tx, accountID string, player game.Player) error {
+	skills,err:=json.Marshal(player.Skills)
+	if err!=nil{return fmt.Errorf("encode owned player skills: %w",err)}
+	inventory,err:=json.Marshal(player.Inventory)
+	if err!=nil{return fmt.Errorf("encode owned player inventory: %w",err)}
+	result,err:=tx.ExecContext(ctx,`UPDATE players SET skills=$3,inventory=$4,zone_id=$5,position_x=$6,position_z=$7,last_move_at=$8 WHERE account_id=$1 AND id=$2`,
+		accountID,string(player.ID),string(skills),string(inventory),player.Position.ZoneID,player.Position.X,player.Position.Z,player.LastMoveAt)
+	if err!=nil{return fmt.Errorf("update owned player: %w",err)}
+	affected,err:=result.RowsAffected()
+	if err!=nil{return fmt.Errorf("count updated owned player: %w",err)}
+	if affected!=1{return game.ErrPlayerNotFound}
+	return nil
+}
+
+func (r *AccountRepository) AwardExperienceForAccount(ctx context.Context,accountID string,id game.PlayerID,skillID string,amount int)(game.Player,bool,error){
+	tx,err:=r.db.BeginTx(ctx,nil);if err!=nil{return game.Player{},false,err};defer tx.Rollback()
+	player,err:=r.lockOwnedPlayer(ctx,tx,accountID,id);if err!=nil{return game.Player{},false,err}
+	leveled,err:=player.AwardExperience(skillID,amount);if err!=nil{return game.Player{},false,err}
+	if err:=updateOwnedPlayer(ctx,tx,accountID,player);err!=nil{return game.Player{},false,err}
+	if err:=tx.Commit();err!=nil{return game.Player{},false,fmt.Errorf("commit owned XP award: %w",err)}
+	return player,leveled,nil
+}
+
+func (r *AccountRepository) MovePlayerForAccount(ctx context.Context,accountID string,id game.PlayerID,x,z float64,now time.Time)(game.Player,error){
+	tx,err:=r.db.BeginTx(ctx,nil);if err!=nil{return game.Player{},err};defer tx.Rollback()
+	player,err:=r.lockOwnedPlayer(ctx,tx,accountID,id);if err!=nil{return game.Player{},err}
+	if err:=player.MoveTo(x,z,now);err!=nil{return player,err}
+	if err:=updateOwnedPlayer(ctx,tx,accountID,player);err!=nil{return game.Player{},err}
+	if err:=tx.Commit();err!=nil{return game.Player{},fmt.Errorf("commit owned movement: %w",err)}
+	return player,nil
+}
+
+func (r *AccountRepository) GatherForAccount(ctx context.Context,accountID string,id game.PlayerID,nodeID string,now time.Time)(game.Player,game.GatheringResult,error){
+	tx,err:=r.db.BeginTx(ctx,nil);if err!=nil{return game.Player{},game.GatheringResult{},err};defer tx.Rollback()
+	player,err:=r.lockOwnedPlayer(ctx,tx,accountID,id);if err!=nil{return game.Player{},game.GatheringResult{},err}
+	node,ok:=game.FindGatheringNode(nodeID);if !ok{return player,game.GatheringResult{},game.ErrUnknownGatheringNode}
+	if _,err:=tx.ExecContext(ctx,`INSERT INTO gathering_node_state (node_id,charges,initialized) VALUES ($1,0,FALSE) ON CONFLICT (node_id) DO NOTHING`,nodeID);err!=nil{return game.Player{},game.GatheringResult{},fmt.Errorf("initialize gathering node: %w",err)}
+	var state game.GatheringNodeState
+	var respawnAt sql.NullTime
+	if err:=tx.QueryRowContext(ctx,`SELECT charges,respawn_at,initialized FROM gathering_node_state WHERE node_id=$1 FOR UPDATE`,nodeID).Scan(&state.Charges,&respawnAt,&state.Initialized);err!=nil{return game.Player{},game.GatheringResult{},fmt.Errorf("lock gathering node: %w",err)}
+	if respawnAt.Valid{state.RespawnAt=respawnAt.Time}
+	result,nextState,err:=player.Gather(node,state,now);if err!=nil{return player,game.GatheringResult{},err}
+	var respawnValue any
+	if !nextState.RespawnAt.IsZero(){respawnValue=nextState.RespawnAt}
+	if _,err:=tx.ExecContext(ctx,`UPDATE gathering_node_state SET charges=$2,respawn_at=$3,initialized=$4 WHERE node_id=$1`,nodeID,nextState.Charges,respawnValue,nextState.Initialized);err!=nil{return game.Player{},game.GatheringResult{},fmt.Errorf("update gathering node: %w",err)}
+	if err:=updateOwnedPlayer(ctx,tx,accountID,player);err!=nil{return game.Player{},game.GatheringResult{},err}
+	if err:=tx.Commit();err!=nil{return game.Player{},game.GatheringResult{},fmt.Errorf("commit owned gathering: %w",err)}
+	return player,result,nil
+}
+
+func (r *AccountRepository) CraftForAccount(ctx context.Context,accountID string,id game.PlayerID,recipeID string,now time.Time)(game.Player,game.CraftingResult,error){
+	tx,err:=r.db.BeginTx(ctx,nil);if err!=nil{return game.Player{},game.CraftingResult{},err};defer tx.Rollback()
+	player,err:=r.lockOwnedPlayer(ctx,tx,accountID,id);if err!=nil{return game.Player{},game.CraftingResult{},err}
+	recipe,ok:=game.FindCraftingRecipe(recipeID);if !ok{return player,game.CraftingResult{},game.ErrUnknownCraftingRecipe}
+	station,ok:=game.FindCraftingStation(recipe.StationID);if !ok{return player,game.CraftingResult{},game.ErrUnknownCraftingStation}
+	result,err:=player.Craft(recipe,station,now);if err!=nil{return player,game.CraftingResult{},err}
+	if err:=updateOwnedPlayer(ctx,tx,accountID,player);err!=nil{return game.Player{},game.CraftingResult{},err}
+	if err:=tx.Commit();err!=nil{return game.Player{},game.CraftingResult{},fmt.Errorf("commit owned crafting: %w",err)}
+	return player,result,nil
+}
