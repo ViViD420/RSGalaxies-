@@ -570,3 +570,27 @@ func TestAuthenticationRateLimiterBoundsHighCardinalityKeys(t *testing.T) {
 	if _,ok:=server.authAttempts["host-0|/api/v1/auth/login"];ok{t.Fatal("oldest key was not evicted")}
 	if _,ok:=server.authAttempts["new-host|/api/v1/auth/login"];!ok{t.Fatal("new key was not retained")}
 }
+
+
+func TestReadinessSeparatesLivenessFromDependencyHealth(t *testing.T) {
+	server:=New(game.NewMemoryPlayerRepository())
+	handler:=server.Routes()
+	live:=httptest.NewRecorder()
+	handler.ServeHTTP(live,httptest.NewRequest(http.MethodGet,"/healthz",nil))
+	if live.Code!=http.StatusOK{t.Fatalf("liveness status=%d body=%s",live.Code,live.Body.String())}
+	ready:=httptest.NewRecorder()
+	handler.ServeHTTP(ready,httptest.NewRequest(http.MethodGet,"/readyz",nil))
+	if ready.Code!=http.StatusOK{t.Fatalf("development readiness status=%d body=%s",ready.Code,ready.Body.String())}
+
+	probeCalls:=0
+	server.SetReadinessCheck(func(ctx context.Context)error{probeCalls++;return fmt.Errorf("private database connection detail")})
+	handler=server.Routes()
+	notReady:=httptest.NewRecorder()
+	handler.ServeHTTP(notReady,httptest.NewRequest(http.MethodGet,"/readyz",nil))
+	if notReady.Code!=http.StatusServiceUnavailable{t.Fatalf("failed dependency readiness status=%d body=%s",notReady.Code,notReady.Body.String())}
+	if strings.Contains(notReady.Body.String(),"private database"){t.Fatal("readiness response leaked dependency details")}
+	if probeCalls!=1{t.Fatalf("readiness probe calls=%d want=1",probeCalls)}
+	stillLive:=httptest.NewRecorder()
+	handler.ServeHTTP(stillLive,httptest.NewRequest(http.MethodGet,"/healthz",nil))
+	if stillLive.Code!=http.StatusOK{t.Fatalf("liveness should stay healthy during DB outage: status=%d",stillLive.Code)}
+}
