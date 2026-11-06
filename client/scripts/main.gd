@@ -10,6 +10,8 @@ var auth_password_input: LineEdit
 var auth_status_label: Label
 var logout_button: Button
 var auth_token := ""
+var current_inventory: Dictionary = {}
+var current_bank: Dictionary = {}
 var api_request: HTTPRequest
 var movement_request: HTTPRequest
 var gather_request: HTTPRequest
@@ -87,6 +89,7 @@ func _build_world() -> void:
 	_add_tree(Vector3(2.0, 0.0, 0.0))
 	_add_stone_deposit(Vector3(-2.0, 0.0, 0.0))
 	_add_workbench(Vector3(0.0, 0.0, 4.0))
+	_add_bank_chest(Vector3(0.0, 0.0, -4.0))
 
 	player_node = PLAYER_SCENE.instantiate() as CharacterBody3D
 	player_node.position = Vector3(0.0, 0.05, 0.0)
@@ -141,6 +144,39 @@ func _add_workbench(at: Vector3) -> void:
 			leg.material_override = wood_material
 			bench.add_child(leg)
 	add_child(bench)
+
+
+func _add_bank_chest(at: Vector3) -> void:
+	var chest := Node3D.new()
+	chest.position = at
+	var wood := StandardMaterial3D.new()
+	wood.albedo_color = Color(0.28, 0.16, 0.08)
+	var lid_material := StandardMaterial3D.new()
+	lid_material.albedo_color = Color(0.48, 0.31, 0.12)
+	var body := MeshInstance3D.new()
+	var body_mesh := BoxMesh.new()
+	body_mesh.size = Vector3(1.6, 0.9, 1.0)
+	body.mesh = body_mesh
+	body.position.y = 0.48
+	body.material_override = wood
+	chest.add_child(body)
+	var lid := MeshInstance3D.new()
+	var lid_mesh := BoxMesh.new()
+	lid_mesh.size = Vector3(1.7, 0.22, 1.08)
+	lid.mesh = lid_mesh
+	lid.position.y = 1.05
+	lid.material_override = lid_material
+	chest.add_child(lid)
+	var clasp := MeshInstance3D.new()
+	var clasp_mesh := BoxMesh.new()
+	clasp_mesh.size = Vector3(0.16, 0.28, 0.08)
+	clasp.mesh = clasp_mesh
+	clasp.position = Vector3(0.0, 0.78, -0.54)
+	var metal := StandardMaterial3D.new()
+	metal.albedo_color = Color(0.72, 0.61, 0.31)
+	clasp.material_override = metal
+	chest.add_child(clasp)
+	add_child(chest)
 
 func _add_stone_deposit(at: Vector3) -> void:
 	var rock := MeshInstance3D.new()
@@ -349,7 +385,33 @@ func _request_interaction() -> void:
 	var tree_distance := Vector2(player_node.global_position.x - 2.0, player_node.global_position.z).length()
 	var stone_distance := Vector2(player_node.global_position.x + 2.0, player_node.global_position.z).length()
 	var bench_distance := Vector2(player_node.global_position.x, player_node.global_position.z - 4.0).length()
+	var bank_distance := Vector2(player_node.global_position.x, player_node.global_position.z + 4.0).length()
 	var error := OK
+	if bank_distance <= 3.0 and bank_distance <= bench_distance and bank_distance <= tree_distance and bank_distance <= stone_distance:
+		var selected_item := ""
+		interaction_type = "bank_deposit"
+		for item_id in ["softwood_log", "rough_stone", "wooden_plank"]:
+			if int(current_inventory.get(item_id, 0)) > 0:
+				selected_item = item_id
+				break
+		if selected_item.is_empty():
+			interaction_type = "bank_withdraw"
+			for item_id in ["softwood_log", "rough_stone", "wooden_plank"]:
+				if int(current_bank.get(item_id, 0)) > 0:
+					selected_item = item_id
+					break
+		if selected_item.is_empty():
+			status_label.text = "Bank: no starter items to move"
+			return
+		var bank_action := "deposit" if interaction_type == "bank_deposit" else "withdraw"
+		status_label.text = "Bank: " + bank_action + "ing " + selected_item.replace("_", " ") + "..."
+		error = gather_request.request(
+			api_base_url + "/api/v1/account/characters/" + player_id + "/bank/" + bank_action,
+			PackedStringArray(["Content-Type: application/json", "Authorization: Bearer " + auth_token]),
+			HTTPClient.METHOD_POST,
+			JSON.stringify({"itemId": selected_item, "quantity": 1})
+		)
+	elif bench_distance <= 3.0 and bench_distance <= tree_distance and bench_distance <= stone_distance:
 	if bench_distance <= 3.0 and bench_distance <= tree_distance and bench_distance <= stone_distance:
 		interaction_type = "craft"
 		status_label.text = "Using frontier workbench..."
@@ -391,6 +453,12 @@ func _on_gather_completed(result: int, response_code: int, _headers: PackedStrin
 		status_label.text = "Interaction: " + error_code.replace("_", " ")
 		return
 	var player_data: Dictionary = payload.get("character", payload.get("player", {}))
+	if interaction_type == "bank_deposit" or interaction_type == "bank_withdraw":
+		var bank_action := "Deposited" if interaction_type == "bank_deposit" else "Withdrew"
+		var item_bank: Variant = payload.get("bank", player_data.get("bank", {}))
+		_update_inventory(payload.get("inventory", player_data.get("inventory", {})), item_bank)
+		status_label.text = "Bank: " + bank_action + " one item"
+		return
 	if interaction_type == "craft":
 		var crafting: Dictionary = payload.get("crafting", {})
 		status_label.text = "Crafted Wooden Plank  •  +" + str(crafting.get("experience", 0)) + " Crafting XP"
@@ -398,15 +466,20 @@ func _on_gather_completed(result: int, response_code: int, _headers: PackedStrin
 		var gathering: Dictionary = payload.get("gathering", {})
 		var item_name := "Softwood Log" if gathering.get("itemId") == "softwood_log" else "Rough Stone"
 		status_label.text = "Gathered " + item_name + "  •  +" + str(gathering.get("experience", 0)) + " " + str(gathering.get("skillId", "")) + " XP"
-	_update_inventory(player_data.get("inventory", {}))
+	_update_inventory(player_data.get("inventory", {}), player_data.get("bank", {}))
 
-func _update_inventory(inventory_data: Variant) -> void:
+func _update_inventory(inventory_data: Variant, bank_data: Variant = {}) -> void:
 	if not inventory_data is Dictionary:
 		return
-	inventory_label.text = "Inventory: Logs %d  •  Planks %d  •  Stone %d" % [
-		int(inventory_data.get("softwood_log", 0)),
-		int(inventory_data.get("wooden_plank", 0)),
-		int(inventory_data.get("rough_stone", 0))
+	current_inventory = inventory_data.duplicate()
+	current_bank = bank_data.duplicate() if bank_data is Dictionary else {}
+	inventory_label.text = "Bag L:%d P:%d S:%d  •  Bank L:%d P:%d S:%d" % [
+		int(current_inventory.get("softwood_log", 0)),
+		int(current_inventory.get("wooden_plank", 0)),
+		int(current_inventory.get("rough_stone", 0)),
+		int(current_bank.get("softwood_log", 0)),
+		int(current_bank.get("wooden_plank", 0)),
+		int(current_bank.get("rough_stone", 0))
 	]
 
 func _apply_server_position(position_data: Dictionary, force: bool) -> void:
@@ -502,7 +575,7 @@ func _activate_character(character_data: Dictionary) -> void:
 	if spawn is Dictionary:
 		_apply_server_position(spawn, true)
 	status_label.text = "Server: connected • account character ready"
-	_update_inventory(character_data.get("inventory", {}))
+	_update_inventory(character_data.get("inventory", {}), character_data.get("bank", {}))
 	auth_panel.visible = false
 	logout_button.visible = true
 	_start_movement_sync()
