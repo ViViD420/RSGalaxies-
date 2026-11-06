@@ -20,6 +20,9 @@ var playerBankMigration string
 //go:embed migrations/0004_player_currency.sql
 var playerCurrencyMigration string
 
+//go:embed migrations/0005_player_equipment.sql
+var playerEquipmentMigration string
+
 func Migrate(ctx context.Context, db *sql.DB) error {
 	tx, err := db.BeginTx(ctx, nil)
 	if err != nil { return fmt.Errorf("begin migration: %w", err) }
@@ -39,6 +42,7 @@ func Migrate(ctx context.Context, db *sql.DB) error {
 		{version: 2, sql: accountsMigration},
 		{version: 3, sql: playerBankMigration},
 		{version: 4, sql: playerCurrencyMigration},
+		{version: 5, sql: playerEquipmentMigration},
 	}
 	for _, migration := range migrations {
 		var applied bool
