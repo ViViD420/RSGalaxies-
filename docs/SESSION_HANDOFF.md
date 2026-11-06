@@ -21,7 +21,7 @@ An original sandbox MMORPG combining long-form skill progression and item gamepl
 - Ten skills, level 1–99, cumulative XP curve and 200,000,000 XP cap.
 - Defensive in-memory repository copies and concurrency-safe experience awards.
 - Starter zone, spawn point, server-time movement validation and world bounds.
-- Tree, stone and copper gathering nodes with range checks, charges, respawn and atomic inventory/XP rewards.
+- Tree, stone and copper gathering nodes with range checks, charges, respawn and atomic inventory/XP rewards. Godot chooses the nearest target and builds resource props from the server node catalog rather than hardcoded node IDs.
 - Starter workbench and forge; recipes cover basic planks, copper smelting and a crafted training sword. Crafting validates range, skill level, ingredients and output stack capacity.
 - Player inventory, 100-slot bank storage, coin wallet, persistent equipment slots and consumable healing potions. New characters start with 100 coins.
 - Starter merchant catalog with server-defined buy/sell prices. Buy/sell operations update coins and inventory atomically.
