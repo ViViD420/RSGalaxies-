@@ -47,9 +47,9 @@ Prefer a normalized escrow ledger table for item and currency movements if it ca
 
 ## API and client contract
 
-Expose account-scoped endpoints for invite, accept, read, update-own-offer, confirm and cancel. Use strict JSON decoding, request body limits, rate limits, stable error codes and generic not-found behavior for trades outside the caller's ownership scope. Every mutating request should include the expected trade revision; stale revisions return a conflict and the latest safe trade snapshot.
+Expose account-scoped endpoints for invite, accept, read, update-own-offer, confirm and cancel. The current API includes an active-trade recovery endpoint and the Godot panel polls it while a character is active. Use strict JSON decoding, request body limits, rate limits, stable error codes and generic not-found behavior for trades outside the caller's ownership scope. Every mutating request should include the expected trade revision; stale revisions return a conflict and the latest safe trade snapshot.
 
-The Godot client should display the other character's public name, both staged offers, confirmation state, revision and expiry. Disable controls while a request is pending. Never optimistically display a completed trade before the server confirms settlement. On reconnect, fetch the active trade by character ID and reconcile from the server.
+The Godot client trade panel displays the other character's public name, both staged offers, confirmation state, revision and expiry; it offers invite, accept, offer update, confirm and cancel actions and polls for active-trade recovery. Disable controls while a request is pending. Never optimistically display a completed trade before the server confirms settlement. On reconnect, fetch the active trade by character ID and reconcile from the server.
 
 ## Required tests before enabling routes
 
