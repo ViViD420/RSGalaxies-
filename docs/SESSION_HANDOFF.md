@@ -25,7 +25,7 @@ An original sandbox MMORPG combining long-form skill progression and item gamepl
 - Starter workbench and forge; recipes cover basic planks, herbal bundles, crafted healing herbal tea, copper smelting and a training sword. Herbal tea is a 15-health consumable. Crafting aggregates duplicate ingredients/outputs, simulates net stack changes, validates the exact station and commits inventory/XP only after all checks pass.
 - Player inventory, 100-slot bank storage, coin wallet, persistent equipment slots, merchant healing potions and crafted herbal tea. New characters start with 100 coins.
 - Starter merchant catalog with server-defined buy/sell prices. Buy/sell operations update coins and inventory atomically.
-- PostgreSQL migrations 0001–0009 cover player state, gathering, accounts/sessions, character ownership, bank storage, currency, equipment, health, shared enemy spawn state, persistent zone chat, leased zone presence and the initial player-trade escrow schema. Migration 0009 creates trade/participant/offer/escrow tables plus a unique active-character reservation table. Authenticated invite/accept, escrow offer replacement, two-sided confirmation, atomic settlement, cancellation, expiry release and active-trade recovery are now implemented. Invite and acceptance require fresh same-zone presence, range and availability checks; Godot trade UI and production abuse/load testing remain.
+- PostgreSQL migrations 0001–0009 cover player state, gathering, accounts/sessions, character ownership, bank storage, currency, equipment, health, shared enemy spawn state, persistent zone chat, leased zone presence and the initial player-trade escrow schema. Migration 0009 creates trade/participant/offer/escrow tables plus a unique active-character reservation table. Authenticated invite/accept, escrow offer replacement, two-sided confirmation, atomic settlement, cancellation, expiry release and active-trade recovery are now implemented. Invite, acceptance, offer edits and confirmations require fresh same-zone proximity/availability checks; Godot trade UI is now integrated, while production abuse/load testing remain.
 - PostgreSQL transactions and row locks protect XP, movement, gathering, crafting, bank transfers, market trades, equipment changes, PvE combat and presence heartbeat updates.
 - Account authentication: PBKDF2-HMAC-SHA-256 with 600,000 iterations and random salts; password length policy is enforced on both hashing and verification; opaque 256-bit bearer tokens stored only as SHA-256 digests; fixed 30-day expiry; logout revocation; last-used timestamps are write-coalesced to at most once per minute to reduce database write amplification; maximum 10 active sessions per account; old-session pruning; dummy PBKDF2 work for unknown/disabled login accounts.
 - Account-owned character CRUD and gameplay operations use account ownership in SQL predicates and row-locked transactions.
@@ -75,12 +75,12 @@ An original sandbox MMORPG combining long-form skill progression and item gamepl
 
 ## Next engineering tasks
 
-1. Finish validating server runs #284–#291, including escrow schema constraints, trade-offer validation and aggregate crafting invariants.
-2. Add Godot trade UI for nearby characters, offer editing, revision confirmations and cancellation; then add load/abuse testing before enabling public production trade.
-3. Add reconnect recovery and authoritative remote-player movement snapshots, then complete a real-phone pass on the Godot Web client.
-4. Add unique item instances/durability, combat animations/AI, currency sinks and player-to-player trade with escrow/transaction safety.
-5. Expand professions, gathering tiers, recipes, NPCs, combat, housing and settlements.
-6. Plan remote-player replication and scalable world/zone ownership.
+1. Finish validating server runs #351–#358 and client runs #101–#107; rerun any affected checks until the latest server and client workflows are green.
+2. Add race-focused PostgreSQL tests for concurrent offer edits, confirm-versus-cancel, expiry-versus-confirm, duplicate retries and restart recovery; run abuse/load tests before enabling public production trade.
+3. Expand the Godot offer editor from one selected item stack to multiple item types, add clearer incoming-invitation notifications and test the panel on a real phone.
+4. Implement authoritative remote-player movement snapshots/interpolation and zone ownership; then add enemy AI/movement and combat animations.
+5. Add unique item instances/durability, currency sinks, additional professions/recipes/NPCs, housing and settlements.
+6. Complete production account safeguards: email verification, recovery, MFA, distributed rate limiting, admin account tools and security/load review.
 
 ## Continuation instruction
 
