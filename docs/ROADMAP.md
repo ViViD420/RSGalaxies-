@@ -23,6 +23,7 @@
 ## Milestone 3: Skills and progression
 
 - [x] Ten data-driven skills, level 1–99 progression curve and XP cap.
+- [x] Authenticated live skills panel with per-skill XP progress and next-level thresholds.
 - [x] Tree, stone and copper gathering with range, skill, charge and respawn rules.
 - [x] Workbench plank recipe and forge copper smelting/training-sword recipes.
 - [x] Transactional crafting with ingredient consumption, output capacity and skill XP.
