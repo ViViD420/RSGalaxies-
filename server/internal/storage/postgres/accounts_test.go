@@ -113,8 +113,8 @@ func TestPostgresMigrationsAreIdempotent(t *testing.T) {
  ctx:=context.Background()
  if err:=Migrate(ctx,db);err!=nil{t.Fatalf("second migration: %v",err)}
  var count int
- if err:=db.QueryRowContext(ctx,"SELECT COUNT(*) FROM schema_migrations WHERE version IN (1,2,3,4,5,6)").Scan(&count);err!=nil{t.Fatal(err)}
- if count!=6{t.Fatalf("migration versions applied=%d want=6",count)}
+ if err:=db.QueryRowContext(ctx,"SELECT COUNT(*) FROM schema_migrations WHERE version IN (1,2,3,4,5,6,7)").Scan(&count);err!=nil{t.Fatal(err)}
+ if count!=7{t.Fatalf("migration versions applied=%d want=7",count)}
 }
 
 func TestPostgresOwnedGatheringLocksSharedNodeAndChecksOwner(t *testing.T) {
@@ -217,4 +217,22 @@ func TestPostgresCombatPersistsEnemyPlayerLootAndRestState(t *testing.T) {
  var enemyHealth int;var initialized bool
  if err:=db.QueryRowContext(ctx,"SELECT health,initialized FROM enemy_spawn_state WHERE enemy_id=$1","frontier-rat-001").Scan(&enemyHealth,&initialized);err!=nil{t.Fatal(err)}
  if !initialized||enemyHealth!=0{t.Fatalf("persisted enemy state initialized=%v health=%d",initialized,enemyHealth)}
+}
+
+func TestPostgresLocalChatIsZoneScopedAndRateLimited(t *testing.T) {
+ db:=integrationDatabase(t);repo:=NewAccountRepository(db);ctx:=context.Background();now:=time.Now().UTC()
+ first,_,err:=repo.Register(ctx,fmt.Sprintf("chat-one-%d@example.test",now.UnixNano()),"correct-horse-battery-staple",now);if err!=nil{t.Fatal(err)}
+ second,_,err:=repo.Register(ctx,fmt.Sprintf("chat-two-%d@example.test",now.UnixNano()),"correct-horse-battery-staple",now);if err!=nil{t.Fatal(err)}
+ t.Cleanup(func(){cleanupTestAccounts(db,first.ID,second.ID)})
+ playerOne,err:=game.NewPlayer(game.PlayerID(fmt.Sprintf("chat-char-one-%d",now.UnixNano())),"ChatOne",now);if err!=nil{t.Fatal(err)}
+ playerTwo,err:=game.NewPlayer(game.PlayerID(fmt.Sprintf("chat-char-two-%d",now.UnixNano())),"ChatTwo",now);if err!=nil{t.Fatal(err)}
+ if err:=repo.CreateCharacter(ctx,first.ID,playerOne);err!=nil{t.Fatal(err)}
+ if err:=repo.CreateCharacter(ctx,second.ID,playerTwo);err!=nil{t.Fatal(err)}
+ sent,err:=repo.SendLocalChatForAccount(ctx,first.ID,playerOne.ID,"  Hello frontier!  ",now);if err!=nil{t.Fatalf("send local chat: %v",err)}
+ if sent.ID==0||sent.Message!="Hello frontier!"||sent.CharacterName!="ChatOne"{t.Fatalf("sent chat message=%+v",sent)}
+ visible,err:=repo.ListLocalChatForAccount(ctx,second.ID,playerTwo.ID,0,50);if err!=nil{t.Fatalf("read zone chat: %v",err)}
+ if len(visible)!=1||visible[0].ID!=sent.ID||visible[0].Message!="Hello frontier!"{t.Fatalf("zone chat visibility=%+v",visible)}
+ if _,err:=repo.SendLocalChatForAccount(ctx,first.ID,playerOne.ID,"too soon",now.Add(time.Second));!errors.Is(err,game.ErrChatCooldown){t.Fatalf("chat cooldown error=%v",err)}
+ after,err:=repo.ListLocalChatForAccount(ctx,second.ID,playerTwo.ID,sent.ID,50);if err!=nil||len(after)!=0{t.Fatalf("chat cursor result=%+v err=%v",after,err)}
+ if _,err:=repo.ListLocalChatForAccount(ctx,second.ID,playerOne.ID,0,50);!errors.Is(err,game.ErrPlayerNotFound){t.Fatalf("foreign chat read error=%v",err)}
 }
