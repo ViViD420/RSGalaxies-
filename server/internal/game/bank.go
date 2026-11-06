@@ -16,6 +16,7 @@ var (
 // DepositItem moves a stack from carried inventory into the account character's bank.
 // Both sides are validated before either map is changed.
 func (p *Player) DepositItem(itemID string, quantity int) error {
+	if err:=p.CanAct();err!=nil{return err}
 	if quantity <= 0 { return ErrInvalidItemQuantity }
 	item, ok := FindItem(itemID)
 	if !ok { return ErrUnknownBankItem }
@@ -32,6 +33,7 @@ func (p *Player) DepositItem(itemID string, quantity int) error {
 
 // WithdrawItem moves a stack from the bank into carried inventory.
 func (p *Player) WithdrawItem(itemID string, quantity int) error {
+	if err:=p.CanAct();err!=nil{return err}
 	if quantity <= 0 { return ErrInvalidItemQuantity }
 	item, ok := FindItem(itemID)
 	if !ok { return ErrUnknownBankItem }
