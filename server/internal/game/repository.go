@@ -14,6 +14,7 @@ type PlayerRepository interface {
 	AwardExperience(ctx context.Context, id PlayerID, skillID string, amount int) (Player, bool, error)
 	MovePlayer(ctx context.Context, id PlayerID, x, z float64, now time.Time) (Player, error)
 	Gather(ctx context.Context, id PlayerID, nodeID string, now time.Time) (Player, GatheringResult, error)
+	Craft(ctx context.Context, id PlayerID, recipeID string, now time.Time) (Player, CraftingResult, error)
 }
 
 type MemoryPlayerRepository struct { mu sync.RWMutex; players map[PlayerID]Player
@@ -87,6 +88,30 @@ func (r *MemoryPlayerRepository) Gather(_ context.Context, id PlayerID, nodeID s
 		return clonePlayer(player), GatheringResult{}, err
 	}
 	r.nodes[nodeID] = state
+	r.players[id] = clonePlayer(player)
+	return clonePlayer(player), result, nil
+}
+
+
+func (r *MemoryPlayerRepository) Craft(_ context.Context, id PlayerID, recipeID string, now time.Time) (Player, CraftingResult, error) {
+	r.mu.Lock()
+	defer r.mu.Unlock()
+	player, ok := r.players[id]
+	if !ok {
+		return Player{}, CraftingResult{}, ErrPlayerNotFound
+	}
+	recipe, ok := FindCraftingRecipe(recipeID)
+	if !ok {
+		return clonePlayer(player), CraftingResult{}, ErrUnknownCraftingRecipe
+	}
+	station, ok := FindCraftingStation(recipe.StationID)
+	if !ok {
+		return clonePlayer(player), CraftingResult{}, ErrUnknownCraftingStation
+	}
+	result, err := player.Craft(recipe, station, now)
+	if err != nil {
+		return clonePlayer(player), CraftingResult{}, err
+	}
 	r.players[id] = clonePlayer(player)
 	return clonePlayer(player), result, nil
 }
