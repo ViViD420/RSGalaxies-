@@ -391,6 +391,7 @@ func _build_hud() -> void:
 	inventory_label.text = "Inventory: empty"
 	column.add_child(inventory_label)
 
+	_build_chat_panel(layer)
 	_build_auth_panel(layer)
 	rest_button = Button.new()
 	rest_button.text = "Rest"
