@@ -94,7 +94,9 @@ func (p *Player) AttackEnemy(enemy EnemyDefinition,state EnemyState,now time.Tim
 		state.RespawnAt=now.Add(time.Duration(enemy.RespawnSeconds)*time.Second)
 		result.EnemyDefeated=true
 		result.Experience=enemy.Experience
-		if _,err:=p.AwardExperience("combat",enemy.Experience);err!=nil{return CombatResult{},state,err}
+		if _,err:=p.AwardExperience("combat",enemy.Experience);err!=nil {
+			if errors.Is(err,ErrExperienceOverflow) { result.Experience=0 } else { return CombatResult{},state,err }
+		}
 		if enemy.LootItemID!=""&&enemy.LootQuantity>0{
 			item,ok:=FindItem(enemy.LootItemID)
 			if ok&&p.Inventory[enemy.LootItemID]<=item.MaxStack-enemy.LootQuantity{
