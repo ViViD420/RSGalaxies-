@@ -5,12 +5,12 @@
 - [x] Document design pillars and system boundaries.
 - [x] Add server API and deterministic tests.
 - [ ] Validate client engine through movement, camera and world-size prototype.
-- [ ] Add PostgreSQL migrations and local development environment.
+- [x] Add PostgreSQL migrations and Codespaces development database.
 - [x] Add hosted Codespaces development-container configuration.
 
 ## Milestone 2: Character and world slice
 - [x] Basic character identity and in-memory development storage.
-- [ ] Durable character persistence and migrations.
+- [x] Durable character, inventory and gathering-node persistence prototype.
 - [x] First world zone, coordinates, spawn point and server-validated movement prototype.
 - [ ] Interactable objects and NPC definitions.
 - [ ] Session lifecycle and basic presence.
