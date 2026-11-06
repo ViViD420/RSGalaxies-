@@ -138,3 +138,17 @@ type AccountStore interface {
 	AuthenticateSession(ctx context.Context, token string, now time.Time) (Account, error)
 	RevokeSession(ctx context.Context, token string, now time.Time) error
 }
+
+var dummyPasswordSalt = []byte("rsg-dummy-salt!!")
+var dummyPasswordHash = pbkdf2SHA256([]byte("dummy-account-password"), dummyPasswordSalt, passwordIterations, passwordKeyBytes)
+
+// BurnPasswordVerification performs a password-hash workload for unknown or
+// disabled accounts so those cases do not return immediately before a real
+// password verification would have completed.
+func BurnPasswordVerification(password string) {
+	if len(password) > maxPasswordBytes {
+		password = password[:maxPasswordBytes]
+	}
+	derived := pbkdf2SHA256([]byte(password), dummyPasswordSalt, passwordIterations, passwordKeyBytes)
+	_ = subtle.ConstantTimeCompare(derived, dummyPasswordHash)
+}
