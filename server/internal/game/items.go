@@ -27,6 +27,8 @@ var itemDefinitions = []ItemDefinition{
 	{ID: "rat_pelt", Name: "Rat Pelt", Description: "A small hide recovered from a frontier rat.", MaxStack: 100, BuyPrice: 6, SellPrice: 2},
 	{ID: "boar_hide", Name: "Boar Hide", Description: "A tough hide taken from a wild boar.", MaxStack: 100, BuyPrice: 15, SellPrice: 5},
 	{ID: "minor_healing_potion", Name: "Minor Healing Potion", Description: "Restores up to 25 health when used.", MaxStack: 10, BuyPrice: 20, SellPrice: 5, Consumable: true, HealAmount: 25},
+	{ID: "wild_herb", Name: "Wild Herb", Description: "A hardy medicinal plant gathered from the frontier.", MaxStack: 100, BuyPrice: 4, SellPrice: 2},
+	{ID: "herbal_bundle", Name: "Herbal Bundle", Description: "A carefully packed bundle of medicinal plants.", MaxStack: 100, BuyPrice: 18, SellPrice: 8},
 }
 
 func ItemDefinitions() []ItemDefinition {
