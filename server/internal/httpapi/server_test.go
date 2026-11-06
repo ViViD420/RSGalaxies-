@@ -550,3 +550,23 @@ func (s *testCharacterStore) UseItemForAccount(_ context.Context,accountID strin
  player,ok:=s.players[accountID][id];if !ok{return game.Player{},0,game.ErrPlayerNotFound}
  healed,err:=player.UseItem(itemID);if err!=nil{return player,0,err};s.players[accountID][id]=player;return player,healed,nil
 }
+
+
+func TestAuthenticationRateLimiterBoundsHighCardinalityKeys(t *testing.T) {
+	now:=time.Date(2026,11,6,18,0,0,0,time.UTC)
+	server:=New(game.NewMemoryPlayerRepository())
+	server.now=func()time.Time{return now}
+	server.authAttempts=make(map[string]authAttemptWindow,maxAuthRateKeys)
+	for i:=0;i<maxAuthRateKeys;i++ {
+		started:=now
+		if i==0 { started=now.Add(-time.Second) }
+		server.authAttempts[fmt.Sprintf("host-%d|/api/v1/auth/login",i)]=authAttemptWindow{started:started,count:1}
+	}
+	request:=httptest.NewRequest(http.MethodPost,"/api/v1/auth/login",nil)
+	request.RemoteAddr="new-host:12345"
+	response:=httptest.NewRecorder()
+	if !server.allowAuthAttempt(response,request,5){t.Fatalf("new key unexpectedly rate limited: %s",response.Body.String())}
+	if len(server.authAttempts)!=maxAuthRateKeys{t.Fatalf("rate-limit key count=%d want=%d",len(server.authAttempts),maxAuthRateKeys)}
+	if _,ok:=server.authAttempts["host-0|/api/v1/auth/login"];ok{t.Fatal("oldest key was not evicted")}
+	if _,ok:=server.authAttempts["new-host|/api/v1/auth/login"];!ok{t.Fatal("new key was not retained")}
+}
