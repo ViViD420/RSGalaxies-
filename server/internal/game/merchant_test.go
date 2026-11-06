@@ -2,6 +2,7 @@ package game
 
 import (
 	"errors"
+	"math"
 	"testing"
 	"time"
 )
@@ -29,4 +30,12 @@ func TestMerchantRejectsInvalidTradesWithoutChangingBalances(t *testing.T) {
 		if err:=test.run();!errors.Is(err,test.want){t.Fatalf("error=%v want=%v",err,test.want)}
 		if test.name!="inventory full"&&(player.Coins!=coins||player.Inventory["rough_stone"]!=inventory["rough_stone"]){t.Fatal("rejected trade changed player balances")}
 	})}
+}
+
+func TestMerchantSaleRejectsCurrencyOverflowWithoutConsumingItems(t *testing.T) {
+ player,err:=NewPlayer("merchant-player-3","MerchantWayfarer",time.Now());if err!=nil{t.Fatal(err)}
+ player.Coins=math.MaxInt64
+ player.Inventory["softwood_log"]=2
+ if _,err:=player.SellItem("softwood_log",1);!errors.Is(err,ErrCurrencyOverflow){t.Fatalf("sale overflow error=%v",err)}
+ if player.Coins!=math.MaxInt64||player.Inventory["softwood_log"]!=2{t.Fatalf("overflow sale mutated player: coins=%d inventory=%v",player.Coins,player.Inventory)}
 }
