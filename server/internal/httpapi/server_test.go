@@ -780,6 +780,7 @@ func (s *testCharacterStore) GetTradeForAccount(_ context.Context,accountID,trad
 func TestAuthenticatedTradeInvitationAcceptanceAndPrivacy(t *testing.T) {
 	t.Setenv("RS_GALAXIES_ENV","production")
 	t.Setenv("RS_GALAXIES_ENABLE_REGISTRATION","true")
+	t.Setenv("RS_GALAXIES_ENABLE_TRADING","true")
 	characters:=newTestCharacterStore()
 	handler:=NewWithAccounts(game.NewMemoryPlayerRepository(),newTestAccountStore(),characters).Routes()
 	register:=func(email string)string{
