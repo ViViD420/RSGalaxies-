@@ -20,7 +20,7 @@ type MemoryPlayerRepository struct { mu sync.RWMutex; players map[PlayerID]Playe
 	nodes map[string]GatheringNodeState }
 
 func NewMemoryPlayerRepository() *MemoryPlayerRepository {
-	return &MemoryPlayerRepository{players:make(map[PlayerID]Player)}
+	return &MemoryPlayerRepository{players: make(map[PlayerID]Player), nodes: make(map[string]GatheringNodeState)}
 }
 
 func (r *MemoryPlayerRepository) Create(_ context.Context, player Player) error {
