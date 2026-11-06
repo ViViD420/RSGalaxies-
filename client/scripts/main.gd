@@ -4,6 +4,12 @@ const PLAYER_SCENE := preload("res://scenes/player.tscn")
 
 var status_label: Label
 var inventory_label: Label
+var auth_panel: PanelContainer
+var auth_email_input: LineEdit
+var auth_password_input: LineEdit
+var auth_status_label: Label
+var logout_button: Button
+var auth_token := ""
 var api_request: HTTPRequest
 var movement_request: HTTPRequest
 var gather_request: HTTPRequest
@@ -11,6 +17,7 @@ var movement_timer: Timer
 var player_node: CharacterBody3D
 var player_id := ""
 var api_stage := "health"
+var auth_mode := "login"
 var movement_pending := false
 var interaction_pending := false
 var interaction_type := "gather"
@@ -175,6 +182,19 @@ func _build_hud() -> void:
 	inventory_label.text = "Inventory: empty"
 	column.add_child(inventory_label)
 
+	_build_auth_panel(layer)
+	logout_button = Button.new()
+	logout_button.text = "Sign out"
+	logout_button.anchor_left = 1.0
+	logout_button.anchor_right = 1.0
+	logout_button.offset_left = -118
+	logout_button.offset_top = 18
+	logout_button.offset_right = -18
+	logout_button.offset_bottom = 62
+	logout_button.visible = false
+	logout_button.pressed.connect(_logout)
+	layer.add_child(logout_button)
+
 	if DisplayServer.is_touchscreen_available():
 		_add_hold_button(layer, "▲", "move_forward", 95, -230, 165, -160)
 		_add_hold_button(layer, "◀", "move_left", 20, -155, 90, -85)
@@ -218,40 +238,59 @@ func _connect_api() -> void:
 		status_label.text = "Server: unavailable (start the Go world service)"
 
 func _on_api_request_completed(result: int, response_code: int, _headers: PackedStringArray, body: PackedByteArray) -> void:
-	if result != HTTPRequest.RESULT_SUCCESS or response_code != 200:
-		status_label.text = "Server: unavailable — world service did not respond"
+	if api_stage == "logout":
+		if result == HTTPRequest.RESULT_SUCCESS and response_code == 204:
+			auth_token = ""
+			player_id = ""
+			if movement_timer != null:
+				movement_timer.stop()
+			auth_panel.visible = true
+			logout_button.visible = false
+			status_label.text = "Server: signed out"
+			auth_status_label.text = "You have been signed out."
+		else:
+			status_label.text = "Sign out failed"
+		return
+	if result != HTTPRequest.RESULT_SUCCESS:
+		status_label.text = "Server: connection failed"
+		if auth_panel != null and auth_panel.visible:
+			auth_status_label.text = "Could not reach the world service."
 		return
 	var payload: Variant = JSON.parse_string(body.get_string_from_utf8())
-	if not payload is Dictionary:
-		status_label.text = "Server: invalid response"
-		return
-
 	if api_stage == "health":
-		if payload.get("status") != "ok":
+		if response_code != 200 or not payload is Dictionary or payload.get("status") != "ok":
 			status_label.text = "Server: unexpected health response"
 			return
-		api_stage = "create_player"
-		var error := api_request.request(
-			api_base_url + "/api/v1/players",
-			PackedStringArray(["Content-Type: application/json"]),
-			HTTPClient.METHOD_POST,
-			JSON.stringify({"name": "Wayfarer"})
-		)
-		if error != OK:
-			status_label.text = "Server: could not create development character"
-	elif api_stage == "create_player":
-		player_id = str(payload.get("id", ""))
-		if player_id.is_empty():
-			status_label.text = "Server: character creation returned no ID"
-			return
-		var spawn: Variant = payload.get("position", {})
-		if spawn is Dictionary:
-			_apply_server_position(spawn, true)
-		status_label.text = "Server: connected • character ready"
-		_update_inventory(payload.get("inventory", {}))
-		_start_movement_sync()
-		_start_gathering()
-
+		status_label.text = "Server: ready • sign in to continue"
+		auth_panel.visible = true
+		return
+	if not payload is Dictionary:
+		if auth_panel != null and auth_panel.visible:
+			auth_status_label.text = "Account service returned an invalid response."
+		return
+	if response_code < 200 or response_code >= 300:
+		var error_code := str(payload.get("error", "request_failed"))
+		if auth_panel != null and auth_panel.visible:
+			auth_status_label.text = "Account: " + error_code.replace("_", " ")
+		else:
+			status_label.text = "Account: " + error_code.replace("_", " ")
+		return
+	match api_stage:
+		"login", "register":
+			auth_token = str(payload.get("accessToken", ""))
+			if auth_token.is_empty():
+				auth_status_label.text = "Account service did not return a session."
+				return
+			auth_status_label.text = "Signed in • loading characters..."
+			_request_character_list()
+		"list_characters":
+			var characters: Variant = payload.get("characters", [])
+			if characters is Array and not characters.is_empty() and characters[0] is Dictionary:
+				_activate_character(characters[0])
+			else:
+				_create_account_character()
+		"create_character":
+			_activate_character(payload)
 func _start_movement_sync() -> void:
 	movement_request = HTTPRequest.new()
 	add_child(movement_request)
@@ -271,8 +310,8 @@ func _sync_player_position() -> void:
 		"z": player_node.global_position.z
 	})
 	var error := movement_request.request(
-		api_base_url + "/api/v1/players/" + player_id + "/move",
-		PackedStringArray(["Content-Type: application/json"]),
+		api_base_url + "/api/v1/account/characters/" + player_id + "/move",
+		PackedStringArray(["Content-Type: application/json", "Authorization: Bearer " + auth_token]),
 		HTTPClient.METHOD_POST,
 		body
 	)
@@ -306,8 +345,8 @@ func _request_interaction() -> void:
 		interaction_type = "craft"
 		status_label.text = "Using frontier workbench..."
 		error = gather_request.request(
-			api_base_url + "/api/v1/players/" + player_id + "/craft/basic-plank",
-			PackedStringArray(),
+			api_base_url + "/api/v1/account/characters/" + player_id + "/craft/basic-plank",
+			_api_headers(),
 			HTTPClient.METHOD_POST,
 			""
 		)
@@ -319,8 +358,8 @@ func _request_interaction() -> void:
 			return
 		interaction_type = "gather"
 		error = gather_request.request(
-			api_base_url + "/api/v1/players/" + player_id + "/gather/" + node_id,
-			PackedStringArray(),
+			api_base_url + "/api/v1/account/characters/" + player_id + "/gather/" + node_id,
+			_api_headers(),
 			HTTPClient.METHOD_POST,
 			""
 		)
@@ -339,7 +378,7 @@ func _on_gather_completed(result: int, response_code: int, _headers: PackedStrin
 		var error_code := str(payload.get("error", "gathering_failed"))
 		status_label.text = "Interaction: " + error_code.replace("_", " ")
 		return
-	var player_data: Dictionary = payload.get("player", {})
+	var player_data: Dictionary = payload.get("character", payload.get("player", {}))
 	if interaction_type == "craft":
 		var crafting: Dictionary = payload.get("crafting", {})
 		status_label.text = "Crafted Wooden Plank  •  +" + str(crafting.get("experience", 0)) + " Crafting XP"
@@ -372,3 +411,110 @@ func _apply_server_position(position_data: Dictionary, force: bool) -> void:
 func _unhandled_input(event: InputEvent) -> void:
 	if event is InputEventKey and event.pressed and event.keycode == KEY_ESCAPE:
 		Input.mouse_mode = Input.MOUSE_MODE_VISIBLE
+func _build_auth_panel(parent: CanvasLayer) -> void:
+	auth_panel = PanelContainer.new()
+	auth_panel.position = Vector2(18, 155)
+	auth_panel.custom_minimum_size = Vector2(360, 220)
+	parent.add_child(auth_panel)
+	var column := VBoxContainer.new()
+	auth_panel.add_child(column)
+	var title := Label.new()
+	title.text = "ACCOUNT SIGN IN"
+	title.add_theme_font_size_override("font_size", 18)
+	column.add_child(title)
+	auth_email_input = LineEdit.new()
+	auth_email_input.placeholder_text = "Email address"
+	auth_email_input.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	column.add_child(auth_email_input)
+	auth_password_input = LineEdit.new()
+	auth_password_input.placeholder_text = "Password (12+ characters)"
+	auth_password_input.secret = true
+	auth_password_input.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	column.add_child(auth_password_input)
+	var actions := HBoxContainer.new()
+	column.add_child(actions)
+	var login_button := Button.new()
+	login_button.text = "Login"
+	login_button.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	login_button.pressed.connect(func() -> void: _request_auth("login"))
+	actions.add_child(login_button)
+	var register_button := Button.new()
+	register_button.text = "Create account"
+	register_button.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	register_button.pressed.connect(func() -> void: _request_auth("register"))
+	actions.add_child(register_button)
+	auth_status_label = Label.new()
+	auth_status_label.text = "Sign in or create a new account."
+	auth_status_label.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+	column.add_child(auth_status_label)
+
+func _request_auth(mode: String) -> void:
+	if auth_email_input.text.strip_edges().is_empty() or auth_password_input.text.length() < 12:
+		auth_status_label.text = "Enter a valid email and a password of at least 12 characters."
+		return
+	auth_mode = mode
+	api_stage = mode
+	auth_status_label.text = "Connecting to account service..."
+	var body := JSON.stringify({"email": auth_email_input.text.strip_edges(), "password": auth_password_input.text})
+	var error := api_request.request(
+		api_base_url + "/api/v1/auth/" + mode,
+		PackedStringArray(["Content-Type: application/json"]),
+		HTTPClient.METHOD_POST,
+		body
+	)
+	if error != OK:
+		auth_status_label.text = "Could not send account request."
+
+func _api_headers() -> PackedStringArray:
+	return PackedStringArray(["Authorization: Bearer " + auth_token])
+
+func _logout() -> void:
+	if auth_token.is_empty():
+		return
+	api_stage = "logout"
+	var error := api_request.request(
+		api_base_url + "/api/v1/auth/logout",
+		_api_headers(),
+		HTTPClient.METHOD_POST,
+		""
+	)
+	if error != OK:
+		status_label.text = "Sign out failed; try again."
+
+func _activate_character(character_data: Dictionary) -> void:
+	player_id = str(character_data.get("id", ""))
+	if player_id.is_empty():
+		status_label.text = "Account: character response had no ID"
+		return
+	var spawn: Variant = character_data.get("position", {})
+	if spawn is Dictionary:
+		_apply_server_position(spawn, true)
+	status_label.text = "Server: connected • account character ready"
+	_update_inventory(character_data.get("inventory", {}))
+	auth_panel.visible = false
+	logout_button.visible = true
+	_start_movement_sync()
+	_start_gathering()
+
+func _request_character_list() -> void:
+	api_stage = "list_characters"
+	var error := api_request.request(
+		api_base_url + "/api/v1/account/characters",
+		_api_headers(),
+		HTTPClient.METHOD_GET
+	)
+	if error != OK:
+		auth_status_label.text = "Could not load account characters."
+
+func _create_account_character() -> void:
+	api_stage = "create_character"
+	var error := api_request.request(
+		api_base_url + "/api/v1/account/characters",
+		PackedStringArray(["Content-Type: application/json", "Authorization: Bearer " + auth_token]),
+		HTTPClient.METHOD_POST,
+		JSON.stringify({"name": "Wayfarer"})
+	)
+	if error != OK:
+		auth_status_label.text = "Could not create a character."
+
+
