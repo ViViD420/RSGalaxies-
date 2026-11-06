@@ -384,3 +384,41 @@ func (r *AccountRepository) UseItemForAccount(ctx context.Context,accountID stri
 	if err:=tx.Commit();err!=nil{return game.Player{},0,fmt.Errorf("commit item use: %w",err)}
 	return player,healed,nil
 }
+
+func (r *AccountRepository) HeartbeatPresenceForAccount(ctx context.Context,accountID string,id game.PlayerID,now time.Time) error {
+	tx,err:=r.db.BeginTx(ctx,nil);if err!=nil{return err};defer tx.Rollback()
+	player,err:=r.lockOwnedPlayer(ctx,tx,accountID,id);if err!=nil{return err}
+	_,err=tx.ExecContext(ctx,`INSERT INTO zone_presence(character_id,account_id,zone_id,position_x,position_z,last_seen_at)
+		VALUES($1,$2,$3,$4,$5,$6)
+		ON CONFLICT(character_id) DO UPDATE SET account_id=EXCLUDED.account_id,zone_id=EXCLUDED.zone_id,
+		position_x=EXCLUDED.position_x,position_z=EXCLUDED.position_z,last_seen_at=EXCLUDED.last_seen_at`,
+		string(player.ID),accountID,player.Position.ZoneID,player.Position.X,player.Position.Z,now.UTC())
+	if err!=nil{return fmt.Errorf("upsert character presence: %w",err)}
+	if _,err:=tx.ExecContext(ctx,`DELETE FROM zone_presence WHERE last_seen_at < $1`,now.UTC().Add(-5*time.Minute));err!=nil{return fmt.Errorf("prune stale character presence: %w",err)}
+	if err:=tx.Commit();err!=nil{return fmt.Errorf("commit character presence: %w",err)}
+	return nil
+}
+
+func (r *AccountRepository) ListZonePresenceForAccount(ctx context.Context,accountID string,id game.PlayerID,now time.Time)([]game.RemotePlayer,error){
+	var zoneID string
+	err:=r.db.QueryRowContext(ctx,`SELECT zone_id FROM players WHERE account_id=$1 AND id=$2`,accountID,string(id)).Scan(&zoneID)
+	if errors.Is(err,sql.ErrNoRows){return nil,game.ErrPlayerNotFound}
+	if err!=nil{return nil,fmt.Errorf("resolve presence zone: %w",err)}
+	rows,err:=r.db.QueryContext(ctx,`SELECT players.id,players.name,zone_presence.zone_id,zone_presence.position_x,zone_presence.position_z,zone_presence.last_seen_at
+		FROM players JOIN zone_presence ON zone_presence.character_id=players.id
+		WHERE zone_presence.zone_id=$1 AND zone_presence.character_id<>$2
+		AND zone_presence.last_seen_at>$3
+		ORDER BY zone_presence.last_seen_at DESC,players.id ASC LIMIT $4`,
+		zoneID,string(id),now.UTC().Add(-game.PresenceLease),game.MaxZonePresence)
+	if err!=nil{return nil,fmt.Errorf("list active zone presence: %w",err)}
+	defer rows.Close()
+	result:=make([]game.RemotePlayer,0)
+	for rows.Next(){
+		var remote game.RemotePlayer
+		if err:=rows.Scan(&remote.CharacterID,&remote.Name,&remote.ZoneID,&remote.X,&remote.Z,&remote.LastSeenAt);err!=nil{return nil,fmt.Errorf("scan remote character presence: %w",err)}
+		remote.LastSeenAt=remote.LastSeenAt.UTC()
+		result=append(result,remote)
+	}
+	if err:=rows.Err();err!=nil{return nil,fmt.Errorf("iterate zone presence: %w",err)}
+	return result,nil
+}
