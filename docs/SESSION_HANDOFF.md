@@ -28,14 +28,14 @@ An original sandbox MMORPG combining long-form skill progression and item gamepl
 
 ### Client
 - Godot 4.3 prototype in client/.
-- Procedurally generated test floor, placeholder character, third-person orbit camera and WASD/jump movement.
+- Procedurally generated test floor, placeholder character, third-person orbit camera, keyboard movement and touchscreen D-pad/jump controls; touch drag or mouse controls the camera.
 - Startup HTTP health check against the Go service.
-- Headless Godot validation workflow.
+- Headless Godot validation and Web export workflow.
 - This is a movement/API proof of concept, not a final client or a network-authoritative character controller.
 
 ### Development environment
 - .devcontainer/ configures a GitHub Codespaces Go workspace.
-- .devcontainer/setup.sh installs Godot 4.3 and export templates, then runs Go tests/vet and a headless Godot project import.
+- .devcontainer/setup.sh installs Godot 4.3 and export templates, then runs Go tests/vet, a headless Godot import and a Web export. .devcontainer/start.sh launches the Go API and exported browser prototype automatically on Codespaces startup. Ports 8000 and 8080 are forwarded; the client derives the API port from the Codespaces hostname and the development API enables CORS.
 - User can edit files in GitHub/Codespaces through a browser; no local PC installation is required for repository work.
 
 ## Limits and decisions
@@ -49,7 +49,7 @@ An original sandbox MMORPG combining long-form skill progression and item gamepl
 ## Next engineering tasks
 
 1. Inspect GitHub Actions results and fix any Go/Godot build failures.
-2. Add a browser-playable Godot web export and phone-friendly input controls.
+2. Validate the auto-launched browser build on a real phone and refine touch controls and camera feel.
 3. Implement world zones, server-owned coordinates, spawn points and validated movement.
 4. Add PostgreSQL schema/migrations and transactional player persistence.
 5. Replace development XP awards with validated gathering, crafting and combat actions.
