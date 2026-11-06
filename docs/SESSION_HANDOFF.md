@@ -21,8 +21,8 @@ An original sandbox MMORPG combining long-form skill progression and item gamepl
 - Ten skills, level 1–99, cumulative XP curve and 200,000,000 XP cap.
 - Defensive in-memory repository copies and concurrency-safe experience awards.
 - Starter zone, spawn point, server-time movement validation and world bounds.
-- Tree and stone gathering nodes with range checks, charges, respawn and atomic inventory/XP rewards.
-- Starter workbench and basic plank recipe; crafting validates range, level, ingredients and stack capacity.
+- Tree, stone and copper gathering nodes with range checks, charges, respawn and atomic inventory/XP rewards.
+- Starter workbench and forge; recipes cover basic planks, copper smelting and a crafted training sword. Crafting validates range, skill level, ingredients and output stack capacity.
 - Player inventory, 100-slot bank storage, coin wallet and persistent equipment slots. New characters start with 100 coins.
 - Starter merchant catalog with server-defined buy/sell prices. Buy/sell operations update coins and inventory atomically.
 - PostgreSQL migrations 0001–0005 cover player state, gathering, accounts/sessions, character ownership, bank storage, currency and equipment.
