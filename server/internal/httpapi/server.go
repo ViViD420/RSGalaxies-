@@ -101,9 +101,9 @@ func (s *Server) movePlayer(w http.ResponseWriter, r *http.Request) {
 		case errors.Is(err, game.ErrPlayerNotFound):
 			writeError(w, http.StatusNotFound, "player_not_found")
 		case errors.Is(err, game.ErrMovementTooFast):
-			writeError(w, http.StatusUnprocessableEntity, "movement_too_fast")
+			writeJSON(w, http.StatusUnprocessableEntity, map[string]any{"error": "movement_too_fast", "position": player.Position})
 		case errors.Is(err, game.ErrOutsideWorld):
-			writeError(w, http.StatusUnprocessableEntity, "outside_world_bounds")
+			writeJSON(w, http.StatusUnprocessableEntity, map[string]any{"error": "outside_world_bounds", "position": player.Position})
 		case errors.Is(err, game.ErrInvalidMovement), errors.Is(err, game.ErrUnknownWorldZone):
 			writeError(w, http.StatusUnprocessableEntity, "invalid_movement")
 		default:
