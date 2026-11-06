@@ -319,3 +319,18 @@ func TestAuthenticatedCharacterLifecycleAndOwnership(t *testing.T) {
 func mustParseTestURL(path string)*url.URL{
 	parsed,err:=url.Parse(path);if err!=nil{panic(err)};return parsed
 }
+
+func (s *testCharacterStore) AwardExperienceForAccount(_ context.Context, accountID string, id game.PlayerID, skill string, amount int) (game.Player,bool,error) {
+ player,ok:=s.players[accountID][id];if !ok{return game.Player{},false,game.ErrPlayerNotFound}
+ leveled,err:=player.AwardExperience(skill,amount);if err!=nil{return game.Player{},false,err};s.players[accountID][id]=player;return player,leveled,nil
+}
+func (s *testCharacterStore) MovePlayerForAccount(_ context.Context, accountID string, id game.PlayerID, x,z float64, now time.Time)(game.Player,error){
+ player,ok:=s.players[accountID][id];if !ok{return game.Player{},game.ErrPlayerNotFound}
+ if err:=player.MoveTo(x,z,now);err!=nil{return player,err};s.players[accountID][id]=player;return player,nil
+}
+func (s *testCharacterStore) GatherForAccount(_ context.Context, accountID string, id game.PlayerID, node string, now time.Time)(game.Player,game.GatheringResult,error){
+ return game.Player{},game.GatheringResult{},game.ErrPlayerNotFound
+}
+func (s *testCharacterStore) CraftForAccount(_ context.Context, accountID string, id game.PlayerID, recipe string, now time.Time)(game.Player,game.CraftingResult,error){
+ return game.Player{},game.CraftingResult{},game.ErrPlayerNotFound
+}
