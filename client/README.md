@@ -10,7 +10,7 @@ Open this folder in Godot 4.3 or newer and run the main scene.
 - Mouse: orbit camera; Escape releases the cursor.
 - Touchscreen: on-screen directional pad and jump button; drag to orbit the camera.
 
-The client checks GET http://127.0.0.1:8080/healthz on startup. Start the Go development server from the server folder first. Change api_base_url in scripts/main.gd if the server is hosted at a different address.
+On startup the client checks the Go API, creates a development character, and synchronizes horizontal movement every 200 ms. The server validates movement against elapsed server time, maximum speed and zone bounds. When running as a Codespaces Web build, the client derives the forwarded API origin automatically. In a local native run, start the Go server on port 8080 first; change api_base_url in scripts/main.gd if it uses a different address.
 
 A Web export preset is included in export_presets.cfg. The Codespaces setup installs Godot 4.3 and its export templates so a browser build can be produced from the hosted workspace.
 
