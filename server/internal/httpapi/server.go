@@ -36,6 +36,7 @@ type characterStore interface {
 	RestForAccount(context.Context, string, game.PlayerID) (game.Player, error)
 	SendLocalChatForAccount(context.Context, string, game.PlayerID, string, time.Time) (game.ChatMessage, error)
 	ListLocalChatForAccount(context.Context, string, game.PlayerID, int64, int) ([]game.ChatMessage, error)
+	UseItemForAccount(context.Context, string, game.PlayerID, string) (game.Player, int, error)
 }
 
 type authAttemptWindow struct { started time.Time; count int }
@@ -104,6 +105,7 @@ func (s *Server) Routes() http.Handler {
 		mux.HandleFunc("POST /api/v1/account/characters/{id}/rest", s.restOwnedCharacter)
 		mux.HandleFunc("GET /api/v1/account/characters/{id}/chat/local", s.listOwnedLocalChat)
 		mux.HandleFunc("POST /api/v1/account/characters/{id}/chat/local", s.sendOwnedLocalChat)
+		mux.HandleFunc("POST /api/v1/account/characters/{id}/inventory/use/{itemID}", s.useOwnedItem)
 	}
 	return securityHeaders(mux)
 }
@@ -719,4 +721,21 @@ func (s *Server) sendOwnedLocalChat(w http.ResponseWriter,r *http.Request) {
 		return
 	}
 	writeJSON(w,201,map[string]any{"message":message})
+}
+
+func (s *Server) useOwnedItem(w http.ResponseWriter,r *http.Request) {
+	account,_,ok:=s.authenticatedAccount(w,r);if !ok{return}
+	player,healed,err:=s.characters.UseItemForAccount(r.Context(),account.ID,game.PlayerID(strings.TrimSpace(r.PathValue("id"))),r.PathValue("itemID"))
+	if err!=nil{
+		switch{
+		case errors.Is(err,game.ErrPlayerNotFound):writeError(w,404,"character_not_found")
+		case errors.Is(err,game.ErrPlayerDefeated):writeError(w,409,"player_defeated")
+		case errors.Is(err,game.ErrItemNotUsable):writeError(w,422,"item_not_usable")
+		case errors.Is(err,game.ErrInsufficientItems):writeError(w,409,"item_not_in_inventory")
+		case errors.Is(err,game.ErrHealthFull):writeError(w,409,"health_full")
+		default:log.Printf("use item for owned character: %v",err);writeError(w,500,"internal_error")
+		}
+		return
+	}
+	writeJSON(w,200,map[string]any{"character":player,"healed":healed,"health":player.Health,"inventory":player.Inventory})
 }
