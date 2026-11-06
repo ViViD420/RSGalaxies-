@@ -23,15 +23,15 @@ type executor interface {
 	ExecContext(ctx context.Context, query string, args ...any) (sql.Result, error)
 }
 
-const playerColumns = "id, name, created_at, skills, inventory, bank, coins, zone_id, position_x, position_z, last_move_at"
+const playerColumns = "id, name, created_at, skills, inventory, bank, coins, equipment, zone_id, position_x, position_z, last_move_at"
 
 func scanPlayer(row scanner) (game.Player, error) {
 	var id, name, zoneID string
 	var createdAt, lastMoveAt time.Time
-	var skillsJSON, inventoryJSON, bankJSON []byte
+	var skillsJSON, inventoryJSON, bankJSON, equipmentJSON []byte
 	var x, z float64
 	var coins int64
-	if err := row.Scan(&id, &name, &createdAt, &skillsJSON, &inventoryJSON, &bankJSON, &coins, &zoneID, &x, &z, &lastMoveAt); err != nil {
+	if err := row.Scan(&id, &name, &createdAt, &skillsJSON, &inventoryJSON, &bankJSON, &coins, &equipmentJSON, &zoneID, &x, &z, &lastMoveAt); err != nil {
 		if errors.Is(err, sql.ErrNoRows) { return game.Player{}, game.ErrPlayerNotFound }
 		return game.Player{}, fmt.Errorf("scan player: %w", err)
 	}
@@ -43,9 +43,11 @@ func scanPlayer(row scanner) (game.Player, error) {
 	if err := json.Unmarshal(skillsJSON, &player.Skills); err != nil { return game.Player{}, fmt.Errorf("decode player skills: %w", err) }
 	if err := json.Unmarshal(inventoryJSON, &player.Inventory); err != nil { return game.Player{}, fmt.Errorf("decode player inventory: %w", err) }
 	if err := json.Unmarshal(bankJSON, &player.Bank); err != nil { return game.Player{}, fmt.Errorf("decode player bank: %w", err) }
+	if err := json.Unmarshal(equipmentJSON, &player.Equipment); err != nil { return game.Player{}, fmt.Errorf("decode player equipment: %w", err) }
 	if player.Skills == nil { player.Skills = make(map[string]game.SkillProgress) }
 	if player.Inventory == nil { player.Inventory = make(map[string]int) }
 	if player.Bank == nil { player.Bank = make(map[string]int) }
+	if player.Equipment == nil { player.Equipment = make(map[string]string) }
 	return player, nil
 }
 
@@ -56,10 +58,12 @@ func (r *PlayerRepository) Create(ctx context.Context, player game.Player) error
 	if err != nil { return fmt.Errorf("encode inventory: %w", err) }
 	bank, err := json.Marshal(player.Bank)
 	if err != nil { return fmt.Errorf("encode bank: %w", err) }
+	equipment, err := json.Marshal(player.Equipment)
+	if err != nil { return fmt.Errorf("encode equipment: %w", err) }
 	_, err = r.db.ExecContext(ctx, `INSERT INTO players
-		(id, name, created_at, skills, inventory, bank, coins, zone_id, position_x, position_z, last_move_at)
-		VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11)`,
-		string(player.ID), player.Name, player.CreatedAt, string(skills), string(inventory), string(bank), player.Coins,
+		(id, name, created_at, skills, inventory, bank, coins, equipment, zone_id, position_x, position_z, last_move_at)
+		VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12)`,
+		string(player.ID), player.Name, player.CreatedAt, string(skills), string(inventory), string(bank), player.Coins, string(equipment),
 		player.Position.ZoneID, player.Position.X, player.Position.Z, player.LastMoveAt)
 	if err != nil {
 		var pgErr *pgconn.PgError
@@ -96,9 +100,11 @@ func updatePlayer(ctx context.Context, exec executor, player game.Player) error 
 	if err != nil { return fmt.Errorf("encode inventory: %w", err) }
 	bank, err := json.Marshal(player.Bank)
 	if err != nil { return fmt.Errorf("encode bank: %w", err) }
-	_, err = exec.ExecContext(ctx, `UPDATE players SET skills=$2, inventory=$3, bank=$4, coins=$5, zone_id=$6,
-		position_x=$7, position_z=$8, last_move_at=$9 WHERE id=$1`,
-		string(player.ID), string(skills), string(inventory), string(bank), player.Coins, player.Position.ZoneID,
+	equipment, err := json.Marshal(player.Equipment)
+	if err != nil { return fmt.Errorf("encode equipment: %w", err) }
+	_, err = exec.ExecContext(ctx, `UPDATE players SET skills=$2, inventory=$3, bank=$4, coins=$5, equipment=$6, zone_id=$7,
+		position_x=$8, position_z=$9, last_move_at=$10 WHERE id=$1`,
+		string(player.ID), string(skills), string(inventory), string(bank), player.Coins, string(equipment), player.Position.ZoneID,
 		player.Position.X, player.Position.Z, player.LastMoveAt)
 	if err != nil { return fmt.Errorf("update player: %w", err) }
 	return nil
