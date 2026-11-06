@@ -32,7 +32,7 @@ An original sandbox MMORPG combining long-form skill progression and item gamepl
 - Authenticated routes cover login/register/logout/me, character list/create/read, skills/XP, movement, gathering, crafting, bank deposits/withdrawals, merchant trades, equipment equip/unequip, combat attacks, safe-spawn rest, local zone chat and account-scoped zone presence.
 - Legacy unscoped player-ID and development mutation routes remain disabled in production. Production registration is disabled unless explicitly enabled.
 - Auth routes have per-process IP/path throttling with bounded key memory. Production CORS uses an exact-origin allowlist. Security response headers and no-store responses are applied.
-- Public catalog routes include skills, world zones, gathering nodes, crafting stations and recipes, items, enemy spawns and merchant prices. `GET /api/v1/world/catalog` returns the complete world definition set in one bootstrap response. `GET /api/v1/world/catalog` returns these definitions in one bounded bootstrap response to reduce client startup round trips.
+- Public catalog routes include skills, world zones, gathering nodes, crafting stations and recipes, items, enemy spawns and merchant prices. `GET /api/v1/world/catalog` returns the complete world definition set in one bounded bootstrap response to reduce client startup round trips.
 - `/healthz` is a dependency-independent liveness probe; `/readyz` performs a bounded two-second PostgreSQL ping and returns a generic 503 on dependency failure.
 - Zone presence uses a 20-second lease, account-owned heartbeat upserts, stale-entry cleanup, a 100-character roster cap and privacy-limited snapshots that never expose account IDs.
 
@@ -58,7 +58,7 @@ An original sandbox MMORPG combining long-form skill progression and item gamepl
 - .devcontainer/ provides a GitHub Codespaces Go/Godot/PostgreSQL workspace with separate development and integration-test databases.
 - Codespaces setup installs Godot 4.3 and export templates, runs race-enabled Go tests, go vet, headless project import and Web export.
 - .env.example contains local-only sample settings; docs/API.md, docs/ACCOUNT_AUTH_DESIGN.md, docs/DEPLOYMENT.md, docs/COMBAT.md, docs/CHAT.md, docs/PRESENCE.md, docs/PLAYER_TRADE_DESIGN.md and refreshed docs/ARCHITECTURE.md describe routes, security boundaries, deployment, gameplay rules and escrow-safe trade requirements.
-- Go server CI runs race-enabled unit/integration tests against PostgreSQL and go vet. Server run #263 passed after the production-route comment cleanup; run #262 passed presence persistence, privacy, heartbeat write-coalescing and account-scoped roster tests. Run #268 exposed a stale public market-catalog test expectation after the herbal items were added; commit 8c0a7fb updates that assertion. Runs #269–#274 are validating the catalog correction, herbal foraging/crafting additions, password-policy enforcement and coalesced session activity writes. Runs #260–#263 passed. Server runs #245–#253 passed chat-history, readiness and rate-limiter hardening.
+- Go server CI runs race-enabled unit/integration tests against PostgreSQL and go vet. Runs #278–#283 passed the password-policy test correction, migration-009 escrow constraints, catalog/crafting validations and current server checks. Runs #284–#291 are validating the latest player-trade schema/domain rules and aggregate crafting invariants. Runs #260–#263 passed presence persistence, privacy, heartbeat write-coalescing and account-scoped roster tests. Runs #245–#253 passed chat-history, readiness and rate-limiter hardening.
 - Godot client CI uses the official Godot 4.3 release and export templates. Client run #97 passed the consolidated world-catalog startup path; runs #89–#96 passed data-driven gathering/station visuals, foraging, presence, inventory search/sort and bounded HTTP timeouts/redirect-safe requests.
 
 ## Production safeguards and remaining launch gates
@@ -74,9 +74,9 @@ An original sandbox MMORPG combining long-form skill progression and item gamepl
 
 ## Next engineering tasks
 
-1. Finish validating server runs #269–#274, including the new account-auth and session-write optimizations; then build reconnect recovery and authoritative remote-player movement snapshots.
-2. Implement the escrow-safe player-to-player trade lifecycle from `docs/PLAYER_TRADE_DESIGN.md`, then add a real-phone pass on the Godot Web client.
-3. Add email verification, password recovery, MFA, distributed abuse controls and administrative account operations before enabling public registration.
+1. Finish validating server runs #284–#291, including escrow schema constraints, trade-offer validation and aggregate crafting invariants.
+2. Implement account-scoped trade invite/accept, escrow offer updates, two-sided confirmation, settlement and cancellation using `docs/PLAYER_TRADE_DESIGN.md`; add concurrency and restart-recovery integration tests before enabling routes.
+3. Add reconnect recovery and authoritative remote-player movement snapshots, then complete a real-phone pass on the Godot Web client.
 4. Add unique item instances/durability, combat animations/AI, currency sinks and player-to-player trade with escrow/transaction safety.
 5. Expand professions, gathering tiers, recipes, NPCs, combat, housing and settlements.
 6. Plan remote-player replication and scalable world/zone ownership.
