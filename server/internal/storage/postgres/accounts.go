@@ -62,7 +62,6 @@ func (r *AccountRepository) Register(ctx context.Context, email, password string
 	token, tokenHash, err := auth.NewSessionToken()
 	if err != nil { return auth.Account{}, "", err }
 	now = now.UTC()
-	expires := now.Add(SessionLifetime)
 
 	tx, err := r.db.BeginTx(ctx, nil)
 	if err != nil { return auth.Account{}, "", fmt.Errorf("begin account registration: %w", err) }
