@@ -85,6 +85,8 @@ var trade_update_button: Button
 var trade_confirm_button: Button
 var trade_cancel_button: Button
 var trade_request: HTTPRequest
+var trade_refresh_request: HTTPRequest
+var trade_refresh_pending := false
 var trade_poll_timer: Timer
 var trade_pending := false
 var trade_action := "poll"
@@ -1803,7 +1805,15 @@ func _stop_trade_polling() -> void:
 		trade_request.queue_free()
 		trade_request = null
 	trade_pending = false
+	if trade_refresh_request != null:
+		if trade_refresh_request.get_http_client_status() != HTTPClient.STATUS_DISCONNECTED:
+			trade_refresh_request.cancel_request()
+		trade_refresh_request.queue_free()
+		trade_refresh_request = null
+	trade_refresh_pending = false
 	current_trade.clear()
+	if trade_panel != null:
+		trade_panel.visible = false
 	if trade_button != null:
 		trade_button.text = "Trade"
 	if trade_status_label != null:
@@ -2023,10 +2033,42 @@ func _on_trade_request_completed(result: int, response_code: int, _headers: Pack
 		return
 	current_trade = payload
 	_render_trade_snapshot()
+	var completed_status := str(current_trade.get("status", ""))
+	if completed_status == "completed" or completed_status == "cancelled" or completed_status == "expired":
+		_refresh_character_after_trade()
 	if trade_button != null and str(current_trade.get("status", "")) == "pending":
 		trade_button.text = "Trade • 1"
 	elif trade_button != null:
 		trade_button.text = "Trade"
+
+
+func _refresh_character_after_trade() -> void:
+	if player_id.is_empty() or trade_refresh_pending:
+		return
+	if trade_refresh_request == null:
+		trade_refresh_request = _new_api_request()
+		add_child(trade_refresh_request)
+		trade_refresh_request.request_completed.connect(_on_trade_character_refreshed)
+	var url := api_base_url + "/api/v1/account/characters/" + player_id
+	var error := trade_refresh_request.request(url, _api_headers())
+	if error == OK:
+		trade_refresh_pending = true
+
+
+func _on_trade_character_refreshed(result: int, response_code: int, _headers: PackedStringArray, body: PackedByteArray) -> void:
+	trade_refresh_pending = false
+	if player_id.is_empty():
+		return
+	if response_code == 401:
+		_expire_session()
+		return
+	if result != HTTPRequest.RESULT_SUCCESS or response_code != 200:
+		return
+	var payload: Variant = JSON.parse_string(body.get_string_from_utf8())
+	if not payload is Dictionary:
+		return
+	_update_inventory(payload.get("inventory", {}), payload.get("bank", {}), payload.get("coins", current_coins), payload.get("equipment", {}), payload.get("health", current_health))
+	_refresh_trade_items()
 
 
 func _render_trade_snapshot() -> void:
