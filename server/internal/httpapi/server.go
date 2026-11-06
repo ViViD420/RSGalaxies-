@@ -44,6 +44,7 @@ type characterStore interface {
 	UpdateTradeOfferForAccount(context.Context, string, game.PlayerID, string, int64, game.TradeOffer, time.Time) (game.TradeSnapshot, error)
 	ConfirmTradeForAccount(context.Context, string, game.PlayerID, string, int64, time.Time) (game.TradeSnapshot, error)
 	CancelTradeForAccount(context.Context, string, game.PlayerID, string, time.Time) (game.TradeSnapshot, error)
+	GetActiveTradeForAccount(context.Context, string, game.PlayerID, time.Time) (game.TradeSnapshot, error)
 	GetTradeForAccount(context.Context, string, string) (game.TradeSnapshot, error)
 	UpdateTradeOfferForAccount(context.Context, string, game.PlayerID, string, int64, game.TradeOffer, time.Time) (game.TradeSnapshot, error)
 	ConfirmTradeForAccount(context.Context, string, game.PlayerID, string, int64, time.Time) (game.TradeSnapshot, error)
@@ -129,6 +130,7 @@ func (s *Server) Routes() http.Handler {
 		mux.HandleFunc("POST /api/v1/account/characters/{id}/trades/{tradeID}/offer", s.updateOwnedTradeOffer)
 		mux.HandleFunc("POST /api/v1/account/characters/{id}/trades/{tradeID}/confirm", s.confirmOwnedTrade)
 		mux.HandleFunc("POST /api/v1/account/characters/{id}/trades/{tradeID}/cancel", s.cancelOwnedTrade)
+		mux.HandleFunc("GET /api/v1/account/characters/{id}/trades/active", s.getActiveOwnedTrade)
 		mux.HandleFunc("GET /api/v1/account/trades/{tradeID}", s.getOwnedTrade)
 		mux.HandleFunc("PUT /api/v1/account/characters/{id}/trades/{tradeID}/offer", s.updateOwnedTradeOffer)
 		mux.HandleFunc("POST /api/v1/account/characters/{id}/trades/{tradeID}/confirm", s.confirmOwnedTrade)
@@ -962,4 +964,18 @@ func writeTradeError(w http.ResponseWriter,err error,operation string) {
 	case errors.Is(err,game.ErrInvalidTradeOffer):writeError(w,http.StatusUnprocessableEntity,"invalid_trade_offer")
 	default:log.Printf("%s: %v",operation,err);writeError(w,http.StatusInternalServerError,"internal_error")
 	}
+}
+
+
+func (s *Server) getActiveOwnedTrade(w http.ResponseWriter,r *http.Request) {
+	account,_,ok:=s.authenticatedAccount(w,r);if !ok{return}
+	trade,err:=s.characters.GetActiveTradeForAccount(r.Context(),account.ID,game.PlayerID(strings.TrimSpace(r.PathValue("id"))),s.now())
+	if err!=nil{
+		switch {
+		case errors.Is(err,game.ErrTradeNotFound),errors.Is(err,game.ErrPlayerNotFound):writeError(w,404,"active_trade_not_found")
+		default:log.Printf("get active trade: %v",err);writeError(w,500,"internal_error")
+		}
+		return
+	}
+	writeJSON(w,http.StatusOK,trade)
 }
