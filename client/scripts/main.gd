@@ -244,6 +244,8 @@ func _on_api_request_completed(result: int, response_code: int, _headers: Packed
 			player_id = ""
 			if movement_timer != null:
 				movement_timer.stop()
+			movement_pending = false
+			interaction_pending = false
 			auth_panel.visible = true
 			logout_button.visible = false
 			status_label.text = "Server: signed out"
@@ -322,6 +324,9 @@ func _on_movement_completed(result: int, response_code: int, _headers: PackedStr
 	movement_pending = false
 	if result != HTTPRequest.RESULT_SUCCESS:
 		return
+	if response_code == 401:
+		_expire_session()
+		return
 	var payload: Variant = JSON.parse_string(body.get_string_from_utf8())
 	if not payload is Dictionary:
 		return
@@ -370,6 +375,9 @@ func _on_gather_completed(result: int, response_code: int, _headers: PackedStrin
 	interaction_pending = false
 	if result != HTTPRequest.RESULT_SUCCESS:
 		status_label.text = "Gathering: server connection lost"
+		return
+	if response_code == 401:
+		_expire_session()
 		return
 	var payload: Variant = JSON.parse_string(body.get_string_from_utf8())
 	if not payload is Dictionary:
@@ -518,3 +526,15 @@ func _create_account_character() -> void:
 		auth_status_label.text = "Could not create a character."
 
 
+
+func _expire_session() -> void:
+	auth_token = ""
+	player_id = ""
+	movement_pending = false
+	interaction_pending = false
+	if movement_timer != null:
+		movement_timer.stop()
+	auth_panel.visible = true
+	logout_button.visible = false
+	status_label.text = "Server: session expired"
+	auth_status_label.text = "Your session expired. Please sign in again."
