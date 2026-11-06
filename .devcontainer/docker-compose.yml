@@ -1,0 +1,32 @@
+services:
+  workspace:
+    image: mcr.microsoft.com/devcontainers/go:1-1.23-bookworm
+    command: sleep infinity
+    volumes:
+      - ..:/workspaces/rs-galaxies:cached
+    environment:
+      RS_GALAXIES_ENV: development
+      RS_GALAXIES_DATABASE_URL: postgres://rsgalaxies:rsgalaxies-dev-only@db:5432/rsgalaxies?sslmode=disable
+      RS_GALAXIES_TEST_DATABASE_URL: postgres://rsgalaxies:rsgalaxies-dev-only@db:5432/rsgalaxies_test?sslmode=disable
+    depends_on:
+      db:
+        condition: service_healthy
+
+  db:
+    image: postgres:16
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: rsgalaxies
+      POSTGRES_PASSWORD: rsgalaxies-dev-only
+      POSTGRES_DB: rsgalaxies
+    volumes:
+      - postgres-data:/var/lib/postgresql/data
+      - ./db-init:/docker-entrypoint-initdb.d:ro
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U rsgalaxies -d rsgalaxies"]
+      interval: 5s
+      timeout: 5s
+      retries: 12
+
+volumes:
+  postgres-data:
