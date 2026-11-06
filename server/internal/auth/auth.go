@@ -4,6 +4,7 @@ package auth
 
 import (
 	"context"
+	"errors"
 	"time"
 	"crypto/hmac"
 	"crypto/rand"
@@ -25,6 +26,11 @@ const (
 )
 
 var (
+	ErrAccountExists = errors.New("account already exists")
+	ErrAccountNotFound = errors.New("account not found")
+	ErrInvalidCredentials = errors.New("invalid email or password")
+	ErrInvalidEmail = errors.New("invalid email address")
+	ErrSessionNotFound = errors.New("session not found or expired")
 	ErrInvalidPassword = errors.New("password must contain 12-1024 bytes")
 	ErrInvalidHash     = errors.New("invalid password hash")
 )
@@ -121,9 +127,9 @@ func pbkdf2SHA256(password, salt []byte, iterations, keyLength int) []byte {
 
 
 type Account struct {
-	ID string
-	Email string
-	CreatedAt time.Time
+	ID string `json:"id"`
+	Email string `json:"email"`
+	CreatedAt time.Time `json:"createdAt"`
 }
 
 type AccountStore interface {
