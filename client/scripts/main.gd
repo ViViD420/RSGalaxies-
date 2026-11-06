@@ -110,6 +110,8 @@ func _build_world() -> void:
 	_add_workbench(Vector3(0.0, 0.0, 4.0))
 	_add_bank_chest(Vector3(0.0, 0.0, -4.0))
 	_add_merchant_stall(Vector3(4.0, 0.0, 0.0))
+	_add_copper_vein(Vector3(0.0, 0.0, -8.0))
+	_add_forge(Vector3(0.0, 0.0, 8.0))
 
 	player_node = PLAYER_SCENE.instantiate() as CharacterBody3D
 	player_node.position = Vector3(0.0, 0.05, 0.0)
@@ -166,6 +168,64 @@ func _add_workbench(at: Vector3) -> void:
 	add_child(bench)
 
 
+
+
+func _add_copper_vein(at: Vector3) -> void:
+	var deposit := Node3D.new()
+	deposit.position = at
+	var rock_material := StandardMaterial3D.new()
+	rock_material.albedo_color = Color(0.30, 0.32, 0.30)
+	var copper_material := StandardMaterial3D.new()
+	copper_material.albedo_color = Color(0.70, 0.34, 0.16)
+	for index in range(4):
+		var rock := MeshInstance3D.new()
+		var mesh := SphereMesh.new()
+		mesh.radius = 0.45 + float(index % 2) * 0.12
+		mesh.height = mesh.radius * 1.6
+		rock.mesh = mesh
+		rock.position = Vector3(float(index % 2) * 0.55 - 0.25, 0.32, float(index / 2) * 0.5 - 0.25)
+		rock.material_override = rock_material
+		deposit.add_child(rock)
+	var ore := MeshInstance3D.new()
+	var ore_mesh := SphereMesh.new()
+	ore_mesh.radius = 0.23
+	ore_mesh.height = 0.5
+	ore.mesh = ore_mesh
+	ore.position = Vector3(0.0, 0.55, -0.2)
+	ore.material_override = copper_material
+	deposit.add_child(ore)
+	add_child(deposit)
+
+func _add_forge(at: Vector3) -> void:
+	var forge := Node3D.new()
+	forge.position = at
+	var stone := StandardMaterial3D.new()
+	stone.albedo_color = Color(0.22, 0.24, 0.25)
+	var ember := StandardMaterial3D.new()
+	ember.albedo_color = Color(0.92, 0.30, 0.08)
+	var base := MeshInstance3D.new()
+	var base_mesh := BoxMesh.new()
+	base_mesh.size = Vector3(2.0, 1.1, 1.6)
+	base.mesh = base_mesh
+	base.position.y = 0.55
+	base.material_override = stone
+	forge.add_child(base)
+	var chimney := MeshInstance3D.new()
+	var chimney_mesh := BoxMesh.new()
+	chimney_mesh.size = Vector3(0.7, 1.8, 0.7)
+	chimney.mesh = chimney_mesh
+	chimney.position = Vector3(0.45, 1.8, -0.2)
+	chimney.material_override = stone
+	forge.add_child(chimney)
+	var fire := MeshInstance3D.new()
+	var fire_mesh := SphereMesh.new()
+	fire_mesh.radius = 0.3
+	fire_mesh.height = 0.55
+	fire.mesh = fire_mesh
+	fire.position = Vector3(0.0, 0.7, 0.84)
+	fire.material_override = ember
+	forge.add_child(fire)
+	add_child(forge)
 
 func _add_merchant_stall(at: Vector3) -> void:
 	var stall := Node3D.new()
@@ -479,20 +539,22 @@ func _request_interaction() -> void:
 	var bench_distance := Vector2(player_node.global_position.x, player_node.global_position.z - 4.0).length()
 	var bank_distance := Vector2(player_node.global_position.x, player_node.global_position.z + 4.0).length()
 	var merchant_distance := Vector2(player_node.global_position.x - 4.0, player_node.global_position.z).length()
+	var copper_distance := Vector2(player_node.global_position.x, player_node.global_position.z + 8.0).length()
+	var forge_distance := Vector2(player_node.global_position.x, player_node.global_position.z - 8.0).length()
 	var error := OK
-	if merchant_distance <= 3.0 and merchant_distance <= bank_distance and merchant_distance <= bench_distance and merchant_distance <= tree_distance and merchant_distance <= stone_distance:
+	if merchant_distance <= 3.0 and merchant_distance <= bank_distance and merchant_distance <= bench_distance and merchant_distance <= tree_distance and merchant_distance <= stone_distance and merchant_distance <= copper_distance and merchant_distance <= forge_distance:
 		_show_market_panel()
 		return
-	elif bank_distance <= 3.0 and bank_distance <= bench_distance and bank_distance <= tree_distance and bank_distance <= stone_distance:
+	elif bank_distance <= 3.0 and bank_distance <= bench_distance and bank_distance <= tree_distance and bank_distance <= stone_distance and bank_distance <= copper_distance and bank_distance <= forge_distance:
 		var selected_item := ""
 		interaction_type = "bank_deposit"
-		for item_id in ["softwood_log", "rough_stone", "wooden_plank"]:
+		for item_id in ["softwood_log", "rough_stone", "copper_ore", "copper_bar", "wooden_plank"]:
 			if int(current_inventory.get(item_id, 0)) > 0:
 				selected_item = item_id
 				break
 		if selected_item.is_empty():
 			interaction_type = "bank_withdraw"
-			for item_id in ["softwood_log", "rough_stone", "wooden_plank"]:
+			for item_id in ["softwood_log", "rough_stone", "copper_ore", "copper_bar", "wooden_plank"]:
 				if int(current_bank.get(item_id, 0)) > 0:
 					selected_item = item_id
 					break
@@ -507,7 +569,19 @@ func _request_interaction() -> void:
 			HTTPClient.METHOD_POST,
 			JSON.stringify({"itemId": selected_item, "quantity": 1})
 		)
-	elif bench_distance <= 3.0 and bench_distance <= tree_distance and bench_distance <= stone_distance:
+	elif forge_distance <= 3.0 and forge_distance <= bench_distance and forge_distance <= tree_distance and forge_distance <= stone_distance and forge_distance <= copper_distance:
+		var recipe_id := "copper-bar"
+		if int(current_inventory.get("copper_bar", 0)) >= 3 and int(current_inventory.get("wooden_plank", 0)) >= 1:
+			recipe_id = "copper-sword"
+		interaction_type = "craft"
+		status_label.text = "Using frontier forge..."
+		error = gather_request.request(
+			api_base_url + "/api/v1/account/characters/" + player_id + "/craft/" + recipe_id,
+			_api_headers(),
+			HTTPClient.METHOD_POST,
+			""
+		)
+	elif bench_distance <= 3.0 and bench_distance <= tree_distance and bench_distance <= stone_distance and bench_distance <= copper_distance:
 		interaction_type = "craft"
 		status_label.text = "Using frontier workbench..."
 		error = gather_request.request(
@@ -517,10 +591,16 @@ func _request_interaction() -> void:
 			""
 		)
 	else:
-		var node_id := "tree-001" if tree_distance <= stone_distance else "stone-001"
-		var nearest_distance := minf(tree_distance, stone_distance)
+		var node_id := "tree-001"
+		var nearest_distance := tree_distance
+		if stone_distance < nearest_distance:
+			node_id = "stone-001"
+			nearest_distance = stone_distance
+		if copper_distance < nearest_distance:
+			node_id = "copper-001"
+			nearest_distance = copper_distance
 		if nearest_distance > 3.0:
-			status_label.text = "Move closer to a resource node or workbench"
+			status_label.text = "Move closer to a resource, station or trader"
 			return
 		interaction_type = "gather"
 		error = gather_request.request(
@@ -577,10 +657,19 @@ func _on_gather_completed(result: int, response_code: int, _headers: PackedStrin
 		return
 	if interaction_type == "craft":
 		var crafting: Dictionary = payload.get("crafting", {})
-		status_label.text = "Crafted Wooden Plank  •  +" + str(crafting.get("experience", 0)) + " Crafting XP"
+		var output_name := "crafted item"
+		if crafting.get("outputs", []).size() > 0:
+			var output_id := str(crafting.outputs[0].get("itemId", ""))
+			for item in market_catalog:
+				if item is Dictionary and str(item.get("id", "")) == output_id:
+					output_name = str(item.get("name", output_id))
+		status_label.text = "Crafted " + output_name + "  •  +" + str(crafting.get("experience", 0)) + " " + str(crafting.get("skillId", "crafting")) + " XP"
 	else:
 		var gathering: Dictionary = payload.get("gathering", {})
-		var item_name := "Softwood Log" if gathering.get("itemId") == "softwood_log" else "Rough Stone"
+		var item_name := str(gathering.get("itemId", "resource")).replace("_", " ")
+		for item in market_catalog:
+			if item is Dictionary and str(item.get("id", "")) == str(gathering.get("itemId", "")):
+				item_name = str(item.get("name", item_name))
 		status_label.text = "Gathered " + item_name + "  •  +" + str(gathering.get("experience", 0)) + " " + str(gathering.get("skillId", "")) + " XP"
 	_update_inventory(player_data.get("inventory", {}), player_data.get("bank", {}), player_data.get("coins", current_coins), player_data.get("equipment", {}))
 
