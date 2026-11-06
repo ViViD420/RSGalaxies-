@@ -42,6 +42,7 @@ Send `Authorization: Bearer <accessToken>`:
 - `POST /api/v1/account/characters` with `{"name":"Wayfarer"}`
 - `GET /api/v1/account/characters/{characterId}`
 - `GET /api/v1/market/items` — public item definitions and merchant prices.
+- `GET /api/v1/combat/enemies` — public enemy spawn definitions.
 - `GET /api/v1/account/characters/{characterId}/skills`
 - `POST /api/v1/account/characters/{characterId}/skills/{skillId}/experience` with `{"amount":25}`
 - `POST /api/v1/account/characters/{characterId}/move` with `{"x":1.0,"z":2.0}`
@@ -53,6 +54,8 @@ Send `Authorization: Bearer <accessToken>`:
 - `POST /api/v1/account/characters/{characterId}/market/sell/{itemId}` with `{"quantity":1}`
 - `POST /api/v1/account/characters/{characterId}/equipment/equip/{itemId}`
 - `POST /api/v1/account/characters/{characterId}/equipment/unequip/{slot}`
+- `POST /api/v1/account/characters/{characterId}/combat/attack/{enemyId}`
+- `POST /api/v1/account/characters/{characterId}/rest` — recover at the safe spawn, or respawn there after defeat.
 
 Every character operation is scoped by the authenticated account in its SQL query or transaction. A character belonging to another account is reported as not found.
 
