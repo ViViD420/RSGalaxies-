@@ -85,6 +85,11 @@ func TestProductionDisablesDevelopmentAwardEndpoint(t *testing.T) {
 	if response.Header().Get("Access-Control-Allow-Origin") != "" {
 		t.Fatal("production response unexpectedly enabled development CORS")
 	}
+	move := httptest.NewRecorder()
+	handler.ServeHTTP(move, httptest.NewRequest(http.MethodPost, "/api/v1/players/player/move", bytes.NewBufferString(`{"x":1,"z":1}`)))
+	if move.Code != http.StatusNotFound && move.Code != http.StatusMethodNotAllowed {
+		t.Fatalf("production movement route status = %d, want route unavailable", move.Code)
+	}
 }
 
 func TestDevelopmentCORSPreflight(t *testing.T) {
