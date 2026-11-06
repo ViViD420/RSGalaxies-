@@ -3,28 +3,29 @@
 ## Milestone 1: Independent foundation
 - [x] Establish standalone repository and project identity.
 - [x] Document design pillars and system boundaries.
-- [x] Add a small server API and deterministic tests.
-- [ ] Select client engine after a short movement / camera / world-size prototype.
+- [x] Add server API and deterministic tests.
+- [ ] Validate client engine through movement, camera and world-size prototype.
 - [ ] Add PostgreSQL migrations and local development environment.
-
-**Exit criteria:** a clean checkout can run tests and start the development service; project boundaries and client/server contracts are documented.
+- [x] Add hosted Codespaces development-container configuration.
 
 ## Milestone 2: Character and world slice
-- [ ] Character creation, identity and persistence.
+- [x] Basic character identity and in-memory development storage.
+- [ ] Durable character persistence and migrations.
 - [ ] World zones, coordinates, movement validation and spawn points.
 - [ ] Interactable objects and NPC definitions.
 - [ ] Session lifecycle and basic presence.
-- [ ] Client connects to a local server and displays authoritative character state.
+- [ ] Client displays authoritative character state.
 
 ## Milestone 3: Skills and progression
-- [ ] Data-driven skill definitions and XP curves.
+- [x] Data-driven starting skill definitions and XP curve prototype.
 - [ ] Gathering nodes and depletion / respawn.
 - [ ] Crafting recipes, requirements and output quality.
 - [ ] Combat attributes, abilities, damage and death / recovery loop.
-- [ ] Server-side action validation and progression tests.
+- [ ] Award XP only through validated gameplay actions.
+- [x] Deterministic progression boundary and repository concurrency tests.
 
 ## Milestone 4: Inventory and economy
-- [ ] Item definitions, item instances, stack rules and equipment.
+- [ ] Item definitions, instances, stack rules and equipment.
 - [ ] Bank storage and item ownership.
 - [ ] Atomic player-to-player trades.
 - [ ] Currency ledger and NPC/player shops.
@@ -46,4 +47,4 @@
 
 ## Working rule
 
-Each milestone is delivered as a tested, reviewable slice. Do not mark a feature complete because a placeholder or interface exists; completion requires server rules, persistence where applicable, tests, and a usable client path.
+Each milestone is a tested, reviewable slice. Do not mark a feature complete because a placeholder or interface exists; completion requires server rules, persistence where applicable, tests, and a usable client path.
