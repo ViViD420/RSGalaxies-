@@ -1786,11 +1786,49 @@ func _on_skills_completed(result: int, response_code: int, _headers: PackedStrin
 	skill_ids.sort()
 	for skill_id in skill_ids:
 		var progress: Variant = skills[skill_id]
-		if progress is Dictionary:
-			var skill_label := Label.new()
-			skill_label.text = str(skill_id).capitalize() + "  •  Level " + str(progress.get("level", 1)) + "  •  " + str(progress.get("experience", 0)) + " XP"
-			skills_list.add_child(skill_label)
-	skills_status_label.text = str(skills.size()) + " skills • XP is awarded by server actions"
+		if not progress is Dictionary:
+			continue
+		var level := clampi(int(progress.get("level", 1)), 1, 99)
+		var experience := maxi(int(progress.get("experience", 0)), 0)
+		var skill_column := VBoxContainer.new()
+		skill_column.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+		var skill_label := Label.new()
+		skill_label.text = str(skill_id).capitalize() + "  •  Level " + str(level)
+		skill_column.add_child(skill_label)
+		var progress_bar := ProgressBar.new()
+		progress_bar.custom_minimum_size = Vector2(0, 12)
+		progress_bar.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+		progress_bar.show_percentage = false
+		if level >= 99:
+			progress_bar.min_value = 0
+			progress_bar.max_value = 1
+			progress_bar.value = 1
+		else:
+			var level_start := _experience_for_level(level)
+			var next_level := _experience_for_level(level + 1)
+			progress_bar.min_value = 0
+			progress_bar.max_value = maxi(next_level - level_start, 1)
+			progress_bar.value = clampi(experience - level_start, 0, int(progress_bar.max_value))
+		skill_column.add_child(progress_bar)
+		var detail := Label.new()
+		if level >= 99:
+			detail.text = str(experience) + " / 200,000,000 XP • Level cap"
+		else:
+			var remaining := maxi(_experience_for_level(level + 1) - experience, 0)
+			detail.text = str(experience) + " XP • " + str(remaining) + " to level " + str(level + 1)
+		detail.add_theme_font_size_override("font_size", 11)
+		skill_column.add_child(detail)
+		skills_list.add_child(skill_column)
+	skills_status_label.text = str(skills.size()) + " skills • progression updates after server actions"
+
+
+func _experience_for_level(level: int) -> int:
+	if level <= 1:
+		return 0
+	var total := 0
+	for current_level in range(1, mini(level, 99)):
+		total += floori(float(current_level) + 300.0 * pow(2.0, float(current_level) / 7.0))
+	return floori(float(total) / 4.0)
 
 
 func _stop_skills_request() -> void:
