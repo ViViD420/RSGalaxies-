@@ -314,8 +314,9 @@ func TestPostgresPlayerTradeEscrowSchemaEnforcesReservationsAndPositiveBalances(
 	if err := repo.CreateCharacter(ctx, third.ID, thirdPlayer); err != nil { t.Fatal(err) }
 
 	tradeID := fmt.Sprintf("trade-%d", now.UnixNano())
+	secondTradeID := tradeID + "-second"
 	t.Cleanup(func() {
-		_, _ = db.ExecContext(context.Background(), "DELETE FROM player_trades WHERE id=$1", tradeID)
+		_, _ = db.ExecContext(context.Background(), "DELETE FROM player_trades WHERE id IN ($1,$2)", tradeID, secondTradeID)
 		cleanupTestAccounts(db, first.ID, second.ID, third.ID)
 	})
 	if _, err := db.ExecContext(ctx, `INSERT INTO player_trades(id,status,revision,created_at,updated_at,expires_at)
@@ -333,16 +334,18 @@ func TestPostgresPlayerTradeEscrowSchemaEnforcesReservationsAndPositiveBalances(
 	if _, err := db.ExecContext(ctx, `INSERT INTO player_trade_escrow_items(trade_id,owner_character_id,item_id,quantity)
 		VALUES($1,$2,'softwood_log',2)`, tradeID, string(firstPlayer.ID)); err != nil { t.Fatal(err) }
 
+	if _, err := db.ExecContext(ctx, `INSERT INTO player_trades(id,status,revision,created_at,updated_at,expires_at)
+		VALUES($1,'pending',1,$2,$2,$3)`, secondTradeID, now, now.Add(10*time.Minute)); err != nil { t.Fatal(err) }
+	if _, err := db.ExecContext(ctx, `INSERT INTO player_trade_participants(trade_id,character_id,account_id,role)
+		VALUES($1,$2,$3,'initiator')`, secondTradeID, string(firstPlayer.ID), first.ID); err != nil { t.Fatal(err) }
 	if _, err := db.ExecContext(ctx, `INSERT INTO player_trade_active_characters(character_id,trade_id,account_id)
-		VALUES($1,$2,$3)`, string(firstPlayer.ID), tradeID, first.ID); err == nil {
+		VALUES($1,$2,$3)`, string(firstPlayer.ID), secondTradeID, first.ID); err == nil {
 		t.Fatal("character was allowed to reserve a second active trade")
 	}
-	if _, err := db.ExecContext(ctx, `INSERT INTO player_trade_offers(trade_id,character_id,offered_coins)
-		VALUES($1,$2,-1)`, tradeID, string(thirdPlayer.ID)); err == nil {
+	if _, err := db.ExecContext(ctx, `UPDATE player_trade_offers SET offered_coins=-1 WHERE trade_id=$1 AND character_id=$2`, tradeID, string(firstPlayer.ID)); err == nil {
 		t.Fatal("negative escrow currency was accepted")
 	}
-	if _, err := db.ExecContext(ctx, `INSERT INTO player_trade_escrow_items(trade_id,owner_character_id,item_id,quantity)
-		VALUES($1,$2,'rough_stone',0)`, tradeID, string(firstPlayer.ID)); err == nil {
+	if _, err := db.ExecContext(ctx, `UPDATE player_trade_escrow_items SET quantity=0 WHERE trade_id=$1 AND owner_character_id=$2 AND item_id='softwood_log'`, tradeID, string(firstPlayer.ID)); err == nil {
 		t.Fatal("zero-quantity escrow item was accepted")
 	}
 }
