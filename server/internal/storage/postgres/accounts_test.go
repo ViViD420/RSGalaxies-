@@ -49,7 +49,7 @@ func TestPostgresAccountEmailUniquenessAndValidation(t *testing.T) {
 	email:=fmt.Sprintf("unique-%d@example.test",now.UnixNano())
 	account,_,err:=repo.Register(ctx,email,"correct-horse-battery-staple",now)
 	if err!=nil{t.Fatal(err)}
-	t.Cleanup(func(){_,_=db.ExecContext(context.Background(),"DELETE FROM accounts WHERE id=$1",account.ID)})
+	t.Cleanup(func(){cleanupTestAccounts(db,account.ID)})
 	if _,_,err:=repo.Register(ctx,"  "+email+" ","correct-horse-battery-staple",now);!errors.Is(err,ErrAccountExists){t.Fatalf("duplicate email error=%v",err)}
 	if _,_,err:=repo.Register(ctx,"not-an-email","correct-horse-battery-staple",now);!errors.Is(err,ErrInvalidEmail){t.Fatalf("invalid email error=%v",err)}
 }
@@ -80,7 +80,7 @@ func TestPostgresOwnedGameplayMutationsEnforceOwnership(t *testing.T) {
  db:=integrationDatabase(t);repo:=NewAccountRepository(db);ctx:=context.Background();now:=time.Now().UTC()
  first,_,err:=repo.Register(ctx,fmt.Sprintf("game-owner-%d@example.test",now.UnixNano()),"correct-horse-battery-staple",now);if err!=nil{t.Fatal(err)}
  second,_,err:=repo.Register(ctx,fmt.Sprintf("game-other-%d@example.test",now.UnixNano()),"correct-horse-battery-staple",now);if err!=nil{t.Fatal(err)}
- t.Cleanup(func(){_,_=db.ExecContext(context.Background(),"DELETE FROM accounts WHERE id IN ($1,$2)",first.ID,second.ID)})
+ t.Cleanup(func(){cleanupTestAccounts(db,first.ID,second.ID)})
  player,err:=game.NewPlayer(game.PlayerID(fmt.Sprintf("game-char-%d",now.UnixNano())),"GameWayfarer",now);if err!=nil{t.Fatal(err)}
  player.Position.Z=2
  player.Inventory["softwood_log"]=2
@@ -120,7 +120,7 @@ func TestPostgresOwnedGatheringLocksSharedNodeAndChecksOwner(t *testing.T) {
  db:=integrationDatabase(t);repo:=NewAccountRepository(db);ctx:=context.Background();now:=time.Now().UTC()
  first,_,err:=repo.Register(ctx,fmt.Sprintf("gather-owner-%d@example.test",now.UnixNano()),"correct-horse-battery-staple",now);if err!=nil{t.Fatal(err)}
  second,_,err:=repo.Register(ctx,fmt.Sprintf("gather-other-%d@example.test",now.UnixNano()),"correct-horse-battery-staple",now);if err!=nil{t.Fatal(err)}
- t.Cleanup(func(){_,_=db.ExecContext(context.Background(),"DELETE FROM accounts WHERE id IN ($1,$2)",first.ID,second.ID);_,_=db.ExecContext(context.Background(),"DELETE FROM gathering_node_state WHERE node_id=$1","tree-001")})
+ t.Cleanup(func(){cleanupTestAccounts(db,first.ID,second.ID);_,_=db.ExecContext(context.Background(),"DELETE FROM gathering_node_state WHERE node_id=$1","tree-001")})
  _,_=db.ExecContext(ctx,"DELETE FROM gathering_node_state WHERE node_id=$1","tree-001")
  player,err:=game.NewPlayer(game.PlayerID(fmt.Sprintf("gather-owned-%d",now.UnixNano())),"GatherOwned",now);if err!=nil{t.Fatal(err)}
  player.Position.X=2
@@ -133,7 +133,7 @@ func TestPostgresOwnedGatheringLocksSharedNodeAndChecksOwner(t *testing.T) {
 func TestPostgresAccountSessionLimitPrunesOldestSessions(t *testing.T) {
  db:=integrationDatabase(t);repo:=NewAccountRepository(db);ctx:=context.Background();now:=time.Now().UTC()
  account,firstToken,err:=repo.Register(ctx,fmt.Sprintf("session-cap-%d@example.test",now.UnixNano()),"correct-horse-battery-staple",now);if err!=nil{t.Fatal(err)}
- t.Cleanup(func(){_,_=db.ExecContext(context.Background(),"DELETE FROM accounts WHERE id=$1",account.ID)})
+ t.Cleanup(func(){cleanupTestAccounts(db,account.ID)})
  for i:=1;i<=MaxActiveSessionsPerAccount;i++ {
   _,hash,err:=auth.NewSessionToken();if err!=nil{t.Fatal(err)}
   tx,err:=db.BeginTx(ctx,nil);if err!=nil{t.Fatal(err)}
@@ -149,7 +149,7 @@ func TestPostgresAccountSessionLimitPrunesOldestSessions(t *testing.T) {
 func TestPostgresConcurrentBankDepositsDoNotLoseItems(t *testing.T) {
  db:=integrationDatabase(t);repo:=NewAccountRepository(db);ctx:=context.Background();now:=time.Now().UTC()
  account,_,err:=repo.Register(ctx,fmt.Sprintf("bank-race-%d@example.test",now.UnixNano()),"correct-horse-battery-staple",now);if err!=nil{t.Fatal(err)}
- t.Cleanup(func(){_,_=db.ExecContext(context.Background(),"DELETE FROM accounts WHERE id=$1",account.ID)})
+ t.Cleanup(func(){cleanupTestAccounts(db,account.ID)})
  player,err:=game.NewPlayer(game.PlayerID(fmt.Sprintf("bank-race-char-%d",now.UnixNano())),"BankRace",now);if err!=nil{t.Fatal(err)}
  player.Inventory["softwood_log"]=10
  if err:=repo.CreateCharacter(ctx,account.ID,player);err!=nil{t.Fatal(err)}
@@ -165,7 +165,7 @@ func TestPostgresConcurrentBankDepositsDoNotLoseItems(t *testing.T) {
 func TestPostgresOwnedCopperMiningPersistsNodeAndRewards(t *testing.T) {
  db:=integrationDatabase(t);repo:=NewAccountRepository(db);ctx:=context.Background();now:=time.Now().UTC()
  account,_,err:=repo.Register(ctx,fmt.Sprintf("copper-miner-%d@example.test",now.UnixNano()),"correct-horse-battery-staple",now);if err!=nil{t.Fatal(err)}
- t.Cleanup(func(){_,_=db.ExecContext(context.Background(),"DELETE FROM accounts WHERE id=$1",account.ID);_,_=db.ExecContext(context.Background(),"DELETE FROM gathering_node_state WHERE node_id=$1","copper-001")})
+ t.Cleanup(func(){cleanupTestAccounts(db,account.ID);_,_=db.ExecContext(context.Background(),"DELETE FROM gathering_node_state WHERE node_id=$1","copper-001")})
  _,_=db.ExecContext(ctx,"DELETE FROM gathering_node_state WHERE node_id=$1","copper-001")
  player,err:=game.NewPlayer(game.PlayerID(fmt.Sprintf("copper-miner-char-%d",now.UnixNano())),"CopperMiner",now);if err!=nil{t.Fatal(err)}
  player.Position.Z=-5
@@ -181,7 +181,7 @@ func TestPostgresOwnedCopperMiningPersistsNodeAndRewards(t *testing.T) {
 func TestPostgresOwnedCopperSmithingPersistsRecipes(t *testing.T) {
  db:=integrationDatabase(t);repo:=NewAccountRepository(db);ctx:=context.Background();now:=time.Now().UTC()
  account,_,err:=repo.Register(ctx,fmt.Sprintf("copper-smith-%d@example.test",now.UnixNano()),"correct-horse-battery-staple",now);if err!=nil{t.Fatal(err)}
- t.Cleanup(func(){_,_=db.ExecContext(context.Background(),"DELETE FROM accounts WHERE id=$1",account.ID)})
+ t.Cleanup(func(){cleanupTestAccounts(db,account.ID)})
  player,err:=game.NewPlayer(game.PlayerID(fmt.Sprintf("copper-smith-char-%d",now.UnixNano())),"CopperSmith",now);if err!=nil{t.Fatal(err)}
  player.Position.Z=8;player.Inventory["copper_ore"]=2
  if err:=repo.CreateCharacter(ctx,account.ID,player);err!=nil{t.Fatal(err)}
