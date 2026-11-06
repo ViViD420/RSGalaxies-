@@ -80,3 +80,17 @@ func TestHerbalBundleRecipeConsumesForagedMaterials(t *testing.T) {
 	result,err:=player.Craft(recipe,station,time.Now());if err!=nil{t.Fatalf("craft herbal bundle: %v",err)}
 	if result.Experience!=45||result.SkillID!="crafting"||player.Inventory["wild_herb"]!=0||player.Inventory["wooden_plank"]!=0||player.Inventory["herbal_bundle"]!=1{t.Fatalf("herbal bundle result=%+v inventory=%v",result,player.Inventory)}
 }
+
+func TestHerbalTeaCraftingCreatesUsableConsumable(t *testing.T) {
+	player,err:=NewPlayer("tea-crafter","TeaCrafter",time.Now());if err!=nil{t.Fatal(err)}
+	player.Position.Z=2
+	player.Inventory["herbal_bundle"]=1
+	player.Inventory["wild_herb"]=1
+	recipe,ok:=FindCraftingRecipe("herbal-tea");if !ok{t.Fatal("herbal tea recipe missing")}
+	station,_:=FindCraftingStation(recipe.StationID)
+	result,err:=player.Craft(recipe,station,time.Now());if err!=nil{t.Fatalf("brew herbal tea: %v",err)}
+	if result.SkillID!="cooking"||result.Experience!=35||player.Inventory["herbal_tea"]!=1||player.Inventory["herbal_bundle"]!=0||player.Inventory["wild_herb"]!=0{t.Fatalf("herbal tea craft result=%+v inventory=%v",result,player.Inventory)}
+	player.Health=80
+	healed,err:=player.UseItem("herbal_tea")
+	if err!=nil||healed!=15||player.Health!=95||player.Inventory["herbal_tea"]!=0{t.Fatalf("use herbal tea healed=%d health=%d inventory=%v err=%v",healed,player.Health,player.Inventory,err)}
+}
