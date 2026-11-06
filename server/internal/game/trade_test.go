@@ -123,7 +123,7 @@ func TestValidateTradeProximityUsesServerZoneAndRange(t *testing.T) {
 	}
 	second.Position.X = 0
 	second.Position.ZoneID = "another-zone"
-	if err := ValidateTradeProximity(first, second); !errors.Is(err, ErrTradeOutOfRange) {
+	if err := ValidateTradeProximity(first, second); !errors.Is(err, ErrTradeDifferentZone) {
 		t.Fatalf("cross-zone error=%v", err)
 	}
 	second.Position.ZoneID = first.Position.ZoneID
