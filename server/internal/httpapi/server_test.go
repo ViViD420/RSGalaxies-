@@ -316,8 +316,10 @@ func TestAuthenticatedCharacterLifecycleAndOwnership(t *testing.T) {
 	equipRequest.Header.Set("Authorization","Bearer "+registration.AccessToken)
 	handler.ServeHTTP(equip,equipRequest)
 	if equip.Code!=http.StatusOK{t.Fatalf("equip status=%d body=%s",equip.Code,equip.Body.String())}
-	characters.players[registration.Account.ID][player.ID].Position.X=6
-	characters.players[registration.Account.ID][player.ID].LastCombatAt=time.Now().Add(-2*time.Second)
+	combatPlayer:=characters.players[registration.Account.ID][player.ID]
+	combatPlayer.Position.X=6
+	combatPlayer.LastCombatAt=time.Now().Add(-2*time.Second)
+	characters.players[registration.Account.ID][player.ID]=combatPlayer
 	attack:=httptest.NewRecorder()
 	attackRequest:=httptest.NewRequest(http.MethodPost,"/api/v1/account/characters/"+string(player.ID)+"/combat/attack/frontier-rat-001",nil)
 	attackRequest.Header.Set("Authorization","Bearer "+registration.AccessToken)
@@ -329,7 +331,9 @@ func TestAuthenticatedCharacterLifecycleAndOwnership(t *testing.T) {
 	restAwayRequest.Header.Set("Authorization","Bearer "+registration.AccessToken)
 	handler.ServeHTTP(restAway,restAwayRequest)
 	if restAway.Code!=http.StatusConflict{t.Fatalf("rest away from spawn status=%d body=%s",restAway.Code,restAway.Body.String())}
-	characters.players[registration.Account.ID][player.ID].Position.X=0
+	combatPlayer=characters.players[registration.Account.ID][player.ID]
+	combatPlayer.Position.X=0
+	characters.players[registration.Account.ID][player.ID]=combatPlayer
 	rest:=httptest.NewRecorder()
 	restRequest:=httptest.NewRequest(http.MethodPost,"/api/v1/account/characters/"+string(player.ID)+"/rest",nil)
 	restRequest.Header.Set("Authorization","Bearer "+registration.AccessToken)
