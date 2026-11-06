@@ -53,9 +53,9 @@ An original sandbox MMORPG combining long-form skill progression and item gamepl
 
 - .devcontainer/ provides a GitHub Codespaces Go/Godot/PostgreSQL workspace with separate development and integration-test databases.
 - Codespaces setup installs Godot 4.3 and export templates, runs race-enabled Go tests, go vet, headless project import and Web export.
-- .env.example contains local-only sample settings; docs/API.md, docs/ACCOUNT_AUTH_DESIGN.md, docs/DEPLOYMENT.md, docs/COMBAT.md and docs/CHAT.md describe routes, security boundaries, deployment and gameplay rules.
-- Go server CI runs race-enabled unit/integration tests against PostgreSQL and go vet. Server runs #260 and #261 passed, including account-scoped presence API tests. Run #262 is validating the latest presence persistence and privacy changes. Server runs #245–#253 also passed chat-history, readiness and rate-limiter hardening.
-- Godot client CI uses the official Godot 4.3 release and export templates. Client run #80 passed the leased remote-player visuals and presence UI. Client runs #77–#79 also passed the inventory search/filter/sort UI and presence heartbeat/roster integration.
+- .env.example contains local-only sample settings; docs/API.md, docs/ACCOUNT_AUTH_DESIGN.md, docs/DEPLOYMENT.md, docs/COMBAT.md, docs/CHAT.md, docs/PRESENCE.md and refreshed docs/ARCHITECTURE.md describe routes, security boundaries, deployment and gameplay rules.
+- Go server CI runs race-enabled unit/integration tests against PostgreSQL and go vet. Server run #262 passed the latest presence persistence, privacy, heartbeat write-coalescing and account-scoped roster tests. Runs #260 and #261 also passed. Server runs #245–#253 also passed chat-history, readiness and rate-limiter hardening.
+- Godot client CI uses the official Godot 4.3 release and export templates. Client run #80 passed leased remote-player visuals and presence UI. Runs #81 and #82 are validating the latest client and documentation updates; runs #77–#80 passed presence and inventory UI changes.
 
 ## Production safeguards and remaining launch gates
 
@@ -70,7 +70,7 @@ An original sandbox MMORPG combining long-form skill progression and item gamepl
 
 ## Next engineering tasks
 
-1. Finish validating server run #262 for PostgreSQL presence/roster tests, then build reconnect recovery and authoritative remote-player movement snapshots.
+1. Finish validating the latest client CI, then build reconnect recovery and authoritative remote-player movement snapshots.
 2. Add player-to-player trade with escrow and transaction safety, then add a real-phone pass on the Godot Web client.
 3. Add email verification, password recovery, MFA, distributed abuse controls and administrative account operations before enabling public registration.
 4. Add unique item instances/durability, combat animations/AI, currency sinks and player-to-player trade with escrow/transaction safety.
