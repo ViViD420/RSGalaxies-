@@ -102,6 +102,9 @@ func (p *Player) Craft(recipe CraftingRecipeDefinition, station CraftingStationD
 	if p.Position.ZoneID != station.Position.ZoneID || math.Hypot(p.Position.X-station.Position.X, p.Position.Z-station.Position.Z) > station.InteractionRange {
 		return CraftingResult{}, ErrCraftingOutOfRange
 	}
+	if recipe.StationID != station.ID {
+		return CraftingResult{}, ErrUnknownCraftingStation
+	}
 	if recipe.RequiredLevel < 1 || recipe.RequiredLevel > MaxSkillLevel || recipe.Experience <= 0 {
 		return CraftingResult{}, ErrUnknownCraftingRecipe
 	}
