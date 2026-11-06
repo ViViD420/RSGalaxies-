@@ -39,8 +39,9 @@ An original sandbox MMORPG combining long-form skill progression and item gamepl
 - This is a movement/gathering proof of concept, not a fully server-authoritative or production client.
 
 ### Development environment
-- .devcontainer/ configures a GitHub Codespaces Go/Godot workspace.
-- setup.sh installs Go-side dependencies, Godot 4.3 and export templates, then runs Go tests/vet, a headless Godot import and a Web export.
+- .devcontainer/ configures a GitHub Codespaces Go/Godot/PostgreSQL workspace using Docker Compose.
+- Docker Compose runs PostgreSQL 16 with separate development and integration-test databases. A named volume preserves the development database across Codespaces stops/restarts.
+- setup.sh installs OS dependencies, Godot 4.3 and export templates, then runs race-enabled Go tests (including PostgreSQL integration), vet, a headless Godot import and a Web export.
 - start.sh launches the Go API and exported browser prototype automatically on Codespaces startup.
 - Ports 8000 and 8080 are forwarded; the Web client derives the API origin from the Codespaces hostname, and the development API enables CORS.
 - Repository work can be done in GitHub/Codespaces through a browser; no local PC installation is required.
@@ -48,9 +49,9 @@ An original sandbox MMORPG combining long-form skill progression and item gamepl
 ## Limits and decisions
 
 - Go is the server language. Godot is provisional pending real-phone validation of camera, movement and Web export.
-- Storage is in memory; player, inventory and node state are lost when the server stops.
+- PostgreSQL persistence is implemented and used in Codespaces. Standalone local runs fall back to in-memory storage unless RS_GALAXIES_DATABASE_URL is configured.
 - XP award, movement, gathering and crafting shortcuts are development-only. They must not be exposed publicly.
-- PostgreSQL, authentication, secure sessions, realtime replication, production persistence, NPCs, combat, additional recipes, player trading and production inventory persistence are not implemented.
+- Authentication, secure sessions, realtime replication, production operations, NPCs, combat, additional recipes, player trading and production hardening remain incomplete.
 - Code and tests are committed. GitHub Actions execution results have not yet been inspected in this session; do not claim CI passes until verified.
 
 ## Next engineering tasks
