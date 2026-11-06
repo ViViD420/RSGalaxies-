@@ -51,9 +51,11 @@ The server listens on http://localhost:8080 by default. Set RS_GALAXIES_ADDR to 
 - GET /api/v1/world/zones — zone bounds and spawn data.
 - GET /api/v1/world/nodes — resource node definitions.
 - GET /api/v1/items — starter item definitions.
+- GET /api/v1/crafting/recipes and GET /api/v1/crafting/stations — crafting data.
 - POST /api/v1/players/{id}/skills/{skill}/experience — development-only XP award.
 - POST /api/v1/players/{id}/move — development movement request with server speed/bounds validation.
 - POST /api/v1/players/{id}/gather/{nodeID} — development gathering action that updates inventory and XP.
+- POST /api/v1/players/{id}/craft/{recipeID} — development crafting action that consumes ingredients and creates outputs.
 
 Create a character with POST /api/v1/players and JSON body {"name":"Wayfarer"}. The XP curve is cumulative and deterministic, with levels 1–99 and a 200,000,000 XP cap. Development-only XP, movement and gathering shortcuts are disabled when RS_GALAXIES_ENV=production; production use still requires authentication and durable persistence.
 
