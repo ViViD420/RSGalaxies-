@@ -481,3 +481,63 @@ func cloneTradeTestPlayer(player game.Player) game.Player {
 	player.Inventory = inventory
 	return player
 }
+
+
+func TestPostgresTradeConfirmCancelRaceReturnsEscrowExactlyOnce(t *testing.T) {
+	db := integrationDatabase(t)
+	repo := NewAccountRepository(db)
+	ctx := context.Background()
+	now := time.Now().UTC().Truncate(time.Microsecond)
+	first, _, err := repo.Register(ctx, fmt.Sprintf("trade-race-a-%d@example.test", now.UnixNano()), "correct-horse-battery-staple", now)
+	if err != nil { t.Fatal(err) }
+	second, _, err := repo.Register(ctx, fmt.Sprintf("trade-race-b-%d@example.test", now.UnixNano()), "correct-horse-battery-staple", now)
+	if err != nil { cleanupTestAccounts(db, first.ID); t.Fatal(err) }
+	initiator, err := game.NewPlayer(game.PlayerID(fmt.Sprintf("trade-race-a-%d", now.UnixNano())), "TradeRaceA", now)
+	if err != nil { t.Fatal(err) }
+	target, err := game.NewPlayer(game.PlayerID(fmt.Sprintf("trade-race-b-%d", now.UnixNano())), "TradeRaceB", now)
+	if err != nil { t.Fatal(err) }
+	initiator.Inventory["softwood_log"] = 3
+	target.Inventory["rough_stone"] = 2
+	if err := repo.CreateCharacter(ctx, first.ID, initiator); err != nil { t.Fatal(err) }
+	if err := repo.CreateCharacter(ctx, second.ID, target); err != nil { t.Fatal(err) }
+	t.Cleanup(func() { cleanupTestAccounts(db, first.ID, second.ID) })
+	if err := repo.HeartbeatPresenceForAccount(ctx, second.ID, target.ID, now); err != nil { t.Fatal(err) }
+	trade, err := repo.CreateTradeForAccount(ctx, first.ID, initiator.ID, target.ID, game.TradeOffer{Items: map[string]int{"softwood_log": 1}, Coins: 10}, now)
+	if err != nil { t.Fatalf("create trade: %v", err) }
+	opened, err := repo.AcceptTradeForAccount(ctx, second.ID, target.ID, trade.ID, game.TradeOffer{Items: map[string]int{"rough_stone": 1}, Coins: 5}, now.Add(time.Second))
+	if err != nil { t.Fatalf("accept trade: %v", err) }
+
+	start := make(chan struct{})
+	var wg sync.WaitGroup
+	var confirmErr, cancelErr error
+	wg.Add(2)
+	go func() {
+		defer wg.Done()
+		<-start
+		_, confirmErr = repo.ConfirmTradeForAccount(ctx, first.ID, initiator.ID, trade.ID, opened.Revision, now.Add(2*time.Second))
+	}()
+	go func() {
+		defer wg.Done()
+		<-start
+		_, cancelErr = repo.CancelTradeForAccount(ctx, second.ID, target.ID, trade.ID, now.Add(2*time.Second))
+	}()
+	close(start)
+	wg.Wait()
+	if cancelErr != nil { t.Fatalf("concurrent cancellation failed: %v", cancelErr) }
+	if confirmErr != nil && !errors.Is(confirmErr, game.ErrTradeNotAccepted) {
+		t.Fatalf("concurrent confirmation returned unexpected error: %v", confirmErr)
+	}
+	finalTrade, err := repo.GetTradeForAccount(ctx, first.ID, trade.ID)
+	if err != nil { t.Fatal(err) }
+	if finalTrade.Status != game.TradeStatusCancelled { t.Fatalf("final trade status=%s want=cancelled", finalTrade.Status) }
+	finalInitiator, err := repo.GetCharacter(ctx, first.ID, initiator.ID)
+	if err != nil { t.Fatal(err) }
+	finalTarget, err := repo.GetCharacter(ctx, second.ID, target.ID)
+	if err != nil { t.Fatal(err) }
+	if finalInitiator.Inventory["softwood_log"] != 3 || finalInitiator.Coins != game.StartingCoins {
+		t.Fatalf("initiator escrow refund was not exactly once: %+v", finalInitiator)
+	}
+	if finalTarget.Inventory["rough_stone"] != 2 || finalTarget.Coins != game.StartingCoins {
+		t.Fatalf("target escrow refund was not exactly once: %+v", finalTarget)
+	}
+}
