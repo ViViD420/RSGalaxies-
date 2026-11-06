@@ -19,7 +19,7 @@ func _setup_input_actions() -> void:
 	_register_key_action("move_right", KEY_D)
 	_register_key_action("jump", KEY_SPACE)
 
-func _register_key_action(action_name: String, key: Key) -> void:
+func _register_key_action(action_name: String, key: int) -> void:
 	if not InputMap.has_action(action_name):
 		InputMap.add_action(action_name)
 	var event := InputEventKey.new()
