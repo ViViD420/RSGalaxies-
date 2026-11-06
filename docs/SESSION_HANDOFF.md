@@ -27,7 +27,7 @@ An original sandbox MMORPG combining long-form skill progression and item gamepl
 - Starter merchant catalog with server-defined buy/sell prices. Buy/sell operations update coins and inventory atomically.
 - PostgreSQL migrations 0001–0008 cover player state, gathering, accounts/sessions, character ownership, bank storage, currency, equipment, health, shared enemy spawn state, persistent zone chat and leased zone presence.
 - PostgreSQL transactions and row locks protect XP, movement, gathering, crafting, bank transfers, market trades, equipment changes, PvE combat and presence heartbeat updates.
-- Account authentication: PBKDF2-HMAC-SHA-256 with 600,000 iterations and random salts; opaque 256-bit bearer tokens stored only as SHA-256 digests; fixed 30-day expiry; logout revocation; last-used updates; maximum 10 active sessions per account; old-session pruning; dummy PBKDF2 work for unknown/disabled login accounts.
+- Account authentication: PBKDF2-HMAC-SHA-256 with 600,000 iterations and random salts; password length policy is enforced on both hashing and verification; opaque 256-bit bearer tokens stored only as SHA-256 digests; fixed 30-day expiry; logout revocation; last-used timestamps are write-coalesced to at most once per minute to reduce database write amplification; maximum 10 active sessions per account; old-session pruning; dummy PBKDF2 work for unknown/disabled login accounts.
 - Account-owned character CRUD and gameplay operations use account ownership in SQL predicates and row-locked transactions.
 - Authenticated routes cover login/register/logout/me, character list/create/read, skills/XP, movement, gathering, crafting, bank deposits/withdrawals, merchant trades, equipment equip/unequip, combat attacks, safe-spawn rest, local zone chat and account-scoped zone presence.
 - Legacy unscoped player-ID and development mutation routes remain disabled in production. Production registration is disabled unless explicitly enabled.
@@ -57,7 +57,7 @@ An original sandbox MMORPG combining long-form skill progression and item gamepl
 - .devcontainer/ provides a GitHub Codespaces Go/Godot/PostgreSQL workspace with separate development and integration-test databases.
 - Codespaces setup installs Godot 4.3 and export templates, runs race-enabled Go tests, go vet, headless project import and Web export.
 - .env.example contains local-only sample settings; docs/API.md, docs/ACCOUNT_AUTH_DESIGN.md, docs/DEPLOYMENT.md, docs/COMBAT.md, docs/CHAT.md, docs/PRESENCE.md and refreshed docs/ARCHITECTURE.md describe routes, security boundaries, deployment and gameplay rules.
-- Go server CI runs race-enabled unit/integration tests against PostgreSQL and go vet. Server run #263 passed after the production-route comment cleanup; run #262 passed the latest presence persistence, privacy, heartbeat write-coalescing and account-scoped roster tests. Runs #264–#269 are validating the foraging/herbal recipe and server-catalog station changes. Runs #260 and #261 also passed. Server runs #245–#253 passed chat-history, readiness and rate-limiter hardening.
+- Go server CI runs race-enabled unit/integration tests against PostgreSQL and go vet. Server run #263 passed after the production-route comment cleanup; run #262 passed presence persistence, privacy, heartbeat write-coalescing and account-scoped roster tests. Run #268 exposed a stale public market-catalog test expectation after the herbal items were added; commit 8c0a7fb updates that assertion. Runs #269–#274 are validating the catalog correction, herbal foraging/crafting additions, password-policy enforcement and coalesced session activity writes. Runs #260–#263 passed. Server runs #245–#253 passed chat-history, readiness and rate-limiter hardening.
 - Godot client CI uses the official Godot 4.3 release and export templates. Client run #90 passed data-driven crafting-station visuals and target selection; runs #89–#90 passed the client catalog changes. Runs #83–#88 also passed presence, inventory search/sort, gathering visuals and bounded HTTP timeouts/redirect-safe requests.
 
 ## Production safeguards and remaining launch gates
@@ -73,7 +73,7 @@ An original sandbox MMORPG combining long-form skill progression and item gamepl
 
 ## Next engineering tasks
 
-1. Finish validating the foraging/herbal server test runs, then build reconnect recovery and authoritative remote-player movement snapshots.
+1. Finish validating server runs #269–#274, including the new account-auth and session-write optimizations; then build reconnect recovery and authoritative remote-player movement snapshots.
 2. Add player-to-player trade with escrow and transaction safety, then add a real-phone pass on the Godot Web client.
 3. Add email verification, password recovery, MFA, distributed abuse controls and administrative account operations before enabling public registration.
 4. Add unique item instances/durability, combat animations/AI, currency sinks and player-to-player trade with escrow/transaction safety.
