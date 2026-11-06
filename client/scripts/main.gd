@@ -118,6 +118,10 @@ func _add_hold_button(parent: Control, caption: String, action: String, left: fl
 	parent.add_child(button)
 
 func _connect_api() -> void:
+	if OS.has_feature("web"):
+		var forwarded_api_origin: Variant = JavaScriptBridge.eval("window.location.origin.replace('-8000.', '-8080.')")
+		if forwarded_api_origin is String and not forwarded_api_origin.is_empty():
+			api_base_url = forwarded_api_origin
 	api_request = HTTPRequest.new()
 	add_child(api_request)
 	api_request.request_completed.connect(_on_api_request_completed)
