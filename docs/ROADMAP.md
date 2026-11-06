@@ -21,11 +21,13 @@
 - [x] Starter gathering nodes with charges, depletion and timed respawn.
 - [ ] Crafting recipes, requirements and output quality.
 - [ ] Combat attributes, abilities, damage and death / recovery loop.
-- [x] Award XP through validated starter gathering actions (development prototype).\n- [ ] Full production gameplay-action validation for gathering, crafting and combat.
+- [x] Award XP through validated starter gathering actions (development prototype).
+- [ ] Full production gameplay-action validation for gathering, crafting and combat.
 - [x] Deterministic progression boundary and repository concurrency tests.
 
 ## Milestone 4: Inventory and economy
-- [x] Starter item definitions and stack-count inventory.\n- [ ] Item instances, equipment, ownership rules and full stack management.
+- [x] Starter item definitions and stack-count inventory.
+- [ ] Item instances, equipment, ownership rules and full stack management.
 - [ ] Bank storage and item ownership.
 - [ ] Atomic player-to-player trades.
 - [ ] Currency ledger and NPC/player shops.
