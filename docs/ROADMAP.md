@@ -36,6 +36,7 @@
 
 - [x] Starter item catalog, stack-count inventory, server-side stack validation and consumable healing potions.
 - [x] Persistent 100-slot bank with atomic deposit/withdraw operations.
+- [x] Client inventory/bank search, category filters and quantity-based sorting.
 - [x] Godot bag/bank panel with item selection and quantity-based stack transfers.
 - [x] Persistent coin wallet, starter merchant catalog and atomic buy/sell transactions.
 - [x] Equipment slots, equip/unequip transactions and derived attack/defense bonuses.
