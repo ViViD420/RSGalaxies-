@@ -10,6 +10,8 @@ import (
 	"testing"
 
 	"github.com/ViViD420/RSGalaxies-/server/internal/game"
+	"github.com/ViViD420/RSGalaxies-/server/internal/auth"
+	"net/url"
 )
 
 func TestPlayerLifecycle(t *testing.T) {
@@ -220,3 +222,100 @@ func TestCraftingCreatesOutputAndConsumesIngredients(t *testing.T) {
 	}
 }
 
+
+type testAccountStore struct {
+	accounts map[string]auth.Account
+	tokens map[string]auth.Account
+	revoked map[string]bool
+}
+
+func newTestAccountStore() *testAccountStore {
+	return &testAccountStore{accounts:map[string]auth.Account{},tokens:map[string]auth.Account{},revoked:map[string]bool{}}
+}
+func (s *testAccountStore) Register(_ context.Context,email,password string,now time.Time)(auth.Account,string,error){
+	id:="account-"+email
+	account:=auth.Account{ID:id,Email:email,CreatedAt:now}
+	s.accounts[email]=account
+	token:="token-"+id
+	s.tokens[token]=account
+	return account,token,nil
+}
+func (s *testAccountStore) Login(ctx context.Context,email,password string,now time.Time)(auth.Account,string,error){
+	account,ok:=s.accounts[email];if !ok{return auth.Account{},"",auth.ErrInvalidCredentials}
+	token:="login-"+account.ID;s.tokens[token]=account;return account,token,nil
+}
+func (s *testAccountStore) AuthenticateSession(_ context.Context,token string,_ time.Time)(auth.Account,error){
+	account,ok:=s.tokens[token];if !ok||s.revoked[token]{return auth.Account{},auth.ErrSessionNotFound};return account,nil
+}
+func (s *testAccountStore) RevokeSession(_ context.Context,token string,_ time.Time)error{s.revoked[token]=true;return nil}
+
+type testCharacterStore struct { players map[string]map[game.PlayerID]game.Player }
+func newTestCharacterStore()*testCharacterStore{return &testCharacterStore{players:map[string]map[game.PlayerID]game.Player{}}}
+func (s *testCharacterStore) CreateCharacter(_ context.Context,accountID string,player game.Player)error{
+	if s.players[accountID]==nil{s.players[accountID]=map[game.PlayerID]game.Player{}}
+	if _,ok:=s.players[accountID][player.ID];ok{return game.ErrPlayerAlreadyExists}
+	s.players[accountID][player.ID]=player;return nil
+}
+func (s *testCharacterStore) GetCharacter(_ context.Context,accountID string,id game.PlayerID)(game.Player,error){
+	player,ok:=s.players[accountID][id];if !ok{return game.Player{},game.ErrPlayerNotFound};return player,nil
+}
+func (s *testCharacterStore) ListCharacters(_ context.Context,accountID string)([]game.Player,error){
+	players:=make([]game.Player,0,len(s.players[accountID]));for _,player:=range s.players[accountID]{players=append(players,player)};return players,nil
+}
+
+func TestAuthenticatedCharacterLifecycleAndOwnership(t *testing.T) {
+	t.Setenv("RS_GALAXIES_ENV","production")
+	accounts:=newTestAccountStore()
+	characters:=newTestCharacterStore()
+	handler:=NewWithAccounts(game.NewMemoryPlayerRepository(),accounts,characters).Routes()
+
+	unauthorized:=httptest.NewRecorder()
+	handler.ServeHTTP(unauthorized,httptest.NewRequest(http.MethodGet,"/api/v1/account/characters",nil))
+	if unauthorized.Code!=http.StatusUnauthorized{t.Fatalf("unauthenticated list status=%d",unauthorized.Code)}
+
+	register:=httptest.NewRecorder()
+	handler.ServeHTTP(register,httptest.NewRequest(http.MethodPost,"/api/v1/auth/register",bytes.NewBufferString(`{"email":"owner@example.test","password":"long-enough-password"}`)))
+	if register.Code!=http.StatusCreated{t.Fatalf("register status=%d body=%s",register.Code,register.Body.String())}
+	var registration struct{AccessToken string `json:"accessToken"`;Account auth.Account `json:"account"`}
+	if err:=json.Unmarshal(register.Body.Bytes(),&registration);err!=nil{t.Fatal(err)}
+	if registration.AccessToken==""||registration.Account.ID==""{t.Fatal("registration response omitted account or token")}
+	authHeader:=func(token string)*http.Request{request:=httptest.NewRequest(http.MethodGet,"/",nil);request.Header.Set("Authorization","Bearer "+token);return request}
+
+	create:=httptest.NewRecorder()
+	createRequest:=httptest.NewRequest(http.MethodPost,"/api/v1/account/characters",bytes.NewBufferString(`{"name":"OwnedWayfarer"}`))
+	createRequest.Header.Set("Authorization","Bearer "+registration.AccessToken)
+	handler.ServeHTTP(create,createRequest)
+	if create.Code!=http.StatusCreated{t.Fatalf("create character status=%d body=%s",create.Code,create.Body.String())}
+	var player game.Player
+	if err:=json.Unmarshal(create.Body.Bytes(),&player);err!=nil{t.Fatal(err)}
+
+	secondRegister:=httptest.NewRecorder()
+	handler.ServeHTTP(secondRegister,httptest.NewRequest(http.MethodPost,"/api/v1/auth/register",bytes.NewBufferString(`{"email":"other@example.test","password":"long-enough-password"}`)))
+	var second struct{AccessToken string `json:"accessToken"`}
+	if err:=json.Unmarshal(secondRegister.Body.Bytes(),&second);err!=nil{t.Fatal(err)}
+	foreign:=httptest.NewRecorder()
+	foreignRequest:=authHeader(second.AccessToken)
+	foreignRequest.Method=http.MethodGet
+	foreignRequest.URL=mustParseTestURL("/api/v1/account/characters/"+string(player.ID))
+	handler.ServeHTTP(foreign,foreignRequest)
+	if foreign.Code!=http.StatusNotFound{t.Fatalf("cross-account character lookup status=%d",foreign.Code)}
+
+	me:=httptest.NewRecorder()
+	meRequest:=authHeader(registration.AccessToken);meRequest.URL=mustParseTestURL("/api/v1/auth/me")
+	handler.ServeHTTP(me,meRequest)
+	if me.Code!=http.StatusOK{t.Fatalf("authenticated account status=%d",me.Code)}
+
+	logout:=httptest.NewRecorder()
+	logoutRequest:=httptest.NewRequest(http.MethodPost,"/api/v1/auth/logout",nil)
+	logoutRequest.Header.Set("Authorization","Bearer "+registration.AccessToken)
+	handler.ServeHTTP(logout,logoutRequest)
+	if logout.Code!=http.StatusNoContent{t.Fatalf("logout status=%d",logout.Code)}
+	afterLogout:=httptest.NewRecorder()
+	afterRequest:=authHeader(registration.AccessToken);afterRequest.URL=mustParseTestURL("/api/v1/auth/me")
+	handler.ServeHTTP(afterLogout,afterRequest)
+	if afterLogout.Code!=http.StatusUnauthorized{t.Fatalf("revoked token status=%d",afterLogout.Code)}
+}
+
+func mustParseTestURL(path string)*url.URL{
+	parsed,err:=url.Parse(path);if err!=nil{panic(err)};return parsed
+}
