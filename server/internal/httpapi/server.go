@@ -9,8 +9,11 @@ import (
 	"io"
 	"log"
 	"net/http"
+	"net"
+	"sync"
 	"os"
 	"strings"
+	"strconv"
 	"time"
 
 	"github.com/ViViD420/RSGalaxies-/server/internal/game"
@@ -27,7 +30,11 @@ type characterStore interface {
 	CraftForAccount(context.Context, string, game.PlayerID, string, time.Time) (game.Player, game.CraftingResult, error)
 }
 
+type authAttemptWindow struct { started time.Time; count int }
+
 type Server struct {
+	authRateMu sync.Mutex
+	authAttempts map[string]authAttemptWindow
 	players game.PlayerRepository
 	accounts auth.AccountStore
 	characters characterStore
@@ -35,11 +42,11 @@ type Server struct {
 }
 
 func New(players game.PlayerRepository) *Server {
-	return &Server{players: players, now: time.Now}
+	return &Server{players: players, now: time.Now, authAttempts: make(map[string]authAttemptWindow)}
 }
 
 func NewWithAccounts(players game.PlayerRepository, accounts auth.AccountStore, characters characterStore) *Server {
-	return &Server{players: players, accounts: accounts, characters: characters, now: time.Now}
+	return &Server{players: players, accounts: accounts, characters: characters, now: time.Now, authAttempts: make(map[string]authAttemptWindow)}
 }
 
 func (s *Server) Routes() http.Handler {
@@ -63,7 +70,9 @@ func (s *Server) Routes() http.Handler {
 		mux.HandleFunc("POST /api/v1/players/{id}/craft/{recipeID}", s.craft)
 	}
 	if s.accounts != nil && s.characters != nil {
-		mux.HandleFunc("POST /api/v1/auth/register", s.register)
+		if os.Getenv("RS_GALAXIES_ENV") != "production" || os.Getenv("RS_GALAXIES_ENABLE_REGISTRATION") == "true" {
+			mux.HandleFunc("POST /api/v1/auth/register", s.register)
+		}
 		mux.HandleFunc("POST /api/v1/auth/login", s.login)
 		mux.HandleFunc("POST /api/v1/auth/logout", s.logout)
 		mux.HandleFunc("GET /api/v1/auth/me", s.me)
@@ -273,6 +282,7 @@ func decodeStrictJSON(w http.ResponseWriter, r *http.Request, limit int64, desti
 }
 
 func (s *Server) register(w http.ResponseWriter, r *http.Request) {
+	if !s.allowAuthAttempt(w, r, 5) { return }
 	var request credentialsRequest
 	if !decodeStrictJSON(w, r, 4<<10, &request) { return }
 	account, token, err := s.accounts.Register(r.Context(), request.Email, request.Password, s.now())
@@ -292,6 +302,7 @@ func (s *Server) register(w http.ResponseWriter, r *http.Request) {
 }
 
 func (s *Server) login(w http.ResponseWriter, r *http.Request) {
+	if !s.allowAuthAttempt(w, r, 10) { return }
 	var request credentialsRequest
 	if !decodeStrictJSON(w, r, 4<<10, &request) { return }
 	account, token, err := s.accounts.Login(r.Context(), request.Email, request.Password, s.now())
@@ -471,4 +482,28 @@ func (s *Server) craftOwnedCharacter(w http.ResponseWriter, r *http.Request) {
   default: log.Printf("craft owned: %v",err); writeError(w,500,"internal_error") }; return
  }
  writeJSON(w,200,map[string]any{"character":player,"crafting":result})
+}
+
+func (s *Server) allowAuthAttempt(w http.ResponseWriter,r *http.Request,limit int) bool {
+ host,_,err:=net.SplitHostPort(r.RemoteAddr)
+ if err!=nil { host=r.RemoteAddr }
+ key:=host+"|"+r.URL.Path
+ now:=s.now()
+ s.authRateMu.Lock()
+ defer s.authRateMu.Unlock()
+ for candidate,window:=range s.authAttempts {
+  if now.Sub(window.started)>=time.Minute { delete(s.authAttempts,candidate) }
+ }
+ window,ok:=s.authAttempts[key]
+ if !ok||now.Sub(window.started)>=time.Minute { window=authAttemptWindow{started:now} }
+ if window.count>=limit {
+  retry:=int(time.Until(window.started.Add(time.Minute)).Seconds())
+  if retry<1 { retry=1 }
+  w.Header().Set("Retry-After",strconv.Itoa(retry))
+  writeError(w,http.StatusTooManyRequests,"rate_limited")
+  return false
+ }
+ window.count++
+ s.authAttempts[key]=window
+ return true
 }
