@@ -418,24 +418,30 @@ func TestPostgresTradeInviteAcceptAndAccountPrivacy(t *testing.T) {
 	if err:=updateOwnedPlayer(ctx,seedTx,second.ID,targetState);err!=nil{seedTx.Rollback();t.Fatal(err)}
 	if err:=seedTx.Commit();err!=nil{t.Fatal(err)}
 	initiatorOffer:=game.TradeOffer{Items:map[string]int{"softwood_log":2},Coins:10}
-	updated,err:=repo.UpdateTradeOfferForAccount(ctx,first.ID,initiator.ID,trade.ID,accepted.Revision,initiatorOffer,now.Add(3*time.Second))
+	if _,err:=db.ExecContext(ctx,"UPDATE players SET position_x=20 WHERE id=$1",string(target.ID));err!=nil{t.Fatal(err)}
+	if _,err:=repo.UpdateTradeOfferForAccount(ctx,first.ID,initiator.ID,trade.ID,accepted.Revision,initiatorOffer,now.Add(3*time.Second));!errors.Is(err,game.ErrTradeOutOfRange){t.Fatalf("offer update outside range error=%v",err)}
+	if _,err:=db.ExecContext(ctx,"UPDATE players SET position_x=0 WHERE id=$1",string(target.ID));err!=nil{t.Fatal(err)}
+	updated,err:=repo.UpdateTradeOfferForAccount(ctx,first.ID,initiator.ID,trade.ID,accepted.Revision,initiatorOffer,now.Add(4*time.Second))
 	if err!=nil{t.Fatalf("set initiator offer: %v",err)}
 	if updated.Revision!=accepted.Revision+1||updated.Participants[0].Offer.Items["softwood_log"]!=2{t.Fatalf("initiator offer snapshot=%+v",updated)}
-	if _,err:=repo.UpdateTradeOfferForAccount(ctx,outsider.ID,initiator.ID,trade.ID,updated.Revision,game.TradeOffer{},now.Add(4*time.Second));!errors.Is(err,game.ErrTradeNotParticipant){t.Fatalf("outsider offer update error=%v",err)}
+	if _,err:=repo.UpdateTradeOfferForAccount(ctx,outsider.ID,initiator.ID,trade.ID,updated.Revision,game.TradeOffer{},now.Add(5*time.Second));!errors.Is(err,game.ErrTradeNotParticipant){t.Fatalf("outsider offer update error=%v",err)}
 	targetOffer:=game.TradeOffer{Items:map[string]int{"rough_stone":1},Coins:5}
-	updated,err=repo.UpdateTradeOfferForAccount(ctx,second.ID,target.ID,trade.ID,updated.Revision,targetOffer,now.Add(5*time.Second))
+	updated,err=repo.UpdateTradeOfferForAccount(ctx,second.ID,target.ID,trade.ID,updated.Revision,targetOffer,now.Add(6*time.Second))
 	if err!=nil{t.Fatalf("set target offer: %v",err)}
 	if updated.Revision!=accepted.Revision+2{t.Fatalf("trade revision=%d want=%d",updated.Revision,accepted.Revision+2)}
 	reservedInitiator,err:=repo.GetCharacter(ctx,first.ID,initiator.ID);if err!=nil{t.Fatal(err)}
 	reservedTarget,err:=repo.GetCharacter(ctx,second.ID,target.ID);if err!=nil{t.Fatal(err)}
 	if reservedInitiator.Inventory["softwood_log"]!=3||reservedInitiator.Coins!=90||reservedTarget.Inventory["rough_stone"]!=2||reservedTarget.Coins!=95{t.Fatalf("assets not moved to escrow initiator=%+v target=%+v",reservedInitiator,reservedTarget)}
-	firstConfirm,err:=repo.ConfirmTradeForAccount(ctx,first.ID,initiator.ID,trade.ID,updated.Revision,now.Add(6*time.Second))
+	if _,err:=db.ExecContext(ctx,"UPDATE players SET position_x=20 WHERE id=$1",string(target.ID));err!=nil{t.Fatal(err)}
+	if _,err:=repo.ConfirmTradeForAccount(ctx,first.ID,initiator.ID,trade.ID,updated.Revision,now.Add(7*time.Second));!errors.Is(err,game.ErrTradeOutOfRange){t.Fatalf("confirm outside range error=%v",err)}
+	if _,err:=db.ExecContext(ctx,"UPDATE players SET position_x=0 WHERE id=$1",string(target.ID));err!=nil{t.Fatal(err)}
+	firstConfirm,err:=repo.ConfirmTradeForAccount(ctx,first.ID,initiator.ID,trade.ID,updated.Revision,now.Add(8*time.Second))
 	if err!=nil||firstConfirm.Status!=game.TradeStatusOpen||!firstConfirm.Participants[0].Confirmed{t.Fatalf("first trade confirmation snapshot=%+v err=%v",firstConfirm,err)}
-	completed,err:=repo.ConfirmTradeForAccount(ctx,second.ID,target.ID,trade.ID,updated.Revision,now.Add(7*time.Second))
+	completed,err:=repo.ConfirmTradeForAccount(ctx,second.ID,target.ID,trade.ID,updated.Revision,now.Add(9*time.Second))
 	if err!=nil||completed.Status!=game.TradeStatusCompleted{t.Fatalf("trade settlement snapshot=%+v err=%v",completed,err)}
 	finalInitiator,err:=repo.GetCharacter(ctx,first.ID,initiator.ID);if err!=nil{t.Fatal(err)}
 	finalTarget,err:=repo.GetCharacter(ctx,second.ID,target.ID);if err!=nil{t.Fatal(err)}
 	if finalInitiator.Inventory["softwood_log"]!=3||finalInitiator.Inventory["rough_stone"]!=1||finalInitiator.Coins!=95{t.Fatalf("initiator settlement=%+v",finalInitiator)}
 	if finalTarget.Inventory["rough_stone"]!=2||finalTarget.Inventory["softwood_log"]!=2||finalTarget.Coins!=105{t.Fatalf("target settlement=%+v",finalTarget)}
-	if _,err:=repo.ConfirmTradeForAccount(ctx,second.ID,target.ID,trade.ID,updated.Revision,now.Add(8*time.Second));!errors.Is(err,game.ErrTradeNotAccepted){t.Fatalf("repeat confirmation after settlement error=%v",err)}
+	if _,err:=repo.ConfirmTradeForAccount(ctx,second.ID,target.ID,trade.ID,updated.Revision,now.Add(10*time.Second));!errors.Is(err,game.ErrTradeNotAccepted){t.Fatalf("repeat confirmation after settlement error=%v",err)}
 }
