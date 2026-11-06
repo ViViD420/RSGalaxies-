@@ -17,7 +17,10 @@ import (
 	"github.com/ViViD420/RSGalaxies-/server/internal/game"
 )
 
-const SessionLifetime = 30 * 24 * time.Hour
+const (
+	SessionLifetime = 30 * 24 * time.Hour
+	MaxActiveSessionsPerAccount = 10
+)
 
 var (
 	ErrAccountExists = auth.ErrAccountExists
@@ -70,7 +73,7 @@ func (r *AccountRepository) Register(ctx context.Context, email, password string
 		if errors.As(err, &pgErr) && pgErr.Code == "23505" { return auth.Account{}, "", ErrAccountExists }
 		return auth.Account{}, "", fmt.Errorf("insert account: %w", err)
 	}
-	if _, err := tx.ExecContext(ctx, `INSERT INTO account_sessions (token_hash,account_id,created_at,expires_at,last_used_at) VALUES ($1,$2,$3,$4,$3)`, tokenHash[:], id, now, expires); err != nil {
+	if err := createSession(ctx, tx, id, tokenHash[:], now); err != nil {
 		return auth.Account{}, "", fmt.Errorf("create initial session: %w", err)
 	}
 	if err := tx.Commit(); err != nil { return auth.Account{}, "", fmt.Errorf("commit account registration: %w", err) }
@@ -93,9 +96,16 @@ func (r *AccountRepository) Login(ctx context.Context, email, password string, n
 	token, tokenHash, err := auth.NewSessionToken()
 	if err != nil { return auth.Account{}, "", err }
 	now = now.UTC()
-	_, err = r.db.ExecContext(ctx, `INSERT INTO account_sessions (token_hash,account_id,created_at,expires_at,last_used_at) VALUES ($1,$2,$3,$4,$3)`,
-		tokenHash[:],account.ID,now,now.Add(SessionLifetime))
-	if err != nil { return auth.Account{}, "", fmt.Errorf("create login session: %w", err) }
+	tx, err := r.db.BeginTx(ctx, nil)
+	if err != nil { return auth.Account{}, "", fmt.Errorf("begin login session: %w", err) }
+	defer tx.Rollback()
+	if _, err := tx.ExecContext(ctx, "SELECT id FROM accounts WHERE id=$1 FOR UPDATE", account.ID); err != nil {
+		return auth.Account{}, "", fmt.Errorf("lock account for session: %w", err)
+	}
+	if err := createSession(ctx, tx, account.ID, tokenHash[:], now); err != nil {
+		return auth.Account{}, "", fmt.Errorf("create login session: %w", err)
+	}
+	if err := tx.Commit(); err != nil { return auth.Account{}, "", fmt.Errorf("commit login session: %w", err) }
 	account.CreatedAt = account.CreatedAt.UTC()
 	return account, token, nil
 }
@@ -229,4 +239,14 @@ func (r *AccountRepository) CraftForAccount(ctx context.Context,accountID string
 	if err:=updateOwnedPlayer(ctx,tx,accountID,player);err!=nil{return game.Player{},game.CraftingResult{},err}
 	if err:=tx.Commit();err!=nil{return game.Player{},game.CraftingResult{},fmt.Errorf("commit owned crafting: %w",err)}
 	return player,result,nil
+}
+
+func createSession(ctx context.Context,tx *sql.Tx,accountID string,tokenHash []byte,now time.Time) error {
+	if _,err:=tx.ExecContext(ctx,`INSERT INTO account_sessions (token_hash,account_id,created_at,expires_at,last_used_at) VALUES ($1,$2,$3,$4,$3)`,tokenHash,accountID,now,now.Add(SessionLifetime));err!=nil{return fmt.Errorf("insert account session: %w",err)}
+	if _,err:=tx.ExecContext(ctx,`DELETE FROM account_sessions WHERE account_id=$1 AND token_hash IN (
+		SELECT token_hash FROM account_sessions WHERE account_id=$1 AND revoked_at IS NULL AND expires_at>$2
+		ORDER BY created_at DESC, token_hash DESC OFFSET $3
+	)`,accountID,now,MaxActiveSessionsPerAccount);err!=nil{return fmt.Errorf("prune excess account sessions: %w",err)}
+	if _,err:=tx.ExecContext(ctx,`DELETE FROM account_sessions WHERE account_id=$1 AND (expires_at<=$2 OR revoked_at<$2-INTERVAL '7 days')`,accountID,now);err!=nil{return fmt.Errorf("prune expired account sessions: %w",err)}
+	return nil
 }
