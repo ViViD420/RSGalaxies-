@@ -84,6 +84,9 @@ func TestPostgresOwnedGameplayMutationsEnforceOwnership(t *testing.T) {
  if deposited,err:=repo.TransferBankItemForAccount(ctx,first.ID,player.ID,"softwood_log",1,true);err!=nil||deposited.Bank["softwood_log"]!=1||deposited.Inventory["softwood_log"]!=1{t.Fatalf("owner bank deposit player=%+v err=%v",deposited,err)}
  persistedBank,err:=repo.GetCharacter(ctx,first.ID,player.ID);if err!=nil||persistedBank.Bank["softwood_log"]!=1{t.Fatalf("bank persistence player=%+v err=%v",persistedBank,err)}
  if withdrawn,err:=repo.TransferBankItemForAccount(ctx,first.ID,player.ID,"softwood_log",1,false);err!=nil||withdrawn.Bank["softwood_log"]!=0||withdrawn.Inventory["softwood_log"]!=2{t.Fatalf("owner bank withdrawal player=%+v err=%v",withdrawn,err)}
+ if _,_,err:=repo.TradeItemForAccount(ctx,second.ID,player.ID,"rough_stone",1,true);!errors.Is(err,game.ErrPlayerNotFound){t.Fatalf("foreign market trade error=%v",err)}
+ bought,cost,err:=repo.TradeItemForAccount(ctx,first.ID,player.ID,"rough_stone",2,true);if err!=nil||cost!=6||bought.Coins!=94||bought.Inventory["rough_stone"]!=2{t.Fatalf("owner market buy player=%+v cost=%d err=%v",bought,cost,err)}
+ sold,revenue,err:=repo.TradeItemForAccount(ctx,first.ID,player.ID,"rough_stone",1,false);if err!=nil||revenue!=1||sold.Coins!=95||sold.Inventory["rough_stone"]!=1{t.Fatalf("owner market sell player=%+v revenue=%d err=%v",sold,revenue,err)}
  if _,_,err:=repo.AwardExperienceForAccount(ctx,first.ID,player.ID,"mining",50);err!=nil{t.Fatalf("owner XP award: %v",err)}
  if _,err:=repo.MovePlayerForAccount(ctx,first.ID,player.ID,0.1,2,now.Add(time.Second));err!=nil{t.Fatalf("owner movement: %v",err)}
  crafted,result,err:=repo.CraftForAccount(ctx,first.ID,player.ID,"basic-plank",now.Add(2*time.Second));if err!=nil{t.Fatalf("owner craft: %v",err)}
@@ -97,8 +100,8 @@ func TestPostgresMigrationsAreIdempotent(t *testing.T) {
  ctx:=context.Background()
  if err:=Migrate(ctx,db);err!=nil{t.Fatalf("second migration: %v",err)}
  var count int
- if err:=db.QueryRowContext(ctx,"SELECT COUNT(*) FROM schema_migrations WHERE version IN (1,2,3)").Scan(&count);err!=nil{t.Fatal(err)}
- if count!=3{t.Fatalf("migration versions applied=%d want=3",count)}
+ if err:=db.QueryRowContext(ctx,"SELECT COUNT(*) FROM schema_migrations WHERE version IN (1,2,3,4)").Scan(&count);err!=nil{t.Fatal(err)}
+ if count!=4{t.Fatalf("migration versions applied=%d want=4",count)}
 }
 
 func TestPostgresOwnedGatheringLocksSharedNodeAndChecksOwner(t *testing.T) {
