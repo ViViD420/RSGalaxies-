@@ -12,7 +12,8 @@ var player_node: CharacterBody3D
 var player_id := ""
 var api_stage := "health"
 var movement_pending := false
-var gather_pending := false
+var interaction_pending := false
+var interaction_type := "gather"
 var api_base_url := "http://127.0.0.1:8080"
 
 func _ready() -> void:
@@ -22,8 +23,8 @@ func _ready() -> void:
 	_connect_api()
 
 func _process(_delta: float) -> void:
-	if Input.is_action_just_pressed("interact") and not player_id.is_empty() and not gather_pending:
-		_request_gather()
+	if Input.is_action_just_pressed("interact") and not player_id.is_empty() and not interaction_pending:
+		_request_interaction()
 
 func _setup_input_actions() -> void:
 	_register_key_action("move_forward", KEY_W)
@@ -78,6 +79,7 @@ func _build_world() -> void:
 
 	_add_tree(Vector3(2.0, 0.0, 0.0))
 	_add_stone_deposit(Vector3(-2.0, 0.0, 0.0))
+	_add_workbench(Vector3(0.0, 0.0, 4.0))
 
 	player_node = PLAYER_SCENE.instantiate() as CharacterBody3D
 	player_node.position = Vector3(0.0, 0.05, 0.0)
@@ -110,6 +112,29 @@ func _add_tree(at: Vector3) -> void:
 	tree.add_child(canopy)
 	add_child(tree)
 
+func _add_workbench(at: Vector3) -> void:
+	var bench := Node3D.new()
+	bench.position = at
+	var wood_material := StandardMaterial3D.new()
+	wood_material.albedo_color = Color(0.30, 0.19, 0.10)
+	var top := MeshInstance3D.new()
+	var top_mesh := BoxMesh.new()
+	top_mesh.size = Vector3(2.4, 0.25, 1.2)
+	top.mesh = top_mesh
+	top.position.y = 1.05
+	top.material_override = wood_material
+	bench.add_child(top)
+	for x_offset in [-0.95, 0.95]:
+		for z_offset in [-0.42, 0.42]:
+			var leg := MeshInstance3D.new()
+			var leg_mesh := BoxMesh.new()
+			leg_mesh.size = Vector3(0.18, 1.0, 0.18)
+			leg.mesh = leg_mesh
+			leg.position = Vector3(x_offset, 0.5, z_offset)
+			leg.material_override = wood_material
+			bench.add_child(leg)
+	add_child(bench)
+
 func _add_stone_deposit(at: Vector3) -> void:
 	var rock := MeshInstance3D.new()
 	var rock_mesh := SphereMesh.new()
@@ -139,7 +164,7 @@ func _build_hud() -> void:
 	column.add_child(heading)
 
 	var instructions := Label.new()
-	instructions.text = "WASD / touch pad: move  •  E / USE: gather  •  Drag / mouse: look"
+	instructions.text = "WASD / pad: move  •  E / USE: gather or craft  •  Drag / mouse: look"
 	column.add_child(instructions)
 
 	status_label = Label.new()
@@ -272,25 +297,38 @@ func _start_gathering() -> void:
 	add_child(gather_request)
 	gather_request.request_completed.connect(_on_gather_completed)
 
-func _request_gather() -> void:
+func _request_interaction() -> void:
 	var tree_distance := Vector2(player_node.global_position.x - 2.0, player_node.global_position.z).length()
 	var stone_distance := Vector2(player_node.global_position.x + 2.0, player_node.global_position.z).length()
-	var node_id := "tree-001" if tree_distance <= stone_distance else "stone-001"
-	var nearest_distance := minf(tree_distance, stone_distance)
-	if nearest_distance > 3.0:
-		status_label.text = "Move closer to a tree or stone deposit to gather"
-		return
-	var error := gather_request.request(
-		api_base_url + "/api/v1/players/" + player_id + "/gather/" + node_id,
-		PackedStringArray(),
-		HTTPClient.METHOD_POST,
-		""
-	)
+	var bench_distance := Vector2(player_node.global_position.x, player_node.global_position.z - 4.0).length()
+	var error := ERR_UNAVAILABLE
+	if bench_distance <= 3.0 and bench_distance <= tree_distance and bench_distance <= stone_distance:
+		interaction_type = "craft"
+		status_label.text = "Using frontier workbench..."
+		error = gather_request.request(
+			api_base_url + "/api/v1/players/" + player_id + "/craft/basic-plank",
+			PackedStringArray(),
+			HTTPClient.METHOD_POST,
+			""
+		)
+	else:
+		var node_id := "tree-001" if tree_distance <= stone_distance else "stone-001"
+		var nearest_distance := minf(tree_distance, stone_distance)
+		if nearest_distance > 3.0:
+			status_label.text = "Move closer to a resource node or workbench"
+			return
+		interaction_type = "gather"
+		error = gather_request.request(
+			api_base_url + "/api/v1/players/" + player_id + "/gather/" + node_id,
+			PackedStringArray(),
+			HTTPClient.METHOD_POST,
+			""
+		)
 	if error == OK:
-		gather_pending = true
+		interaction_pending = true
 
 func _on_gather_completed(result: int, response_code: int, _headers: PackedStringArray, body: PackedByteArray) -> void:
-	gather_pending = false
+	interaction_pending = false
 	if result != HTTPRequest.RESULT_SUCCESS:
 		status_label.text = "Gathering: server connection lost"
 		return
@@ -301,17 +339,22 @@ func _on_gather_completed(result: int, response_code: int, _headers: PackedStrin
 		var error_code := str(payload.get("error", "gathering_failed"))
 		status_label.text = "Gathering: " + error_code.replace("_", " ")
 		return
-	var gathering: Dictionary = payload.get("gathering", {})
 	var player_data: Dictionary = payload.get("player", {})
-	var item_name := "Softwood Log" if gathering.get("itemId") == "softwood_log" else "Rough Stone"
-	status_label.text = "Gathered " + item_name + "  •  +" + str(gathering.get("experience", 0)) + " " + str(gathering.get("skillId", "")) + " XP"
+	if interaction_type == "craft":
+		var crafting: Dictionary = payload.get("crafting", {})
+		status_label.text = "Crafted Wooden Plank  •  +" + str(crafting.get("experience", 0)) + " Crafting XP"
+	else:
+		var gathering: Dictionary = payload.get("gathering", {})
+		var item_name := "Softwood Log" if gathering.get("itemId") == "softwood_log" else "Rough Stone"
+		status_label.text = "Gathered " + item_name + "  •  +" + str(gathering.get("experience", 0)) + " " + str(gathering.get("skillId", "")) + " XP"
 	_update_inventory(player_data.get("inventory", {}))
 
 func _update_inventory(inventory_data: Variant) -> void:
 	if not inventory_data is Dictionary:
 		return
-	inventory_label.text = "Inventory: Logs %d  •  Stone %d" % [
+	inventory_label.text = "Inventory: Logs %d  •  Planks %d  •  Stone %d" % [
 		int(inventory_data.get("softwood_log", 0)),
+		int(inventory_data.get("wooden_plank", 0)),
 		int(inventory_data.get("rough_stone", 0))
 	]
 
