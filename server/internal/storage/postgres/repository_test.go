@@ -79,3 +79,36 @@ func TestPostgresRepositoryRollsBackInvalidCraft(t *testing.T) {
 		t.Fatalf("failed craft changed persisted state: %+v", persisted)
 	}
 }
+
+func TestPostgresGatheringPersistsNodeAndPlayerAtomically(t *testing.T) {
+	db := integrationDatabase(t)
+	repository := NewPlayerRepository(db)
+	ctx := context.Background()
+	id := game.PlayerID(fmt.Sprintf("gather-%d", time.Now().UnixNano()))
+	player, err := game.NewPlayer(id, "GatheringWayfarer", time.Now().UTC())
+	if err != nil { t.Fatal(err) }
+	player.Position.X = 2
+	if err := repository.Create(ctx, player); err != nil { t.Fatalf("create player: %v", err) }
+	_, _ = db.ExecContext(ctx, "DELETE FROM gathering_node_state WHERE node_id=$1", "tree-001")
+	t.Cleanup(func() {
+		_, _ = db.ExecContext(context.Background(), "DELETE FROM players WHERE id=$1", string(id))
+		_, _ = db.ExecContext(context.Background(), "DELETE FROM gathering_node_state WHERE node_id=$1", "tree-001")
+	})
+
+	gathered, result, err := repository.Gather(ctx, id, "tree-001", time.Now())
+	if err != nil { t.Fatalf("gather: %v", err) }
+	if result.ItemID != "softwood_log" || gathered.Inventory["softwood_log"] != 1 || gathered.Skills["woodcutting"].Experience != 25 {
+		t.Fatalf("gather result mismatch: result=%+v player=%+v", result, gathered)
+	}
+	var charges int
+	var initialized bool
+	if err := db.QueryRowContext(ctx, "SELECT charges, initialized FROM gathering_node_state WHERE node_id=$1", "tree-001").Scan(&charges, &initialized); err != nil {
+		t.Fatalf("read persisted node state: %v", err)
+	}
+	if !initialized || charges != 2 { t.Fatalf("persisted node state = initialized:%v charges:%d", initialized, charges) }
+	reloaded, err := repository.Get(ctx, id)
+	if err != nil { t.Fatal(err) }
+	if reloaded.Inventory["softwood_log"] != 1 || reloaded.Skills["woodcutting"].Experience != 25 {
+		t.Fatalf("player gather reward not persisted: %+v", reloaded)
+	}
+}
