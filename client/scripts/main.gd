@@ -643,12 +643,12 @@ func _build_hud() -> void:
 	layer.add_child(logout_button)
 	trade_button = Button.new()
 	trade_button.text = "Trade"
-	trade_button.anchor_left = 1.0
-	trade_button.anchor_right = 1.0
-	trade_button.offset_left = -828
-	trade_button.offset_top = 18
-	trade_button.offset_right = -728
-	trade_button.offset_bottom = 62
+	trade_button.anchor_left = 0.0
+	trade_button.anchor_right = 0.0
+	trade_button.offset_left = 18
+	trade_button.offset_top = 145
+	trade_button.offset_right = 118
+	trade_button.offset_bottom = 189
 	trade_button.visible = false
 	trade_button.pressed.connect(_toggle_trade_panel)
 	layer.add_child(trade_button)
@@ -1852,7 +1852,12 @@ func _toggle_trade_panel() -> void:
 
 func _build_trade_panel() -> void:
 	trade_panel = PanelContainer.new()
-	trade_panel.position = Vector2(410, 145)
+	trade_panel.anchor_left = 0.5
+	trade_panel.anchor_right = 0.5
+	trade_panel.offset_left = -205
+	trade_panel.offset_top = 145
+	trade_panel.offset_right = 205
+	trade_panel.offset_bottom = 535
 	trade_panel.custom_minimum_size = Vector2(410, 390)
 	var column := VBoxContainer.new()
 	trade_panel.add_child(column)
