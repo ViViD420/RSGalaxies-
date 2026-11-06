@@ -100,3 +100,36 @@ func TestDevelopmentCORSPreflight(t *testing.T) {
 		t.Fatal("development CORS origin header missing")
 	}
 }
+
+func TestWorldZonesAndValidatedMovement(t *testing.T) {
+	handler := New(game.NewMemoryPlayerRepository()).Routes()
+	zones := httptest.NewRecorder()
+	handler.ServeHTTP(zones, httptest.NewRequest(http.MethodGet, "/api/v1/world/zones", nil))
+	if zones.Code != http.StatusOK {
+		t.Fatalf("world zones status = %d", zones.Code)
+	}
+
+	created := httptest.NewRecorder()
+	handler.ServeHTTP(created, httptest.NewRequest(http.MethodPost, "/api/v1/players", bytes.NewBufferString(`{"name":"Wayfarer"}`)))
+	var player game.Player
+	if err := json.Unmarshal(created.Body.Bytes(), &player); err != nil {
+		t.Fatal(err)
+	}
+	if player.Position.ZoneID != game.DefaultWorldZoneID {
+		t.Fatalf("spawn zone = %q", player.Position.ZoneID)
+	}
+
+	path := "/api/v1/players/" + string(player.ID) + "/move"
+	moved := httptest.NewRecorder()
+	handler.ServeHTTP(moved, httptest.NewRequest(http.MethodPost, path, bytes.NewBufferString(`{"x":0.1,"z":0}`)))
+	if moved.Code != http.StatusOK {
+		t.Fatalf("valid move status = %d body = %s", moved.Code, moved.Body.String())
+	}
+
+	outside := httptest.NewRecorder()
+	handler.ServeHTTP(outside, httptest.NewRequest(http.MethodPost, path, bytes.NewBufferString(`{"x":200,"z":0}`)))
+	if outside.Code != http.StatusUnprocessableEntity {
+		t.Fatalf("out-of-bounds move status = %d, want %d", outside.Code, http.StatusUnprocessableEntity)
+	}
+}
+
