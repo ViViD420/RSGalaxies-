@@ -26,9 +26,10 @@
 
 - [x] Ten data-driven skills, level 1–99 progression curve and XP cap.
 - [x] Authenticated live skills panel with per-skill XP progress and next-level thresholds.
-- [x] Tree, stone and copper gathering with range, skill, charge and respawn rules.
+- [x] Tree, stone, copper and wild-herb gathering with range, skill, charge and respawn rules.
 - [x] Godot selects gathering targets and builds resource props from the server node catalog.
-- [x] Workbench plank recipe and forge copper smelting/training-sword recipes.
+- [x] Godot builds and selects workbench/forge stations from the server crafting-station catalog.
+- [x] Workbench plank and herbal-bundle recipes plus forge copper smelting/training-sword recipes.
 - [x] Transactional crafting with ingredient consumption, output capacity and skill XP.
 - [x] Basic PvE enemy definitions, server-calculated damage, cooldowns, retaliation, combat XP, loot and respawns.
 - [x] Player health, defeated-state action restrictions and safe-spawn recovery.
