@@ -427,3 +427,15 @@ func (s *testCharacterStore) TradeItemForAccount(_ context.Context,accountID str
  if buy{amount,err=player.BuyItem(itemID,quantity)}else{amount,err=player.SellItem(itemID,quantity)}
  if err!=nil{return player,0,err};s.players[accountID][id]=player;return player,amount,nil
 }
+
+func TestMarketCatalogIsPublicAndContainsServerPrices(t *testing.T) {
+ t.Setenv("RS_GALAXIES_ENV","production")
+ handler:=New(game.NewMemoryPlayerRepository()).Routes()
+ response:=httptest.NewRecorder()
+ handler.ServeHTTP(response,httptest.NewRequest(http.MethodGet,"/api/v1/market/items",nil))
+ if response.Code!=http.StatusOK{t.Fatalf("market catalog status=%d",response.Code)}
+ var payload struct{Items []game.ItemDefinition `json:"items"`;StartingCoins int64 `json:"startingCoins"`}
+ if err:=json.Unmarshal(response.Body.Bytes(),&payload);err!=nil{t.Fatal(err)}
+ if len(payload.Items)!=3||payload.StartingCoins!=game.StartingCoins{t.Fatalf("unexpected market catalog: %+v",payload)}
+ if payload.Items[0].BuyPrice<=payload.Items[0].SellPrice{t.Fatal("merchant catalog should expose a grounded buy/sell spread")}
+}
