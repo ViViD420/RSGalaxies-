@@ -63,6 +63,8 @@ Send `Authorization: Bearer <accessToken>`:
 - `GET /api/v1/account/characters/{characterId}/chat/local?after={messageId}&limit=50`
 - `POST /api/v1/account/characters/{characterId}/chat/local` with `{"message":"Hello, zone!"}`.
 - `POST /api/v1/account/characters/{characterId}/inventory/use/{itemId}` — consume an owned item effect such as a healing potion.
+- `POST /api/v1/account/characters/{characterId}/presence/heartbeat` — refresh this owned character's zone presence lease.
+- `GET /api/v1/account/characters/{characterId}/presence` — list up to 100 active characters in the same zone; account IDs and private state are never returned.
 
 A new local-chat reader starts with `after=0` and receives the latest 50 zone messages in chronological order; later requests fetch newer IDs from the returned cursor. Every character operation is scoped by the authenticated account in its SQL query or transaction. A character belonging to another account is reported as not found.
 
