@@ -22,6 +22,9 @@ var skills_request: HTTPRequest
 var skills_pending := false
 var inventory_panel: PanelContainer
 var inventory_use_select: OptionButton
+var inventory_bank_select: OptionButton
+var inventory_quantity_input: LineEdit
+var inventory_status_label: Label
 var equipment_panel: PanelContainer
 var equipment_item_select: OptionButton
 var equipment_slot_select: OptionButton
@@ -807,6 +810,9 @@ func _on_gather_completed(result: int, response_code: int, _headers: PackedStrin
 			market_status_label.text = message
 		if interaction_type == "gear_equip" or interaction_type == "gear_unequip":
 			equipment_status_label.text = message
+		if interaction_type == "bank_deposit" or interaction_type == "bank_withdraw":
+			if inventory_status_label != null:
+				inventory_status_label.text = message
 		if interaction_type == "combat":
 			if error_code == "combat_cooldown":
 				status_label.text = "Combat: wait for your next attack"
@@ -865,7 +871,9 @@ func _on_gather_completed(result: int, response_code: int, _headers: PackedStrin
 		var bank_action := "Deposited" if interaction_type == "bank_deposit" else "Withdrew"
 		var item_bank: Variant = payload.get("bank", player_data.get("bank", {}))
 		_update_inventory(payload.get("inventory", player_data.get("inventory", {})), item_bank, player_data.get("coins", current_coins), player_data.get("equipment", {}), player_data.get("health", current_health))
-		status_label.text = "Bank: " + bank_action + " one item"
+		status_label.text = "Bank: " + bank_action + " stack updated"
+		if inventory_panel != null and inventory_panel.visible:
+			_show_inventory_panel()
 		return
 	if interaction_type == "craft":
 		var crafting: Dictionary = payload.get("crafting", {})
@@ -1557,6 +1565,40 @@ func _show_inventory_panel() -> void:
 		var empty_label := Label.new()
 		empty_label.text = "Your bags and bank are empty."
 		items_column.add_child(empty_label)
+	inventory_bank_select = OptionButton.new()
+	inventory_bank_select.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	for item in market_catalog:
+		if item is Dictionary:
+			var item_id := str(item.get("id", ""))
+			var carried := int(current_inventory.get(item_id, 0))
+			var banked := int(current_bank.get(item_id, 0))
+			if carried > 0 or banked > 0:
+				inventory_bank_select.add_item(str(item.get("name", item_id)) + " (Bag " + str(carried) + " / Bank " + str(banked) + ")")
+				inventory_bank_select.set_item_metadata(inventory_bank_select.item_count - 1, item_id)
+	column.add_child(inventory_bank_select)
+	inventory_quantity_input = LineEdit.new()
+	inventory_quantity_input.text = "1"
+	inventory_quantity_input.placeholder_text = "Transfer quantity (1–100)"
+	inventory_quantity_input.virtual_keyboard_type = LineEdit.KEYBOARD_TYPE_NUMBER
+	column.add_child(inventory_quantity_input)
+	var bank_actions := HBoxContainer.new()
+	var deposit_button := Button.new()
+	deposit_button.text = "Deposit"
+	deposit_button.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	deposit_button.disabled = inventory_bank_select.item_count == 0
+	deposit_button.pressed.connect(func() -> void: _submit_bank_transfer(true))
+	bank_actions.add_child(deposit_button)
+	var withdraw_button := Button.new()
+	withdraw_button.text = "Withdraw"
+	withdraw_button.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	withdraw_button.disabled = inventory_bank_select.item_count == 0
+	withdraw_button.pressed.connect(func() -> void: _submit_bank_transfer(false))
+	bank_actions.add_child(withdraw_button)
+	column.add_child(bank_actions)
+	inventory_status_label = Label.new()
+	inventory_status_label.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+	inventory_status_label.text = "Select an item and quantity to move stacks between bag and bank."
+	column.add_child(inventory_status_label)
 	inventory_use_select = OptionButton.new()
 	inventory_use_select.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	for item in market_catalog:
@@ -1759,3 +1801,28 @@ func _stop_skills_request() -> void:
 		skills_request = null
 	skills_pending = false
 
+
+func _submit_bank_transfer(deposit: bool) -> void:
+	if interaction_pending:
+		return
+	var item_id := str(inventory_bank_select.get_selected_metadata())
+	var quantity := int(inventory_quantity_input.text)
+	if item_id.is_empty():
+		inventory_status_label.text = "Select an item first."
+		return
+	if quantity < 1 or quantity > 100:
+		inventory_status_label.text = "Quantity must be between 1 and 100."
+		return
+	interaction_type = "bank_deposit" if deposit else "bank_withdraw"
+	var action := "deposit" if deposit else "withdraw"
+	var error := gather_request.request(
+		api_base_url + "/api/v1/account/characters/" + player_id + "/bank/" + action,
+		_api_headers(),
+		HTTPClient.METHOD_POST,
+		JSON.stringify({"itemId": item_id, "quantity": quantity})
+	)
+	if error == OK:
+		interaction_pending = true
+		inventory_status_label.text = "Transferring " + str(quantity) + " × " + item_id.replace("_", " ") + "..."
+	else:
+		inventory_status_label.text = "Could not send bank request."
