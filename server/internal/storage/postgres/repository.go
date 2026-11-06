@@ -52,7 +52,7 @@ func (r *PlayerRepository) Create(ctx context.Context, player game.Player) error
 	_, err = r.db.ExecContext(ctx, `INSERT INTO players
 		(id, name, created_at, skills, inventory, zone_id, position_x, position_z, last_move_at)
 		VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9)`,
-		string(player.ID), player.Name, player.CreatedAt, skills, inventory,
+		string(player.ID), player.Name, player.CreatedAt, string(skills), string(inventory),
 		player.Position.ZoneID, player.Position.X, player.Position.Z, player.LastMoveAt)
 	if err != nil {
 		var pgErr *pgconn.PgError
@@ -89,7 +89,7 @@ func updatePlayer(ctx context.Context, exec executor, player game.Player) error 
 	if err != nil { return fmt.Errorf("encode inventory: %w", err) }
 	_, err = exec.ExecContext(ctx, `UPDATE players SET skills=$2, inventory=$3, zone_id=$4,
 		position_x=$5, position_z=$6, last_move_at=$7 WHERE id=$1`,
-		string(player.ID), skills, inventory, player.Position.ZoneID,
+		string(player.ID), string(skills), string(inventory), player.Position.ZoneID,
 		player.Position.X, player.Position.Z, player.LastMoveAt)
 	if err != nil { return fmt.Errorf("update player: %w", err) }
 	return nil
