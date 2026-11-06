@@ -38,7 +38,7 @@ Requires Go 1.23 or newer.
     go vet ./...
     go run ./cmd/worldd
 
-The server listens on http://localhost:8080 by default. Set RS_GALAXIES_ADDR to change the listen address.
+The server listens on http://localhost:8080 by default. Without RS_GALAXIES_DATABASE_URL it uses in-memory development storage; set that variable to a PostgreSQL DSN to enable durable storage. Set RS_GALAXIES_ADDR to change the listen address. The Codespaces workspace supplies PostgreSQL automatically; its checked-in credentials are development-only and must never be reused in production.
 
 ## API
 
