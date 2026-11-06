@@ -34,6 +34,8 @@ type characterStore interface {
 	UnequipItemForAccount(context.Context, string, game.PlayerID, string) (game.Player, error)
 	AttackEnemyForAccount(context.Context, string, game.PlayerID, string, time.Time) (game.Player, game.CombatResult, error)
 	RestForAccount(context.Context, string, game.PlayerID) (game.Player, error)
+	SendLocalChatForAccount(context.Context, string, game.PlayerID, string, time.Time) (game.ChatMessage, error)
+	ListLocalChatForAccount(context.Context, string, game.PlayerID, int64, int) ([]game.ChatMessage, error)
 }
 
 type authAttemptWindow struct { started time.Time; count int }
@@ -100,6 +102,8 @@ func (s *Server) Routes() http.Handler {
 		mux.HandleFunc("POST /api/v1/account/characters/{id}/equipment/unequip/{slot}", s.unequipOwnedItem)
 		mux.HandleFunc("POST /api/v1/account/characters/{id}/combat/attack/{enemyID}", s.attackOwnedEnemy)
 		mux.HandleFunc("POST /api/v1/account/characters/{id}/rest", s.restOwnedCharacter)
+		mux.HandleFunc("GET /api/v1/account/characters/{id}/chat/local", s.listOwnedLocalChat)
+		mux.HandleFunc("POST /api/v1/account/characters/{id}/chat/local", s.sendOwnedLocalChat)
 	}
 	return securityHeaders(mux)
 }
@@ -680,4 +684,39 @@ func (s *Server) restOwnedCharacter(w http.ResponseWriter,r *http.Request) {
 		return
 	}
 	writeJSON(w,200,map[string]any{"character":player,"health":player.Health})
+}
+
+func (s *Server) listOwnedLocalChat(w http.ResponseWriter,r *http.Request) {
+	account,_,ok:=s.authenticatedAccount(w,r);if !ok{return}
+	afterID:=int64(0)
+	if raw:=r.URL.Query().Get("after");raw!=""{
+		value,err:=strconv.ParseInt(raw,10,64);if err!=nil||value<0{writeError(w,422,"invalid_chat_cursor");return};afterID=value
+	}
+	limit:=50
+	if raw:=r.URL.Query().Get("limit");raw!=""{
+		value,err:=strconv.Atoi(raw);if err!=nil||value<1||value>50{writeError(w,422,"invalid_chat_limit");return};limit=value
+	}
+	messages,err:=s.characters.ListLocalChatForAccount(r.Context(),account.ID,game.PlayerID(strings.TrimSpace(r.PathValue("id"))),afterID,limit)
+	if err!=nil{
+		if errors.Is(err,game.ErrPlayerNotFound){writeError(w,404,"character_not_found")}else{log.Printf("list local chat: %v",err);writeError(w,500,"internal_error")}
+		return
+	}
+	writeJSON(w,200,map[string]any{"messages":messages,"after":afterID})
+}
+
+func (s *Server) sendOwnedLocalChat(w http.ResponseWriter,r *http.Request) {
+	account,_,ok:=s.authenticatedAccount(w,r);if !ok{return}
+	var request struct{Message string `json:"message"`}
+	if !decodeStrictJSON(w,r,2<<10,&request){return}
+	message,err:=s.characters.SendLocalChatForAccount(r.Context(),account.ID,game.PlayerID(strings.TrimSpace(r.PathValue("id"))),request.Message,s.now())
+	if err!=nil{
+		switch{
+		case errors.Is(err,game.ErrPlayerNotFound):writeError(w,404,"character_not_found")
+		case errors.Is(err,game.ErrInvalidChatMessage):writeError(w,422,"invalid_chat_message")
+		case errors.Is(err,game.ErrChatCooldown):w.Header().Set("Retry-After","2");writeError(w,429,"chat_cooldown")
+		default:log.Printf("send local chat: %v",err);writeError(w,500,"internal_error")
+		}
+		return
+	}
+	writeJSON(w,201,map[string]any{"message":message})
 }
