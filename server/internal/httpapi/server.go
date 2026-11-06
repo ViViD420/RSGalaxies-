@@ -23,6 +23,8 @@ func (s *Server) Routes() http.Handler {
 	mux.HandleFunc("GET /healthz", s.health)
 	mux.HandleFunc("GET /api/v1/skills", s.listSkills)
 	mux.HandleFunc("GET /api/v1/world/zones", s.listWorldZones)
+	mux.HandleFunc("GET /api/v1/world/nodes", s.listGatheringNodes)
+	mux.HandleFunc("GET /api/v1/items", s.listItems)
 	mux.HandleFunc("GET /api/v1/players", s.listPlayers)
 	mux.HandleFunc("POST /api/v1/players", s.createPlayer)
 	mux.HandleFunc("GET /api/v1/players/{id}", s.getPlayer)
@@ -31,6 +33,7 @@ func (s *Server) Routes() http.Handler {
 	if os.Getenv("RS_GALAXIES_ENV") != "production" {
 		mux.HandleFunc("POST /api/v1/players/{id}/skills/{skill}/experience", s.awardExperience)
 		mux.HandleFunc("POST /api/v1/players/{id}/move", s.movePlayer)
+		mux.HandleFunc("POST /api/v1/players/{id}/gather/{nodeID}", s.gather)
 	}
 	return securityHeaders(mux)
 }
@@ -39,6 +42,15 @@ func (s *Server) health(w http.ResponseWriter, _ *http.Request) { writeJSON(w,20
 func (s *Server) listSkills(w http.ResponseWriter, _ *http.Request) { writeJSON(w,200,map[string]any{"skills":game.SkillDefinitions(),"maxLevel":game.MaxSkillLevel,"maxExperience":game.MaxSkillExperience}) }
 func (s *Server) listWorldZones(w http.ResponseWriter, _ *http.Request) {
 	writeJSON(w, http.StatusOK, map[string]any{"zones": game.WorldZones()})
+}
+
+
+func (s *Server) listGatheringNodes(w http.ResponseWriter, _ *http.Request) {
+	writeJSON(w, http.StatusOK, map[string]any{"nodes": game.GatheringNodes()})
+}
+
+func (s *Server) listItems(w http.ResponseWriter, _ *http.Request) {
+	writeJSON(w, http.StatusOK, map[string]any{"items": game.ItemDefinitions()})
 }
 
 func (s *Server) listPlayers(w http.ResponseWriter,r *http.Request) {
@@ -78,6 +90,32 @@ func (s *Server) awardExperience(w http.ResponseWriter,r *http.Request) {
 	}
 	writeJSON(w,200,map[string]any{"player":player,"skill":player.Skills[strings.ToLower(strings.TrimSpace(r.PathValue("skill")))],"leveledUp":leveled})
 }
+
+func (s *Server) gather(w http.ResponseWriter, r *http.Request) {
+	player, result, err := s.players.Gather(r.Context(), game.PlayerID(strings.TrimSpace(r.PathValue("id"))), r.PathValue("nodeID"), s.now())
+	if err != nil {
+		switch {
+		case errors.Is(err, game.ErrPlayerNotFound):
+			writeError(w, http.StatusNotFound, "player_not_found")
+		case errors.Is(err, game.ErrUnknownGatheringNode):
+			writeError(w, http.StatusNotFound, "gathering_node_not_found")
+		case errors.Is(err, game.ErrGatheringOutOfRange):
+			writeError(w, http.StatusUnprocessableEntity, "gathering_out_of_range")
+		case errors.Is(err, game.ErrGatheringNodeDepleted):
+			writeError(w, http.StatusConflict, "gathering_node_depleted")
+		case errors.Is(err, game.ErrInsufficientSkillLevel):
+			writeError(w, http.StatusUnprocessableEntity, "insufficient_skill_level")
+		case errors.Is(err, game.ErrInventoryFull), errors.Is(err, game.ErrExperienceOverflow):
+			writeError(w, http.StatusConflict, "inventory_or_progression_limit")
+		default:
+			log.Printf("gather resource: %v", err)
+			writeError(w, http.StatusInternalServerError, "internal_error")
+		}
+		return
+	}
+	writeJSON(w, http.StatusOK, map[string]any{"player": player, "gathering": result})
+}
+
 func (s *Server) movePlayer(w http.ResponseWriter, r *http.Request) {
 	r.Body = http.MaxBytesReader(w, r.Body, 1<<10)
 	defer r.Body.Close()
