@@ -472,6 +472,7 @@ func (s *Server) awardOwnedExperience(w http.ResponseWriter, r *http.Request) {
  player, leveled, err := s.characters.AwardExperienceForAccount(r.Context(),account.ID,game.PlayerID(strings.TrimSpace(r.PathValue("id"))),r.PathValue("skill"),request.Amount)
  if err != nil {
   switch { case errors.Is(err,game.ErrPlayerNotFound): writeError(w,404,"character_not_found")
+  case errors.Is(err,game.ErrPlayerDefeated): writeError(w,409,"player_defeated")
   case errors.Is(err,game.ErrUnknownSkill): writeError(w,422,"unknown_skill")
   case errors.Is(err,game.ErrInvalidExperience): writeError(w,422,"invalid_experience")
   case errors.Is(err,game.ErrExperienceOverflow): writeError(w,409,"experience_cap_reached")
