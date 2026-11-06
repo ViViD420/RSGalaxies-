@@ -1,0 +1,1 @@
+ALTER TABLE players ADD COLUMN IF NOT EXISTS equipment JSONB NOT NULL DEFAULT '{}'::jsonb;
