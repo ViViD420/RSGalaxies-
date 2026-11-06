@@ -116,3 +116,17 @@ func pbkdf2SHA256(password, salt []byte, iterations, keyLength int) []byte {
 	}
 	return result[:keyLength]
 }
+
+
+type Account struct {
+	ID string
+	Email string
+	CreatedAt time.Time
+}
+
+type AccountStore interface {
+	Register(ctx context.Context, email, password string, now time.Time) (Account, string, error)
+	Login(ctx context.Context, email, password string, now time.Time) (Account, string, error)
+	AuthenticateSession(ctx context.Context, token string, now time.Time) (Account, error)
+	RevokeSession(ctx context.Context, token string, now time.Time) error
+}
