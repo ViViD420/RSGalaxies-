@@ -21,7 +21,7 @@
 - [x] Starter gathering nodes with charges, depletion and timed respawn.
 - [ ] Crafting recipes, requirements and output quality.
 - [ ] Combat attributes, abilities, damage and death / recovery loop.
-- [ ] Award XP only through validated gameplay actions.
+- [x] Award XP through validated starter gathering actions (development prototype).\n- [ ] Full production gameplay-action validation for gathering, crafting and combat.
 - [x] Deterministic progression boundary and repository concurrency tests.
 
 ## Milestone 4: Inventory and economy
