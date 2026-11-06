@@ -13,6 +13,7 @@ var (
 )
 
 func (p *Player) EquipItem(itemID string) error {
+	if err:=p.CanAct();err!=nil{return err}
 	item,ok:=FindItem(itemID)
 	if !ok||item.EquipmentSlot==""{return ErrItemNotEquippable}
 	if p.Inventory[itemID]<1{return ErrInsufficientItems}
@@ -31,6 +32,7 @@ func (p *Player) EquipItem(itemID string) error {
 }
 
 func (p *Player) UnequipItem(slot string) error {
+	if err:=p.CanAct();err!=nil{return err}
 	slot=strings.ToLower(strings.TrimSpace(slot))
 	if slot!="main_hand"&&slot!="head"&&slot!="body"&&slot!="feet"{return ErrInvalidEquipmentSlot}
 	itemID,ok:=p.Equipment[slot]
