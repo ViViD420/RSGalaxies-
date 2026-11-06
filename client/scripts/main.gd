@@ -14,6 +14,10 @@ var character_button: Button
 var character_panel: PanelContainer
 var character_select: OptionButton
 var character_name_input: LineEdit
+var market_panel: PanelContainer
+var market_item_select: OptionButton
+var market_quantity_input: LineEdit
+var market_status_label: Label
 var auth_token := ""
 var current_inventory: Dictionary = {}
 var current_bank: Dictionary = {}
@@ -340,6 +344,8 @@ func _on_api_request_completed(result: int, response_code: int, _headers: Packed
 			character_button.visible = false
 			if character_panel != null:
 				character_panel.visible = false
+			if market_panel != null:
+				market_panel.visible = false
 			status_label.text = "Server: signed out"
 			auth_status_label.text = "You have been signed out."
 		else:
@@ -444,23 +450,8 @@ func _request_interaction() -> void:
 	var merchant_distance := Vector2(player_node.global_position.x - 4.0, player_node.global_position.z).length()
 	var error := OK
 	if merchant_distance <= 3.0 and merchant_distance <= bank_distance and merchant_distance <= bench_distance and merchant_distance <= tree_distance and merchant_distance <= stone_distance:
-		var selected_item := ""
-		interaction_type = "market_sell"
-		for item_id in ["rough_stone", "softwood_log", "wooden_plank"]:
-			if int(current_inventory.get(item_id, 0)) > 0:
-				selected_item = item_id
-				break
-		if selected_item.is_empty():
-			interaction_type = "market_buy"
-			selected_item = "softwood_log"
-		var market_action := "sell" if interaction_type == "market_sell" else "buy"
-		status_label.text = "Frontier trader: " + market_action + "ing " + selected_item.replace("_", " ") + "..."
-		error = gather_request.request(
-			api_base_url + "/api/v1/account/characters/" + player_id + "/market/" + market_action + "/" + selected_item,
-			PackedStringArray(["Content-Type: application/json", "Authorization: Bearer " + auth_token]),
-			HTTPClient.METHOD_POST,
-			JSON.stringify({"quantity": 1})
-		)
+		_show_market_panel()
+		return
 	elif bank_distance <= 3.0 and bank_distance <= bench_distance and bank_distance <= tree_distance and bank_distance <= stone_distance:
 		var selected_item := ""
 		interaction_type = "bank_deposit"
@@ -523,14 +514,19 @@ func _on_gather_completed(result: int, response_code: int, _headers: PackedStrin
 		return
 	if response_code != 200:
 		var error_code := str(payload.get("error", "gathering_failed"))
-		status_label.text = "Interaction: " + error_code.replace("_", " ")
+		var message := "Interaction: " + error_code.replace("_", " ")
+		status_label.text = message
+		if interaction_type == "market_buy" or interaction_type == "market_sell":
+			market_status_label.text = message
 		return
 	var player_data: Dictionary = payload.get("character", payload.get("player", {}))
 	if interaction_type == "market_buy" or interaction_type == "market_sell":
 		var trade: Dictionary = payload.get("trade", {})
 		var trade_action := "Bought" if interaction_type == "market_buy" else "Sold"
 		_update_inventory(payload.get("inventory", player_data.get("inventory", {})), player_data.get("bank", {}), payload.get("coins", player_data.get("coins", current_coins)))
-		status_label.text = "Trader: " + trade_action + " " + str(trade.get("quantity", 1)) + " " + str(trade.get("itemId", "item")).replace("_", " ") + " • " + str(trade.get("coins", 0)) + " coins"
+		var trade_message := trade_action + " " + str(trade.get("quantity", 1)) + " " + str(trade.get("itemId", "item")).replace("_", " ") + " for " + str(trade.get("coins", 0)) + " coins"
+		status_label.text = "Trader: " + trade_message
+		market_status_label.text = trade_message
 		return
 	if interaction_type == "bank_deposit" or interaction_type == "bank_withdraw":
 		var bank_action := "Deposited" if interaction_type == "bank_deposit" else "Withdrew"
@@ -663,6 +659,8 @@ func _activate_character(character_data: Dictionary) -> void:
 	auth_panel.visible = false
 	if character_panel != null:
 		character_panel.visible = false
+	if market_panel != null:
+		market_panel.visible = false
 	logout_button.visible = true
 	character_button.visible = true
 	_start_movement_sync()
@@ -707,6 +705,8 @@ func _expire_session() -> void:
 	character_button.visible = false
 	if character_panel != null:
 		character_panel.visible = false
+	if market_panel != null:
+		market_panel.visible = false
 	status_label.text = "Server: session expired"
 	auth_status_label.text = "Your session expired. Please sign in again."
 
@@ -764,6 +764,80 @@ func _show_character_selection(characters: Array) -> void:
 	auth_panel.get_parent().add_child(character_panel)
 
 
+func _show_market_panel() -> void:
+	if market_panel != null:
+		market_panel.visible = true
+		return
+	market_panel = PanelContainer.new()
+	market_panel.position = Vector2(420, 155)
+	market_panel.custom_minimum_size = Vector2(320, 220)
+	var column := VBoxContainer.new()
+	market_panel.add_child(column)
+	var heading := Label.new()
+	heading.text = "FRONTIER TRADER"
+	heading.add_theme_font_size_override("font_size", 18)
+	column.add_child(heading)
+	market_item_select = OptionButton.new()
+	market_item_select.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	var market_items := [
+		{"id":"softwood_log","name":"Softwood Log"},
+		{"id":"rough_stone","name":"Rough Stone"},
+		{"id":"wooden_plank","name":"Wooden Plank"}
+	]
+	for item in market_items:
+		market_item_select.add_item(item.name)
+		market_item_select.set_item_metadata(market_item_select.item_count-1,item.id)
+	column.add_child(market_item_select)
+	market_quantity_input = LineEdit.new()
+	market_quantity_input.text = "1"
+	market_quantity_input.placeholder_text = "Quantity (1–100)"
+	market_quantity_input.virtual_keyboard_type = LineEdit.KEYBOARD_TYPE_NUMBER
+	column.add_child(market_quantity_input)
+	var actions := HBoxContainer.new()
+	column.add_child(actions)
+	var buy_button := Button.new()
+	buy_button.text = "Buy"
+	buy_button.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	buy_button.pressed.connect(func() -> void: _submit_market_trade(true))
+	actions.add_child(buy_button)
+	var sell_button := Button.new()
+	sell_button.text = "Sell"
+	sell_button.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	sell_button.pressed.connect(func() -> void: _submit_market_trade(false))
+	actions.add_child(sell_button)
+	var close_button := Button.new()
+	close_button.text = "Close"
+	close_button.pressed.connect(func() -> void: market_panel.visible = false)
+	column.add_child(close_button)
+	market_status_label = Label.new()
+	market_status_label.text = "Coins: " + str(current_coins)
+	market_status_label.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+	column.add_child(market_status_label)
+	auth_panel.get_parent().add_child(market_panel)
+
+func _submit_market_trade(buy: bool) -> void:
+	var quantity := int(market_quantity_input.text)
+	if quantity < 1 or quantity > 100:
+		market_status_label.text = "Quantity must be between 1 and 100."
+		return
+	var item_id := str(market_item_select.get_selected_metadata())
+	if item_id.is_empty():
+		market_status_label.text = "Choose an item."
+		return
+	interaction_type = "market_buy" if buy else "market_sell"
+	var action := "buy" if buy else "sell"
+	var error := gather_request.request(
+		api_base_url + "/api/v1/account/characters/" + player_id + "/market/" + action + "/" + item_id,
+		PackedStringArray(["Content-Type: application/json", "Authorization: Bearer " + auth_token]),
+		HTTPClient.METHOD_POST,
+		JSON.stringify({"quantity": quantity})
+	)
+	if error == OK:
+		interaction_pending = true
+		market_status_label.text = "Processing trade..."
+	else:
+		market_status_label.text = "Could not send market request."
+
 func _set_account_status(message: String) -> void:
 	if character_panel != null and character_panel.visible and character_status_label != null:
 		character_status_label.text = message
@@ -771,3 +845,81 @@ func _set_account_status(message: String) -> void:
 		auth_status_label.text = message
 	else:
 		status_label.text = message
+
+func _show_market_panel() -> void:
+	if market_panel != null:
+		market_panel.visible = true
+		return
+	market_panel = PanelContainer.new()
+	market_panel.position = Vector2(420, 155)
+	market_panel.custom_minimum_size = Vector2(320, 220)
+	var column := VBoxContainer.new()
+	market_panel.add_child(column)
+	var heading := Label.new()
+	heading.text = "FRONTIER TRADER"
+	heading.add_theme_font_size_override("font_size", 18)
+	column.add_child(heading)
+	market_item_select = OptionButton.new()
+	market_item_select.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	var market_items := [
+		{"id":"softwood_log","name":"Softwood Log"},
+		{"id":"rough_stone","name":"Rough Stone"},
+		{"id":"wooden_plank","name":"Wooden Plank"}
+	]
+	for item in market_items:
+		market_item_select.add_item(item.name)
+		market_item_select.set_item_metadata(market_item_select.item_count-1,item.id)
+	column.add_child(market_item_select)
+	market_quantity_input = LineEdit.new()
+	market_quantity_input.text = "1"
+	market_quantity_input.placeholder_text = "Quantity (1–100)"
+	market_quantity_input.virtual_keyboard_type = LineEdit.KEYBOARD_TYPE_NUMBER
+	column.add_child(market_quantity_input)
+	var actions := HBoxContainer.new()
+	column.add_child(actions)
+	var buy_button := Button.new()
+	buy_button.text = "Buy"
+	buy_button.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	buy_button.pressed.connect(func() -> void: _submit_market_trade(true))
+	actions.add_child(buy_button)
+	var sell_button := Button.new()
+	sell_button.text = "Sell"
+	sell_button.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	sell_button.pressed.connect(func() -> void: _submit_market_trade(false))
+	actions.add_child(sell_button)
+	var close_button := Button.new()
+	close_button.text = "Close"
+	close_button.pressed.connect(func() -> void: market_panel.visible = false)
+	column.add_child(close_button)
+	market_status_label = Label.new()
+	market_status_label.text = "Coins: " + str(current_coins)
+	market_status_label.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+	column.add_child(market_status_label)
+	auth_panel.get_parent().add_child(market_panel)
+
+func _submit_market_trade(buy: bool) -> void:
+	var quantity := int(market_quantity_input.text)
+	if quantity < 1 or quantity > 100:
+		market_status_label.text = "Quantity must be between 1 and 100."
+		return
+	var item_id := str(market_item_select.get_selected_metadata())
+	if item_id.is_empty():
+		market_status_label.text = "Choose an item."
+		return
+	interaction_type = "market_buy" if buy else "market_sell"
+	var action := "buy" if buy else "sell"
+	var error := gather_request.request(
+		api_base_url + "/api/v1/account/characters/" + player_id + "/market/" + action + "/" + item_id,
+		PackedStringArray(["Content-Type: application/json", "Authorization: Bearer " + auth_token]),
+		HTTPClient.METHOD_POST,
+		JSON.stringify({"quantity": quantity})
+	)
+	if error == OK:
+		interaction_pending = true
+		market_status_label.text = "Processing trade..."
+	else:
+		market_status_label.text = "Could not send market request."
+
+
+
+
