@@ -299,6 +299,18 @@ func TestAuthenticatedCharacterLifecycleAndOwnership(t *testing.T) {
 	handler.ServeHTTP(secondRegister,httptest.NewRequest(http.MethodPost,"/api/v1/auth/register",bytes.NewBufferString(`{"email":"other@example.test","password":"long-enough-password"}`)))
 	var second struct{AccessToken string `json:"accessToken"`}
 	if err:=json.Unmarshal(secondRegister.Body.Bytes(),&second);err!=nil{t.Fatal(err)}
+
+	experiencePath:="/api/v1/account/characters/"+string(player.ID)+"/skills/mining/experience"
+	xp:=httptest.NewRecorder()
+	xpRequest:=httptest.NewRequest(http.MethodPost,experiencePath,bytes.NewBufferString(`{"amount":50}`))
+	xpRequest.Header.Set("Authorization","Bearer "+registration.AccessToken)
+	handler.ServeHTTP(xp,xpRequest)
+	if xp.Code!=http.StatusOK{t.Fatalf("owned XP award status=%d body=%s",xp.Code,xp.Body.String())}
+	foreignXP:=httptest.NewRecorder()
+	foreignXPRequest:=httptest.NewRequest(http.MethodPost,experiencePath,bytes.NewBufferString(`{"amount":50}`))
+	foreignXPRequest.Header.Set("Authorization","Bearer "+second.AccessToken)
+	handler.ServeHTTP(foreignXP,foreignXPRequest)
+	if foreignXP.Code!=http.StatusNotFound{t.Fatalf("cross-account XP award status=%d",foreignXP.Code)}
 	foreign:=httptest.NewRecorder()
 	foreignRequest:=authHeader(second.AccessToken)
 	foreignRequest.Method=http.MethodGet
