@@ -96,30 +96,70 @@ func FindCraftingRecipe(id string) (CraftingRecipeDefinition, bool) {
 }
 
 func (p *Player) Craft(recipe CraftingRecipeDefinition, station CraftingStationDefinition, _ time.Time) (CraftingResult, error) {
-	if err:=p.CanAct();err!=nil{return CraftingResult{},err}
+	if err := p.CanAct(); err != nil {
+		return CraftingResult{}, err
+	}
 	if p.Position.ZoneID != station.Position.ZoneID || math.Hypot(p.Position.X-station.Position.X, p.Position.Z-station.Position.Z) > station.InteractionRange {
 		return CraftingResult{}, ErrCraftingOutOfRange
 	}
-	if p.Skills[recipe.SkillID].Level < recipe.RequiredLevel {
+	if recipe.RequiredLevel < 1 || recipe.RequiredLevel > MaxSkillLevel || recipe.Experience <= 0 {
+		return CraftingResult{}, ErrUnknownCraftingRecipe
+	}
+	progress, skillExists := p.Skills[recipe.SkillID]
+	if !skillExists || progress.Level < recipe.RequiredLevel {
 		return CraftingResult{}, ErrCraftingSkillTooLow
 	}
-	if p.Inventory == nil { p.Inventory = make(map[string]int) }
+
+	consumed := make(map[string]int, len(recipe.Ingredients))
+	produced := make(map[string]int, len(recipe.Outputs))
 	for _, ingredient := range recipe.Ingredients {
-		if p.Inventory[ingredient.ItemID] < ingredient.Quantity {
+		item, exists := FindItem(ingredient.ItemID)
+		if !exists || ingredient.Quantity <= 0 || consumed[ingredient.ItemID] > item.MaxStack-ingredient.Quantity {
+			return CraftingResult{}, ErrUnknownCraftingRecipe
+		}
+		consumed[ingredient.ItemID] += ingredient.Quantity
+	}
+	for _, output := range recipe.Outputs {
+		item, exists := FindItem(output.ItemID)
+		if !exists || output.Quantity <= 0 || produced[output.ItemID] > item.MaxStack-output.Quantity {
+			return CraftingResult{}, ErrUnknownCraftingRecipe
+		}
+		produced[output.ItemID] += output.Quantity
+	}
+	for itemID, quantity := range consumed {
+		if p.Inventory[itemID] < quantity {
 			return CraftingResult{}, ErrInsufficientIngredients
 		}
 	}
-	for _, output := range recipe.Outputs {
-		item, ok := FindItem(output.ItemID)
-		if !ok { return CraftingResult{}, ErrUnknownCraftingRecipe }
-		if p.Inventory[output.ItemID]+output.Quantity > item.MaxStack {
+
+	// Simulate the complete net inventory change before mutating anything.
+	// Aggregating duplicate entries also prevents malformed recipes from
+	// bypassing stack limits or consuming the same stack more than once.
+	nextInventory := make(map[string]int, len(p.Inventory)+len(produced))
+	for itemID, quantity := range p.Inventory {
+		nextInventory[itemID] = quantity
+	}
+	for itemID, quantity := range consumed {
+		nextInventory[itemID] -= quantity
+	}
+	for itemID, quantity := range produced {
+		item, _ := FindItem(itemID)
+		if nextInventory[itemID] > item.MaxStack-quantity {
 			return CraftingResult{}, ErrCraftingOutputFull
 		}
+		nextInventory[itemID] += quantity
 	}
+	for itemID, quantity := range nextInventory {
+		if quantity == 0 {
+			delete(nextInventory, itemID)
+		}
+	}
+
 	leveled, err := p.AwardExperience(recipe.SkillID, recipe.Experience)
-	if err != nil { return CraftingResult{}, err }
-	for _, ingredient := range recipe.Ingredients { p.Inventory[ingredient.ItemID] -= ingredient.Quantity }
-	for _, output := range recipe.Outputs { p.Inventory[output.ItemID] += output.Quantity }
+	if err != nil {
+		return CraftingResult{}, err
+	}
+	p.Inventory = nextInventory
 	return CraftingResult{
 		RecipeID: recipe.ID, Outputs: append([]ItemQuantity(nil), recipe.Outputs...),
 		SkillID: recipe.SkillID, Experience: recipe.Experience,
