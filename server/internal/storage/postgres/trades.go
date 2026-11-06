@@ -110,6 +110,28 @@ func lockTradePlayers(ctx context.Context,tx *sql.Tx,tradeID string)(map[game.Pl
 	return locked,nil
 }
 
+func validateLockedTradeProximity(snapshot game.TradeSnapshot, players map[game.PlayerID]lockedTradePlayer) error {
+	var initiator, target game.Player
+	for _, participant := range snapshot.Participants {
+		ref, ok := players[participant.CharacterID]
+		if !ok {
+			return game.ErrTradeNotFound
+		}
+		switch participant.Role {
+		case "initiator":
+			initiator = ref.Player
+		case "target":
+			target = ref.Player
+		default:
+			return game.ErrTradeInvalidState
+		}
+	}
+	if initiator.ID == "" || target.ID == "" {
+		return game.ErrTradeInvalidState
+	}
+	return game.ValidateTradeInvite(initiator, target)
+}
+
 func participantRole(snapshot game.TradeSnapshot,id game.PlayerID)(game.TradeParticipant,bool){
 	for _,participant:=range snapshot.Participants{if participant.CharacterID==id{return participant,true}}
 	return game.TradeParticipant{},false
@@ -215,6 +237,7 @@ func (r *AccountRepository) UpdateTradeOfferForAccount(ctx context.Context,accou
 	_,ok:=participantRole(snapshot,id);if !ok{return game.TradeSnapshot{},game.ErrTradeNotParticipant}
 	players,err:=lockTradePlayers(ctx,tx,tradeID);if err!=nil{return game.TradeSnapshot{},err}
 	ref:=players[id];if ref.AccountID!=accountID{return game.TradeSnapshot{},game.ErrTradeNotParticipant}
+	if err:=validateLockedTradeProximity(snapshot,players);err!=nil{return game.TradeSnapshot{},err}
 	if err:=game.ApplyTradeOffer(&ref.Player,participant.Offer);err!=nil{return game.TradeSnapshot{},err}
 	if err:=game.EscrowTradeOffer(&ref.Player,offer);err!=nil{return game.TradeSnapshot{},err}
 	if err:=persistTradeOffer(ctx,tx,tradeID,id,offer);err!=nil{return game.TradeSnapshot{},err}
@@ -238,6 +261,7 @@ func (r *AccountRepository) ConfirmTradeForAccount(ctx context.Context,accountID
 	participant,ok:=participantRole(snapshot,id);if !ok{return game.TradeSnapshot{},game.ErrTradeNotParticipant}
 	players,err:=lockTradePlayers(ctx,tx,tradeID);if err!=nil{return game.TradeSnapshot{},err}
 	ref:=players[id];if ref.AccountID!=accountID{return game.TradeSnapshot{},game.ErrTradeNotParticipant}
+	if err:=validateLockedTradeProximity(snapshot,players);err!=nil{return game.TradeSnapshot{},err}
 	if _,err:=tx.ExecContext(ctx,`UPDATE player_trade_participants SET confirmed_revision=$3 WHERE trade_id=$1 AND character_id=$2`,tradeID,string(id),revision);err!=nil{return game.TradeSnapshot{},err}
 	var confirmations int
 	if err:=tx.QueryRowContext(ctx,`SELECT COUNT(*) FROM player_trade_participants WHERE trade_id=$1 AND confirmed_revision=$2`,tradeID,revision).Scan(&confirmations);err!=nil{return game.TradeSnapshot{},err}
