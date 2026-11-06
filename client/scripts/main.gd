@@ -635,7 +635,7 @@ func _request_interaction() -> void:
 func _on_gather_completed(result: int, response_code: int, _headers: PackedStringArray, body: PackedByteArray) -> void:
 	interaction_pending = false
 	if result != HTTPRequest.RESULT_SUCCESS:
-		status_label.text = "Gathering: server connection lost"
+		status_label.text = "Interaction: server connection lost"
 		return
 	if response_code == 401:
 		_expire_session()
@@ -644,10 +644,16 @@ func _on_gather_completed(result: int, response_code: int, _headers: PackedStrin
 	if not payload is Dictionary:
 		return
 	if response_code != 200:
-		var error_code := str(payload.get("error", "gathering_failed"))
+		var error_code := str(payload.get("error", "interaction_failed"))
 		var message := "Interaction: " + error_code.replace("_", " ")
 		status_label.text = message
-		if interaction_type == "rest":
+		if interaction_type == "market_buy" or interaction_type == "market_sell":
+			market_status_label.text = message
+		if interaction_type == "gear_equip" or interaction_type == "gear_unequip":
+			equipment_status_label.text = message
+		return
+	var player_data: Dictionary = payload.get("character", payload.get("player", {}))
+	if interaction_type == "rest":
 		_update_inventory(player_data.get("inventory", {}), player_data.get("bank", {}), player_data.get("coins", current_coins), player_data.get("equipment", {}), payload.get("health", player_data.get("health", current_health)))
 		var position_data: Variant = player_data.get("position", {})
 		if position_data is Dictionary:
@@ -656,12 +662,6 @@ func _on_gather_completed(result: int, response_code: int, _headers: PackedStrin
 		if movement_timer == null or movement_timer.is_stopped():
 			_start_movement_sync()
 		return
-	if interaction_type == "market_buy" or interaction_type == "market_sell":
-			market_status_label.text = message
-		if interaction_type == "gear_equip" or interaction_type == "gear_unequip":
-			equipment_status_label.text = message
-		return
-	var player_data: Dictionary = payload.get("character", payload.get("player", {}))
 	if interaction_type == "market_buy" or interaction_type == "market_sell":
 		var trade: Dictionary = payload.get("trade", {})
 		var trade_action := "Bought" if interaction_type == "market_buy" else "Sold"
@@ -687,20 +687,21 @@ func _on_gather_completed(result: int, response_code: int, _headers: PackedStrin
 	if interaction_type == "craft":
 		var crafting: Dictionary = payload.get("crafting", {})
 		var output_name := "crafted item"
-		if crafting.get("outputs", []).size() > 0:
-			var output_id := str(crafting.outputs[0].get("itemId", ""))
+		var outputs: Array = crafting.get("outputs", [])
+		if not outputs.is_empty():
+			var output_id := str(outputs[0].get("itemId", ""))
 			for item in market_catalog:
 				if item is Dictionary and str(item.get("id", "")) == output_id:
 					output_name = str(item.get("name", output_id))
-		status_label.text = "Crafted " + output_name + "  •  +" + str(crafting.get("experience", 0)) + " " + str(crafting.get("skillId", "crafting")) + " XP"
+		status_label.text = "Crafted " + output_name + " • +" + str(crafting.get("experience", 0)) + " " + str(crafting.get("skillId", "crafting")) + " XP"
 	else:
 		var gathering: Dictionary = payload.get("gathering", {})
 		var item_name := str(gathering.get("itemId", "resource")).replace("_", " ")
 		for item in market_catalog:
 			if item is Dictionary and str(item.get("id", "")) == str(gathering.get("itemId", "")):
 				item_name = str(item.get("name", item_name))
-		status_label.text = "Gathered " + item_name + "  •  +" + str(gathering.get("experience", 0)) + " " + str(gathering.get("skillId", "")) + " XP"
-	_update_inventory(player_data.get("inventory", {}), player_data.get("bank", {}), player_data.get("coins", current_coins), player_data.get("equipment", {}))
+		status_label.text = "Gathered " + item_name + " • +" + str(gathering.get("experience", 0)) + " " + str(gathering.get("skillId", "")) + " XP"
+	_update_inventory(player_data.get("inventory", {}), player_data.get("bank", {}), player_data.get("coins", current_coins), player_data.get("equipment", {}), player_data.get("health", current_health))
 
 func _update_inventory(inventory_data: Variant, bank_data: Variant = {}, coins_data: Variant = null, equipment_data: Variant = {}, health_data: Variant = null) -> void:
 	if not inventory_data is Dictionary:
