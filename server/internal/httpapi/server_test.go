@@ -354,6 +354,19 @@ func TestAuthenticatedCharacterLifecycleAndOwnership(t *testing.T) {
 	restRequest.Header.Set("Authorization","Bearer "+registration.AccessToken)
 	handler.ServeHTTP(rest,restRequest)
 	if rest.Code!=http.StatusOK||characters.players[registration.Account.ID][player.ID].Health!=game.MaxPlayerHealth{t.Fatalf("safe rest status=%d health=%d body=%s",rest.Code,characters.players[registration.Account.ID][player.ID].Health,rest.Body.String())}
+	buyPotion:=httptest.NewRecorder()
+	buyPotionRequest:=httptest.NewRequest(http.MethodPost,"/api/v1/account/characters/"+string(player.ID)+"/market/buy/minor_healing_potion",bytes.NewBufferString(`{"quantity":1}`))
+	buyPotionRequest.Header.Set("Authorization","Bearer "+registration.AccessToken)
+	handler.ServeHTTP(buyPotion,buyPotionRequest)
+	if buyPotion.Code!=http.StatusOK{t.Fatalf("buy potion status=%d body=%s",buyPotion.Code,buyPotion.Body.String())}
+	combatPlayer=characters.players[registration.Account.ID][player.ID]
+	combatPlayer.Health=80
+	characters.players[registration.Account.ID][player.ID]=combatPlayer
+	usePotion:=httptest.NewRecorder()
+	usePotionRequest:=httptest.NewRequest(http.MethodPost,"/api/v1/account/characters/"+string(player.ID)+"/inventory/use/minor_healing_potion",nil)
+	usePotionRequest.Header.Set("Authorization","Bearer "+registration.AccessToken)
+	handler.ServeHTTP(usePotion,usePotionRequest)
+	if usePotion.Code!=http.StatusOK||characters.players[registration.Account.ID][player.ID].Health!=100||characters.players[registration.Account.ID][player.ID].Inventory["minor_healing_potion"]!=0{t.Fatalf("use potion status=%d player=%+v body=%s",usePotion.Code,characters.players[registration.Account.ID][player.ID],usePotion.Body.String())}
 	unequip:=httptest.NewRecorder()
 	unequipRequest:=httptest.NewRequest(http.MethodPost,"/api/v1/account/characters/"+string(player.ID)+"/equipment/unequip/main_hand",nil)
 	unequipRequest.Header.Set("Authorization","Bearer "+registration.AccessToken)
