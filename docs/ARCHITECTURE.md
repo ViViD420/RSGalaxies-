@@ -1,77 +1,85 @@
 # RS Galaxies — Architecture
 
-## Goals
+## Product and engineering goals
 
-Build an original, server-authoritative sandbox MMORPG with independently testable game rules, a replaceable client, and persistence boundaries that can evolve without rewriting gameplay systems.
+Build an original, server-authoritative sandbox MMORPG with long-form skills, gathering, crafting, economy, combat and social systems. Keep game rules independently testable, the client replaceable and durable state behind transactional repositories. All code and assets must be original.
 
-## Initial technology direction
+## Technology
 
-| Area | Initial direction | Rationale |
+| Area | Current implementation | Intended evolution |
 |---|---|---|
-| Game rules / world service | Go | Fast iteration, strong concurrency and simple deployment |
-| Client | Godot 4.3 prototype (provisional) | Open-source 3D engine; validating third-person movement, touch controls and Web export before final commitment |
-| Durable data | PostgreSQL 16 (implemented for development) | Transactions and relational integrity for characters, skills, inventory and gathering-node state |
-| Cache / ephemeral coordination | Redis (planned, not required yet) | Later use for presence, rate limits and ephemeral coordination |
-| Realtime transport | WebSocket or UDP-based protocol (planned) | Choose after latency and replication prototypes |
-| CI | GitHub Actions | Repeatable tests on every change |
+| World service | Go HTTP API and domain services | Authoritative zone simulation and realtime gateway |
+| Client | Godot 4.3 third-person prototype | Production-ready desktop/mobile client |
+| Durable data | PostgreSQL 16, versioned SQL migrations | Partitioning, backups, restore drills and capacity planning |
+| Ephemeral coordination | PostgreSQL leased presence prototype | Redis or another dedicated presence/coordination service when scale requires it |
+| Realtime transport | HTTP polling for movement/presence/chat | WebSocket or UDP-based transport after latency/replication prototypes |
+| CI | GitHub Actions | Expanded load, security and deployment pipelines |
+| Hosted development | GitHub Codespaces devcontainer | Reproducible team workspaces |
 
-The Go service is a development API, not yet a production MMO server. It selects a transactional PostgreSQL repository when RS_GALAXIES_DATABASE_URL is configured and otherwise uses the replaceable in-memory repository. PostgreSQL migrations and integration tests are included; authentication and production operational hardening remain future work.
+The Go service selects PostgreSQL repositories when `RS_GALAXIES_DATABASE_URL` is configured; otherwise it uses an in-memory development repository. Account-backed gameplay requires PostgreSQL. Production startup fails closed without the database URL, applies migrations before serving and exposes separate liveness/readiness probes.
 
 ## Runtime boundaries
 
-1. **Client:** rendering, input, local presentation, prediction where appropriate. The client is untrusted.
-2. **Gateway / session layer (future):** authentication, connection lifecycle, rate limits and routing.
-3. **Authoritative world simulation:** validates movement and actions, owns live entity state, applies combat and skill rules.
-4. **Domain services:** character, skills, inventory, crafting, gathering, trade, housing and social systems.
-5. **Persistence:** PostgreSQL transactions for durable state; append-only audit/event records for economically sensitive operations.
-6. **Operations:** structured logs, metrics, tracing, backups, migrations and deployment automation.
+1. **Godot client:** input, rendering, local presentation and short-term smoothing. Treat all client state and requests as untrusted.
+2. **HTTP/session boundary:** bearer-token authentication, account ownership checks, request limits, throttling and route-level security.
+3. **Game/domain layer:** skill progression, movement validation, gathering, crafting, bank, merchant, equipment, consumables and PvE rules. Domain logic is independent of HTTP and SQL.
+4. **Repository/persistence layer:** PostgreSQL transactions and row locks protect account-owned character state and shared world state. The in-memory repository supports isolated development tests.
+5. **Presence/social layer:** PostgreSQL leased zone presence and persistent local chat currently use bounded polling. This is a prototype, not a realtime fan-out service.
+6. **Operations:** migrations, CI, liveness/readiness, deployment configuration, monitoring, backups and incident procedures.
 
-## Domain design principles
+## Implemented vertical slices
 
-- Use stable IDs rather than display names as identity.
-- Represent skill XP as integer values; derive levels from a single tested progression curve.
-- Treat inventory and currency as owned resources. Transfers must be atomic and idempotent.
-- Model item definitions separately from item instances.
-- Model resources with explicit properties so crafting can use quality, purity, rarity and region without hard-coding every resource.
-- Keep recipes data-driven and validate all ingredients and requirements on the server.
-- Use server timestamps and sequence numbers for ordering consequential actions.
-- Add version fields to persisted aggregates to support optimistic concurrency.
+### Identity and ownership
 
-## Initial service contract
+- Account registration/login/logout and opaque bearer sessions.
+- PBKDF2-HMAC-SHA-256 password hashes with per-account random salts; random session tokens are stored as SHA-256 digests.
+- Account-owned character CRUD and ownership predicates in character operations.
+- Production registration disabled by default. Email verification, recovery, MFA, distributed edge rate limiting and admin account operations remain launch gates.
 
-The current development API exposes:
+### World and progression
 
-- `GET /healthz`
-- `GET /api/v1/skills`
-- `GET /api/v1/world/zones`
-- `GET /api/v1/world/nodes`
-- `GET /api/v1/items`
-- `GET /api/v1/players`, `POST /api/v1/players`, `GET /api/v1/players/{id}`
-- `GET /api/v1/players/{id}/skills`
-- `GET /api/v1/crafting/recipes` and `GET /api/v1/crafting/stations`
-- Development-only `POST` routes for XP awards, movement, gathering and crafting.
+- One bounded starter zone with a spawn point and server-time movement validation.
+- Ten data-driven skills, level 1–99 progression and a 200,000,000 XP cap.
+- Tree/stone/copper gathering, node charges and respawn, workbench/forge recipes and transactional skill XP awards.
+- Basic server-authoritative PvE with enemy health/respawn state, cooldowns, retaliation, loot and safe-spawn recovery.
 
-The first world slice contains one bounded zone, a spawn point, server-time-validated horizontal movement, two starter resource nodes, stack-count inventory and XP rewards. Resource gathering updates player inventory, skill XP and node charges inside one transaction (with a shared node row lock in PostgreSQL); resource nodes have limited charges and timed respawn. A first workbench recipe consumes two logs to create a wooden plank and award Crafting XP. Crafting checks station range, skill level, ingredient counts and output stack capacity before committing the inventory/XP change. These systems have both in-memory and PostgreSQL repository implementations for development. PostgreSQL persists character skills, inventory, positions, movement timestamps and gathering-node charge/respawn state. All player-specific routes and development state-changing shortcuts are not registered when RS_GALAXIES_ENV=production; public player APIs will return only after authentication and ownership checks exist.
+### Inventory and economy
 
-## Data ownership and transaction strategy
+- Stack-based inventory, 100-slot bank, coin wallet and starter merchant.
+- Atomic bank transfers, merchant buy/sell and equipment equip/unequip.
+- Consumable healing items and derived equipment combat bonuses.
+- Item definitions are separate from player stack maps. Unique item instances, durability, binding and modifiers are future work.
+- Player-to-player trading must use atomic multi-party transactions, escrow and an auditable currency/item ledger before release.
 
-Implemented PostgreSQL aggregates:
-- Character identity, skills, inventory stacks and world position
-- Gathering-node charges and respawn timestamps
+### Social and multiplayer prototype
 
-Planned PostgreSQL aggregates:
-- Account identity and authenticated sessions
-- Item instances, equipment and bank storage
-- Currency ledger and trade offers/completions
-- Housing and settlement ownership
+- Persistent local-zone chat with server-side cooldown, cursor pagination, newest-50 initial history and bounded client history.
+- Leased zone presence: account-owned heartbeat, 20-second lease, stale cleanup, capped zone roster and privacy-limited remote-character snapshots.
+- Godot polls presence and renders placeholder remote avatars/nameplates. There is no authoritative continuous movement replication, reconnect recovery, zone handoff or realtime transport yet.
 
-A trade must lock or version-check both parties' affected inventories, validate capacity and ownership, write both sides and the currency ledger in one transaction, then publish an event after commit. Never acknowledge a trade based only on a client message.
+## Persistence and transaction invariants
 
-## Security baseline
+- Never trust client-supplied XP, item counts, currency, position, combat results, account IDs or ownership.
+- Character operations resolve the character using the authenticated account and lock affected rows in a transaction.
+- Shared gathering and enemy state is stored in PostgreSQL and locked to prevent duplicate resource consumption or combat rewards across server instances.
+- Inventory and currency changes validate all inputs and capacity before commit.
+- Any future trade must lock both parties in a stable order, reserve assets in escrow, validate acceptance and capacity, atomically deliver both sides, and write an append-only ledger in the same transaction.
+- Presence is ephemeral and lease-based; it must not be treated as proof of an active socket or as durable player state.
+- Use server timestamps and monotonically increasing database IDs/cursors for ordering consequential events.
 
-- Never trust client-supplied position, XP, inventory, item ownership, currency or combat results.
-- Validate request size, JSON shape, names and identifiers.
-- Use authentication before exposing private character data.
-- Rate-limit state-changing actions.
-- Avoid logging credentials, session tokens or private account data.
-- Use parameterized SQL and explicit transaction boundaries.
+## Security and production boundaries
+
+- Parameterized SQL, strict JSON decoding, request body limits, account ownership checks and generic external error responses.
+- Production player mutation routes are account-scoped; legacy unscoped development routes are not registered in production.
+- Production CORS requires exact origins. Authentication throttling is process-local and bounded; trusted edge rate limiting is still required.
+- `/healthz` reports process liveness independent of PostgreSQL. `/readyz` performs a bounded database dependency check.
+- Never log passwords, bearer tokens, authorization headers or private account data.
+- Do not enable public registration until recovery, verification, distributed abuse controls, monitoring and administrative account-disable/recovery workflows are complete.
+
+## Next architectural decisions
+
+1. Replace polling with a measured realtime transport and authoritative zone snapshots.
+2. Define online/session ownership, reconnect and multi-device character rules.
+3. Add trade escrow and an append-only economy ledger before player-to-player exchange.
+4. Introduce item instances only when durability, binding or per-item modifiers require them.
+5. Split presence/cache and zone simulation only when load tests demonstrate PostgreSQL/HTTP polling is insufficient.
