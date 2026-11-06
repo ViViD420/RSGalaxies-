@@ -497,7 +497,7 @@ func (s *Server) allowAuthAttempt(w http.ResponseWriter,r *http.Request,limit in
  window,ok:=s.authAttempts[key]
  if !ok||now.Sub(window.started)>=time.Minute { window=authAttemptWindow{started:now} }
  if window.count>=limit {
-  retry:=int(time.Until(window.started.Add(time.Minute)).Seconds())
+  retry:=int(window.started.Add(time.Minute).Sub(now).Seconds())
   if retry<1 { retry=1 }
   w.Header().Set("Retry-After",strconv.Itoa(retry))
   writeError(w,http.StatusTooManyRequests,"rate_limited")
