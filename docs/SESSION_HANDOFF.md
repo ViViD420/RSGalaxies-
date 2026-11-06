@@ -26,10 +26,10 @@ An original sandbox MMORPG combining long-form skill progression and item gamepl
 - Player inventory, 100-slot bank storage, coin wallet and persistent equipment slots. New characters start with 100 coins.
 - Starter merchant catalog with server-defined buy/sell prices. Buy/sell operations update coins and inventory atomically.
 - PostgreSQL migrations 0001–0005 cover player state, gathering, accounts/sessions, character ownership, bank storage, currency and equipment.
-- PostgreSQL transactions and row locks protect XP, movement, gathering, crafting, bank transfers and market trades.
+- PostgreSQL transactions and row locks protect XP, movement, gathering, crafting, bank transfers, market trades and equipment changes.
 - Account authentication: PBKDF2-HMAC-SHA-256 with 600,000 iterations and random salts; opaque 256-bit bearer tokens stored only as SHA-256 digests; fixed 30-day expiry; logout revocation; last-used updates; maximum 10 active sessions per account; old-session pruning; dummy PBKDF2 work for unknown/disabled login accounts.
 - Account-owned character CRUD and gameplay operations use account ownership in SQL predicates and row-locked transactions.
-- Authenticated routes cover login/register/logout/me, character list/create/read, skills/XP, movement, gathering, crafting, bank deposits/withdrawals and merchant trades.
+- Authenticated routes cover login/register/logout/me, character list/create/read, skills/XP, movement, gathering, crafting, bank deposits/withdrawals, merchant trades and equipment equip/unequip.
 - Legacy unscoped player-ID and development mutation routes remain disabled in production. Production registration is disabled unless explicitly enabled.
 - Auth routes have per-process IP/path throttling. Production CORS uses an exact-origin allowlist. Security response headers and no-store responses are applied.
 - Public catalog routes include skills, world zones, gathering nodes, items, crafting definitions and merchant prices.
@@ -49,7 +49,7 @@ An original sandbox MMORPG combining long-form skill progression and item gamepl
 - .devcontainer/ provides a GitHub Codespaces Go/Godot/PostgreSQL workspace with separate development and integration-test databases.
 - Codespaces setup installs Godot 4.3 and export templates, runs race-enabled Go tests, go vet, headless project import and Web export.
 - .env.example contains local-only sample settings; docs/API.md, docs/ACCOUNT_AUTH_DESIGN.md and docs/DEPLOYMENT.md describe routes, security boundaries and deployment.
-- Go server CI runs race-enabled unit/integration tests against PostgreSQL and go vet. Server run #179 passed the market catalog and account/economy suite. Run #181 is validating the latest equipment slot test correction.
+- Go server CI runs race-enabled unit/integration tests against PostgreSQL and go vet. Server run #179 passed the market catalog and account/economy suite. Run #181 is validating the equipment slot test correction.
 - Godot client CI uses the official Godot 4.3 release and export templates. Client runs #42–#44 passed, including market catalog loading, character selection, merchant panel, equipment panel and gear request flows.
 
 ## Production safeguards and remaining launch gates
@@ -60,12 +60,12 @@ An original sandbox MMORPG combining long-form skill progression and item gamepl
 - Email verification, password reset/recovery, MFA, distributed rate limiting, admin account tools and security/load review remain incomplete.
 - The current in-process auth throttle is only a local safety net; production still needs trusted edge controls.
 - The Godot client does not persist access tokens across launches. Secure platform-specific persistence is a future decision.
-- No remote-player replication, NPC behaviors, combat, equipment, housing, settlements, player-to-player trading, advanced item instances or large-scale world streaming yet.
+- No remote-player replication, NPC behaviors, combat calculations, equipment visuals/item instances/durability, housing, settlements, player-to-player trading or large-scale world streaming yet.
 - The account APIs require PostgreSQL. The server's in-memory-only development mode does not register account routes.
 
 ## Next engineering tasks
 
-1. Finish validating the latest Go run #163; fix any new failure before extending the economy.
+1. Finish validating the latest Go run #181; fix any new failure before extending equipment and combat.
 2. Add merchant/bank usability improvements and a real-phone pass on the Godot Web client.
 3. Add email verification, password recovery, MFA, distributed abuse controls and administrative account operations before enabling public registration.
 4. Add equipment visuals, item instances/durability, combat calculations, currency sinks and player-to-player trade with escrow/transaction safety.
