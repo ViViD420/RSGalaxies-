@@ -1,0 +1,22 @@
+name: client
+
+on:
+  push:
+    paths:
+      - "client/**"
+      - ".github/workflows/client.yml"
+  pull_request:
+    paths:
+      - "client/**"
+      - ".github/workflows/client.yml"
+
+jobs:
+  godot-check:
+    runs-on: ubuntu-latest
+    container:
+      image: barichello/godot-ci:4.3.0
+    steps:
+      - uses: actions/checkout@v4
+      - name: Import project and validate scripts
+        working-directory: client
+        run: godot --headless --editor --path . --quit
