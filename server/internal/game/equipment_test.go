@@ -26,7 +26,8 @@ func TestEquipmentRejectsInvalidOperationsWithoutLosingItems(t *testing.T) {
 	player,err:=NewPlayer("equipment-player-2","EquipmentWayfarer",time.Now());if err!=nil{t.Fatal(err)}
 	player.Inventory["softwood_log"]=1
 	if err:=player.EquipItem("softwood_log");!errors.Is(err,ErrItemNotEquippable){t.Fatalf("non-equipment error=%v",err)}
-	if err:=player.UnequipItem("unknown");!errors.Is(err,ErrEquipmentSlotEmpty){t.Fatalf("empty slot error=%v",err)}
+	if err:=player.UnequipItem("unknown");!errors.Is(err,ErrInvalidEquipmentSlot){t.Fatalf("unknown slot error=%v",err)}
+	if err:=player.UnequipItem("head");!errors.Is(err,ErrEquipmentSlotEmpty){t.Fatalf("empty valid slot error=%v",err)}
 	if err:=player.UnequipItem("");!errors.Is(err,ErrInvalidEquipmentSlot){t.Fatalf("invalid slot error=%v",err)}
 	player.Inventory["leather_cap"]=1
 	if err:=player.EquipItem("leather_cap");err!=nil{t.Fatal(err)}
