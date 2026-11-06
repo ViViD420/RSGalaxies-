@@ -28,7 +28,7 @@ const (
 
 type TradeParticipant struct {
 	CharacterID PlayerID `json:"characterId"`
-	CharacterName string `json:"characterName"`
+	Name string `json:"name"`
 	Role string `json:"role"`
 	Offer TradeOffer `json:"offer"`
 	Confirmed bool `json:"confirmed"`
