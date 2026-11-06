@@ -1,29 +1,46 @@
-# RS Galaxies client prototype
+# RS Galaxies — Godot client
 
-This is an early Godot 4 third-person 3D movement and server-connectivity prototype. It is intentionally a small technical test, not the final art direction or game client.
+A playable Godot 4.3 third-person prototype for the original RS Galaxies sandbox MMORPG. This is a technical vertical slice, not final art direction or a finished multiplayer client.
 
 ## Run
 
-Open this folder in Godot 4.3 or newer and run the main scene.
+Open `client/` in Godot 4.3 or newer and run the main scene. Start the Go world server on port 8080 with PostgreSQL configured for account-backed play.
 
-- Keyboard: WASD to move, Space to jump.
-- Mouse: orbit camera; Escape releases the cursor.
-- Touchscreen: on-screen directional pad, USE and jump buttons; drag to orbit the camera.
-- Gather: walk within range of the starter tree or stone deposit and press E / USE to collect a resource and gain the matching skill XP.
-- Craft: collect two logs, move to the frontier workbench and press E / USE to craft a wooden plank for Crafting XP.
-- Bank: move to the starter chest behind the spawn point and press E / USE for a quick one-item transfer, or open Bag to select any carried/banked item and transfer a chosen stack quantity (1–100).
-- Mining and smithing: mine the copper vein behind the bank, smelt two ore into a bar at the frontier forge, then combine three bars and a plank to forge a training sword.
-- Combat: approach a frontier rat or wild boar and press E / USE to attack. Combat cooldowns, damage, retaliation, enemy respawns, XP and loot are server-authoritative. If defeated, use Rest to respawn at the starter spawn.
-- Merchant: move to the frontier trader stall beside the tree and press E / USE to open the buy/sell panel. Choose a starter item and quantity; the server validates prices, coin balance and stack limits.
+### Controls
 
-On startup the client checks the Go API and presents account login/registration. After authentication it opens an account character picker, lets the player enter an existing character or create another, and creates a starter character if the account has none. It sends the bearer token with account-scoped movement, gathering and crafting requests, and supports character switching, sign-out and re-authentication after session expiry. The Bag panel displays all catalog items in carried and bank storage, allows quantity-based deposits/withdrawals, and uses owned consumables. The token is held in memory only and is not persisted between application launches. The server validates movement against elapsed server time, maximum speed and zone bounds. When running as a Codespaces Web build, the client derives the forwarded API origin automatically. Account login requires PostgreSQL-backed account services: use the provided Codespaces workspace, or start PostgreSQL and set `RS_GALAXIES_DATABASE_URL` before launching the Go server. The in-memory-only development server does not register account routes. In a local native run, start the Go server on port 8080 first; change api_base_url in scripts/main.gd if it uses a different address.
+- **WASD:** move; **Space:** jump.
+- **Mouse:** orbit camera; **Escape:** release cursor.
+- **Touchscreen:** on-screen movement pad, USE and jump controls; drag to orbit.
+- **E / USE:** interact with nearby gathering nodes, stations, bank, merchant and enemies.
 
-A Web export preset is included in export_presets.cfg. The Codespaces setup installs Godot 4.3 and its export templates so a browser build can be produced from the hosted workspace.
+### Playable systems
+
+- Account registration/login, account-owned character list, character creation/selection, switching and sign-out.
+- Authenticated, server-validated movement and safe-spawn recovery.
+- Woodcutting and stone gathering; copper mining, smelting and smithing.
+- Workbench and forge recipes with server-validated ingredients, skill levels, range and output capacity.
+- Persistent inventory, 100-slot bank, coin wallet and merchant purchases/sales.
+- Equipment slots, gear bonuses and simple equipped-item visuals.
+- Server-authoritative PvE attacks, enemy retaliation/respawn, Combat XP, loot and healing consumables.
+- Persistent local-zone chat with a bounded 100-line client display.
+- Live skills panel with all ten skills, current level, XP totals, per-level progress bars and XP remaining to the next level.
+
+The client uses the public item, skill, crafting and enemy catalogs instead of duplicating those definitions. Gameplay outcomes are committed by the Go server and PostgreSQL repository.
+
+## Server configuration
+
+Account login requires PostgreSQL-backed account services. Use the provided GitHub Codespaces development container or run PostgreSQL and set `RS_GALAXIES_DATABASE_URL` before starting the Go server. The in-memory-only server mode is for isolated development and does not register account routes.
+
+When running as a Codespaces Web build, the client derives the forwarded API origin automatically. For a native local run, start the Go API on port 8080 first; change `api_base_url` in `scripts/main.gd` if required.
+
+A Web export preset is included in `export_presets.cfg`. The Codespaces setup installs Godot 4.3 and its export templates, and CI imports the project and validates a Web export.
 
 ## Current limitations
 
-- Movement is client-predicted with periodic server validation and correction; there is no continuous world simulation or remote-player replication yet.
-- The world is a generated test floor with a placeholder capsule character.
-- Inventory, bank storage, equipment, consumables, copper progression, crafting, merchant trading, PvE combat, safe-spawn recovery and polling local chat are connected to account-owned server APIs. The client does not yet persist tokens securely across launches or support password recovery/MFA.
-- Equipment has placeholder visuals and combat is a small server-authoritative PvE slice; there is no enemy AI, animation system, production art or remote-player networking yet.
-- This prototype is used to validate camera, movement and touch interaction before committing to a full client architecture.
+- Movement is client-predicted and periodically server-validated; there is no remote-player replication or authoritative continuous world simulation yet.
+- The world is a generated starter test zone with placeholder geometry and character/enemy visuals.
+- Enemies are stationary and have no aggro, pathfinding, abilities or animated combat.
+- Local chat is polling-based. Direct messages, friends, groups, guilds, moderation and retention automation are not implemented.
+- Equipment uses catalog items and slot maps; unique item instances, durability, modifiers and binding are future work.
+- Access tokens remain in memory only and are not persisted between application launches. Password recovery, email verification and MFA are not implemented.
+- Housing, settlements, player-to-player trading and large-scale world streaming remain future milestones.
