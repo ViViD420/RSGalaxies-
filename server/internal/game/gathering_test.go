@@ -58,3 +58,13 @@ func TestGatheringRejectsOutOfRangeAndFullInventory(t *testing.T) {
 		t.Fatalf("full inventory error = %v", err)
 	}
 }
+
+func TestCopperVeinAwardsMiningExperienceAndOre(t *testing.T) {
+ now:=time.Now().UTC()
+ player,err:=NewPlayer("copper-miner","CopperMiner",now);if err!=nil{t.Fatal(err)}
+ player.Position.Z=-5
+ node,ok:=FindGatheringNode("copper-001");if !ok{t.Fatal("copper vein missing")}
+ result,state,err:=player.Gather(node,GatheringNodeState{},now);if err!=nil{t.Fatal(err)}
+ if result.ItemID!="copper_ore"||result.Experience!=30||player.Inventory["copper_ore"]!=1||player.Skills["mining"].Experience!=30{t.Fatalf("copper gather result=%+v player=%+v",result,player)}
+ if state.Charges!=1{t.Fatalf("copper vein charges=%d want=1",state.Charges)}
+}
