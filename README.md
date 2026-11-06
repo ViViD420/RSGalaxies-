@@ -57,7 +57,7 @@ The server listens on http://localhost:8080 by default. Without RS_GALAXIES_DATA
 - POST /api/v1/players/{id}/gather/{nodeID} — development gathering action that updates inventory and XP.
 - POST /api/v1/players/{id}/craft/{recipeID} — development crafting action that consumes ingredients and creates outputs.
 
-Create a character with POST /api/v1/players and JSON body {"name":"Wayfarer"}. The XP curve is cumulative and deterministic, with levels 1–99 and a 200,000,000 XP cap. Development-only XP, movement, gathering and crafting shortcuts are disabled when RS_GALAXIES_ENV=production; production use still requires authentication and durable persistence.
+Create a character with POST /api/v1/players and JSON body {"name":"Wayfarer"}. The XP curve is cumulative and deterministic, with levels 1–99 and a 200,000,000 XP cap. All player-specific APIs, including character creation and lookup, and all development-only XP/movement/gathering/crafting actions are disabled when RS_GALAXIES_ENV=production. They remain unavailable until authenticated accounts and character ownership are implemented.
 
 ## Engineering rules
 
