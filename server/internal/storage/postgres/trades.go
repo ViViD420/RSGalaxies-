@@ -41,11 +41,6 @@ type lockedTradePlayer struct {
 	Player game.Player
 }
 
-type tradeQueryer interface {
-	QueryContext(context.Context,string,...any)(*sql.Rows,error)
-	QueryRowContext(context.Context,string,...any)*sql.Row
-}
-
 func rLockOwnedPlayer(ctx context.Context,tx *sql.Tx,accountID string,id game.PlayerID)(game.Player,error){
 	return scanPlayer(tx.QueryRowContext(ctx,"SELECT "+playerColumns+" FROM players WHERE account_id=$1 AND id=$2 FOR UPDATE",accountID,string(id)))
 }
