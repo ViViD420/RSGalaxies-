@@ -22,6 +22,13 @@ var skills_request: HTTPRequest
 var skills_pending := false
 var inventory_panel: PanelContainer
 var inventory_use_select: OptionButton
+var inventory_search_input: LineEdit
+var inventory_filter_select: OptionButton
+var inventory_sort_select: OptionButton
+var inventory_items_column: VBoxContainer
+var inventory_search_text := ""
+var inventory_filter := "all"
+var inventory_sort := "name"
 var inventory_bank_select: OptionButton
 var inventory_quantity_input: LineEdit
 var inventory_status_label: Label
@@ -895,6 +902,81 @@ func _on_gather_completed(result: int, response_code: int, _headers: PackedStrin
 	_update_inventory(player_data.get("inventory", {}), player_data.get("bank", {}), player_data.get("coins", current_coins), player_data.get("equipment", {}), player_data.get("health", current_health))
 	_refresh_skills_panel()
 
+
+func _on_inventory_search_changed(value: String) -> void:
+	inventory_search_text = value.strip_edges().to_lower()
+	_refresh_inventory_item_list()
+
+
+func _on_inventory_filter_selected(index: int) -> void:
+	inventory_filter = str(inventory_filter_select.get_item_metadata(index))
+	_refresh_inventory_item_list()
+
+
+func _on_inventory_sort_selected(index: int) -> void:
+	inventory_sort = str(inventory_sort_select.get_item_metadata(index))
+	_refresh_inventory_item_list()
+
+
+func _compare_inventory_items(left: Dictionary, right: Dictionary) -> bool:
+	var left_id := str(left.get("id", ""))
+	var right_id := str(right.get("id", ""))
+	if inventory_sort == "bag":
+		var left_count := int(current_inventory.get(left_id, 0))
+		var right_count := int(current_inventory.get(right_id, 0))
+		if left_count != right_count:
+			return left_count > right_count
+	elif inventory_sort == "bank":
+		var left_count := int(current_bank.get(left_id, 0))
+		var right_count := int(current_bank.get(right_id, 0))
+		if left_count != right_count:
+			return left_count > right_count
+	return str(left.get("name", left_id)).naturalnocasecmp_to(str(right.get("name", right_id))) < 0
+
+
+func _refresh_inventory_item_list() -> void:
+	if inventory_items_column == null or inventory_bank_select == null:
+		return
+	for child in inventory_items_column.get_children():
+		child.queue_free()
+	inventory_bank_select.clear()
+	var visible_items: Array[Dictionary] = []
+	for item in market_catalog:
+		if not item is Dictionary:
+			continue
+		var item_id := str(item.get("id", ""))
+		var carried := int(current_inventory.get(item_id, 0))
+		var banked := int(current_bank.get(item_id, 0))
+		if carried == 0 and banked == 0:
+			continue
+		var item_name := str(item.get("name", item_id))
+		if not inventory_search_text.is_empty() and not item_name.to_lower().contains(inventory_search_text) and not item_id.to_lower().contains(inventory_search_text):
+			continue
+		var equipment := str(item.get("equipmentSlot", "")) != ""
+		var consumable := bool(item.get("consumable", false))
+		if inventory_filter == "resources" and (equipment or consumable):
+			continue
+		if inventory_filter == "equipment" and not equipment:
+			continue
+		if inventory_filter == "consumables" and not consumable:
+			continue
+		visible_items.append(item)
+	visible_items.sort_custom(_compare_inventory_items)
+	for item in visible_items:
+		var item_id := str(item.get("id", ""))
+		var carried := int(current_inventory.get(item_id, 0))
+		var banked := int(current_bank.get(item_id, 0))
+		var item_label := Label.new()
+		item_label.text = str(item.get("name", item_id)) + "  •  Bag " + str(carried) + "  •  Bank " + str(banked)
+		inventory_items_column.add_child(item_label)
+		inventory_bank_select.add_item(str(item.get("name", item_id)) + " (Bag " + str(carried) + " / Bank " + str(banked) + ")")
+		inventory_bank_select.set_item_metadata(inventory_bank_select.item_count - 1, item_id)
+	if visible_items.is_empty():
+		var empty_label := Label.new()
+		empty_label.text = "No items match this filter."
+		inventory_items_column.add_child(empty_label)
+
+
 func _update_inventory(inventory_data: Variant, bank_data: Variant = {}, coins_data: Variant = null, equipment_data: Variant = {}, health_data: Variant = null) -> void:
 	if not inventory_data is Dictionary:
 		return
@@ -1547,35 +1629,43 @@ func _show_inventory_panel() -> void:
 	var items_column := VBoxContainer.new()
 	items_column.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	scroll.add_child(items_column)
-	var displayed := false
-	for item in market_catalog:
-		if not item is Dictionary:
-			continue
-		var item_id := str(item.get("id", ""))
-		var carried := int(current_inventory.get(item_id, 0))
-		var banked := int(current_bank.get(item_id, 0))
-		if carried == 0 and banked == 0:
-			continue
-		var item_name := str(item.get("name", item_id))
-		var item_label := Label.new()
-		item_label.text = item_name + "  •  Bag " + str(carried) + "  •  Bank " + str(banked)
-		items_column.add_child(item_label)
-		displayed = true
-	if not displayed:
-		var empty_label := Label.new()
-		empty_label.text = "Your bags and bank are empty."
-		items_column.add_child(empty_label)
+	var filter_row := HBoxContainer.new()
+	column.add_child(filter_row)
+	inventory_filter_select = OptionButton.new()
+	for filter in [{"label":"All items","id":"all"},{"label":"Resources","id":"resources"},{"label":"Equipment","id":"equipment"},{"label":"Consumables","id":"consumables"}]:
+		inventory_filter_select.add_item(str(filter.label))
+		inventory_filter_select.set_item_metadata(inventory_filter_select.item_count - 1, str(filter.id))
+		if str(filter.id) == inventory_filter:
+			inventory_filter_select.select(inventory_filter_select.item_count - 1)
+	inventory_filter_select.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	inventory_filter_select.item_selected.connect(_on_inventory_filter_selected)
+	filter_row.add_child(inventory_filter_select)
+	inventory_sort_select = OptionButton.new()
+	for sort_option in [{"label":"Name","id":"name"},{"label":"Bag count","id":"bag"},{"label":"Bank count","id":"bank"}]:
+		inventory_sort_select.add_item(str(sort_option.label))
+		inventory_sort_select.set_item_metadata(inventory_sort_select.item_count - 1, str(sort_option.id))
+		if str(sort_option.id) == inventory_sort:
+			inventory_sort_select.select(inventory_sort_select.item_count - 1)
+	inventory_sort_select.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	inventory_sort_select.item_selected.connect(_on_inventory_sort_selected)
+	filter_row.add_child(inventory_sort_select)
+	inventory_search_input = LineEdit.new()
+	inventory_search_input.placeholder_text = "Search items..."
+	inventory_search_input.text = inventory_search_text
+	inventory_search_input.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	inventory_search_input.text_changed.connect(_on_inventory_search_changed)
+	column.add_child(inventory_search_input)
+	var scroll := ScrollContainer.new()
+	scroll.custom_minimum_size = Vector2(330, 130)
+	scroll.size_flags_vertical = Control.SIZE_EXPAND_FILL
+	column.add_child(scroll)
+	inventory_items_column = VBoxContainer.new()
+	inventory_items_column.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	scroll.add_child(inventory_items_column)
 	inventory_bank_select = OptionButton.new()
 	inventory_bank_select.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-	for item in market_catalog:
-		if item is Dictionary:
-			var item_id := str(item.get("id", ""))
-			var carried := int(current_inventory.get(item_id, 0))
-			var banked := int(current_bank.get(item_id, 0))
-			if carried > 0 or banked > 0:
-				inventory_bank_select.add_item(str(item.get("name", item_id)) + " (Bag " + str(carried) + " / Bank " + str(banked) + ")")
-				inventory_bank_select.set_item_metadata(inventory_bank_select.item_count - 1, item_id)
 	column.add_child(inventory_bank_select)
+	_refresh_inventory_item_list()
 	inventory_quantity_input = LineEdit.new()
 	inventory_quantity_input.text = "1"
 	inventory_quantity_input.placeholder_text = "Transfer quantity (1–100)"
