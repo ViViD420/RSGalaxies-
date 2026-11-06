@@ -212,7 +212,7 @@ func (r *AccountRepository) UpdateTradeOfferForAccount(ctx context.Context,accou
 	}
 	if snapshot.Status!=game.TradeStatusOpen{return game.TradeSnapshot{},game.ErrTradeNotAccepted}
 	if snapshot.Revision!=revision{return game.TradeSnapshot{},game.ErrTradeRevisionConflict}
-	participant,ok:=participantRole(snapshot,id);if !ok{return game.TradeSnapshot{},game.ErrTradeNotParticipant}
+	_,ok:=participantRole(snapshot,id);if !ok{return game.TradeSnapshot{},game.ErrTradeNotParticipant}
 	players,err:=lockTradePlayers(ctx,tx,tradeID);if err!=nil{return game.TradeSnapshot{},err}
 	ref:=players[id];if ref.AccountID!=accountID{return game.TradeSnapshot{},game.ErrTradeNotParticipant}
 	if err:=game.ApplyTradeOffer(&ref.Player,participant.Offer);err!=nil{return game.TradeSnapshot{},err}
