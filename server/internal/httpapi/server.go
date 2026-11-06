@@ -651,7 +651,7 @@ func (s *Server) listEnemies(w http.ResponseWriter,r *http.Request) {
 
 func (s *Server) attackOwnedEnemy(w http.ResponseWriter,r *http.Request) {
 	account,_,ok:=s.authenticatedAccount(w,r);if !ok{return}
-	player,result,err:=s.characters.AttackEnemyForAccount(r.Context(),account.ID,game.PlayerID(strings.TrimSpace(r.PathValue("id"))),r.PathValue("enemyID"),time.Now().UTC())
+	player,result,err:=s.characters.AttackEnemyForAccount(r.Context(),account.ID,game.PlayerID(strings.TrimSpace(r.PathValue("id"))),r.PathValue("enemyID"),s.now())
 	if err!=nil {
 		switch {
 		case errors.Is(err,game.ErrPlayerNotFound):writeError(w,404,"character_not_found")
