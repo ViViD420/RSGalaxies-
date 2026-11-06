@@ -26,7 +26,7 @@ Open `client/` in Godot 4.3 or newer and run the main scene. Start the Go world 
 - Leased zone-presence heartbeats and polling remote-player avatars/nameplates; inactive characters disappear after their presence lease expires.
 - Live skills panel with all ten skills, current level, XP totals, per-level progress bars and XP remaining to the next level.
 
-The client uses the public item, skill, crafting and enemy catalogs instead of duplicating those definitions. Gameplay outcomes are committed by the Go server and PostgreSQL repository.
+The client uses the public item, skill, crafting and enemy catalogs instead of duplicating those definitions. Gameplay outcomes are committed by the Go server and PostgreSQL repository. API requests use bounded timeouts, and automatic redirects are disabled so bearer credentials are never forwarded to a redirected destination.
 
 ## Server configuration
 
