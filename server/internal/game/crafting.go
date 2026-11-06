@@ -124,8 +124,11 @@ func (p *Player) Craft(recipe CraftingRecipeDefinition, station CraftingStationD
 	}
 	for _, output := range recipe.Outputs {
 		item, exists := FindItem(output.ItemID)
-		if !exists || output.Quantity <= 0 || produced[output.ItemID] > item.MaxStack-output.Quantity {
+		if !exists || output.Quantity <= 0 || output.Quantity > item.MaxStack {
 			return CraftingResult{}, ErrUnknownCraftingRecipe
+		}
+		if produced[output.ItemID] > item.MaxStack-output.Quantity {
+			return CraftingResult{}, ErrCraftingOutputFull
 		}
 		produced[output.ItemID] += output.Quantity
 	}
