@@ -79,6 +79,10 @@ var trade_target_select: OptionButton
 var trade_item_select: OptionButton
 var trade_quantity_input: LineEdit
 var trade_coins_input: LineEdit
+var trade_offer_items: Dictionary = {}
+var trade_offer_items_label: Label
+var trade_editor_trade_id := ""
+var trade_editor_revision := -1
 var trade_status_label: Label
 var trade_accept_button: Button
 var trade_update_button: Button
@@ -1876,27 +1880,39 @@ func _build_trade_panel() -> void:
 	trade_target_select.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	column.add_child(trade_target_select)
 	var item_label := Label.new()
-	item_label.text = "Offer one inventory stack (or coins only)"
+	item_label.text = "Build an offer with up to 20 item stacks"
 	column.add_child(item_label)
 	trade_item_select = OptionButton.new()
 	trade_item_select.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	column.add_child(trade_item_select)
 	var quantity_row := HBoxContainer.new()
 	var quantity_label := Label.new()
-	quantity_label.text = "Quantity"
+	quantity_label.text = "Add quantity"
 	quantity_row.add_child(quantity_label)
 	trade_quantity_input = LineEdit.new()
 	trade_quantity_input.text = "1"
-	trade_quantity_input.custom_minimum_size = Vector2(75, 0)
+	trade_quantity_input.custom_minimum_size = Vector2(65, 0)
 	quantity_row.add_child(trade_quantity_input)
+	var add_item_button := Button.new()
+	add_item_button.text = "Add"
+	add_item_button.pressed.connect(_add_trade_offer_item)
+	quantity_row.add_child(add_item_button)
+	var remove_item_button := Button.new()
+	remove_item_button.text = "Remove"
+	remove_item_button.pressed.connect(_remove_trade_offer_item)
+	quantity_row.add_child(remove_item_button)
 	var coins_label := Label.new()
 	coins_label.text = "Coins"
 	quantity_row.add_child(coins_label)
 	trade_coins_input = LineEdit.new()
 	trade_coins_input.text = "0"
-	trade_coins_input.custom_minimum_size = Vector2(90, 0)
+	trade_coins_input.custom_minimum_size = Vector2(75, 0)
 	quantity_row.add_child(trade_coins_input)
 	column.add_child(quantity_row)
+	trade_offer_items_label = Label.new()
+	trade_offer_items_label.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+	trade_offer_items_label.custom_minimum_size = Vector2(380, 42)
+	column.add_child(trade_offer_items_label)
 	var actions := HBoxContainer.new()
 	var invite_button := Button.new()
 	invite_button.text = "Invite"
@@ -1949,16 +1965,25 @@ func _refresh_trade_items() -> void:
 	if trade_item_select == null:
 		return
 	trade_item_select.clear()
-	trade_item_select.add_item("No item")
+	trade_item_select.add_item("Select item")
 	trade_item_select.set_item_metadata(0, "")
 	var equipped: Array = current_equipment.values()
-	var item_ids: Array = current_inventory.keys()
+	var available: Dictionary = {}
+	for item_id in current_inventory.keys():
+		if int(current_inventory.get(item_id, 0)) > 0:
+			available[str(item_id)] = true
+	for item_id in trade_offer_items.keys():
+		available[str(item_id)] = true
+	var item_ids: Array = available.keys()
 	item_ids.sort()
 	for item_id in item_ids:
-		if int(current_inventory.get(item_id, 0)) <= 0 or equipped.has(item_id):
+		if equipped.has(item_id):
 			continue
-		trade_item_select.add_item(str(item_id).replace("_", " ") + "  ×" + str(current_inventory[item_id]))
+		var bag_count := int(current_inventory.get(item_id, 0))
+		var offered_count := int(trade_offer_items.get(item_id, 0))
+		trade_item_select.add_item(str(item_id).replace("_", " ") + "  (bag " + str(bag_count) + ", offer " + str(offered_count) + ")")
 		trade_item_select.set_item_metadata(trade_item_select.item_count - 1, str(item_id))
+	_update_trade_offer_items_label()
 
 
 func _send_trade_action(action: String) -> void:
@@ -2002,14 +2027,17 @@ func _send_trade_action(action: String) -> void:
 		if coins < 0 or coins > current_coins:
 			trade_status_label.text = "Coin offer exceeds your available balance."
 			return
-		var item_id := str(trade_item_select.get_selected_metadata()) if trade_item_select != null else ""
-		var items: Dictionary = {}
-		if not item_id.is_empty():
-			if quantity < 1 or quantity > int(current_inventory.get(item_id, 0)):
-				trade_status_label.text = "Item quantity exceeds your available stack."
+		var currently_offered := _current_own_trade_offer()
+		var available_coins := current_coins + int(currently_offered.get("coins", 0))
+		if coins > available_coins:
+			trade_status_label.text = "Coin offer exceeds your available balance."
+			return
+		for item_id in trade_offer_items.keys():
+			var available_quantity := int(current_inventory.get(item_id, 0)) + int(currently_offered.get("items", {}).get(item_id, 0))
+			if int(trade_offer_items[item_id]) < 1 or int(trade_offer_items[item_id]) > available_quantity:
+				trade_status_label.text = "Offer quantity exceeds your available stack for " + str(item_id).replace("_", " ") + "."
 				return
-			items[item_id] = quantity
-		var request_data: Dictionary = {"offer": {"items": items, "coins": coins}}
+		var request_data: Dictionary = {"offer": {"items": trade_offer_items.duplicate(), "coins": coins}}
 		if action == "update":
 			request_data["revision"] = int(current_trade.get("revision", 0))
 		body = JSON.stringify(request_data)
