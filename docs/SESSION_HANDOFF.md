@@ -35,7 +35,7 @@ An original sandbox MMORPG combining long-form skill progression and item gamepl
 - Startup character creation and HTTP health check against the Go service; client position is periodically sent to the server and checked against movement rules.
 - Touchscreen D-pad/jump buttons and touch-drag camera controls.
 - Headless Godot validation and Web export workflow.
-- This is a movement/API proof of concept, not a final client or a network-authoritative character controller.
+- This is a movement/gathering API proof of concept, not a final client or a fully server-authoritative character controller.
 
 ### Development environment
 - .devcontainer/ configures a GitHub Codespaces Go workspace.
