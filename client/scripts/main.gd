@@ -2153,9 +2153,19 @@ func _on_trade_request_completed(result: int, response_code: int, _headers: Pack
 	var trade_status := str(current_trade.get("status", ""))
 	if trade_button != null and trade_status == "pending":
 		trade_button.text = "Trade • 1"
+		var own_role := ""
+		var partner_name := "nearby player"
 		for participant in current_trade.get("participants", []):
-			if participant is Dictionary and str(participant.get("characterId", "")) != player_id:
-				status_label.text = "Trade invitation from " + str(participant.get("name", "nearby player"))
+			if not participant is Dictionary:
+				continue
+			if str(participant.get("characterId", "")) == player_id:
+				own_role = str(participant.get("role", ""))
+			else:
+				partner_name = str(participant.get("name", partner_name))
+		if own_role == "target":
+			status_label.text = "Trade invitation from " + partner_name
+		else:
+			status_label.text = "Trade invitation sent to " + partner_name
 	elif trade_button != null:
 		trade_button.text = "Trade"
 		if trade_status == "open":
