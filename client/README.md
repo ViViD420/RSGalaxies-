@@ -19,7 +19,7 @@ Open `client/` in Godot 4.3 or newer and run the main scene. Start the Go world 
 - Authenticated, server-validated movement and safe-spawn recovery.
 - Woodcutting and stone gathering; copper mining, smelting and smithing.
 - Workbench and forge recipes with server-validated ingredients, skill levels, range and output capacity.
-- Persistent inventory, 100-slot bank, coin wallet and merchant purchases/sales.
+- Persistent inventory, 100-slot bank, coin wallet and merchant purchases/sales. The bag/bank panel supports item search, resource/equipment/consumable filters and sorting by name or carried/banked quantity.
 - Equipment slots, gear bonuses and simple equipped-item visuals.
 - Server-authoritative PvE attacks, enemy retaliation/respawn, Combat XP, loot and healing consumables.
 - Persistent local-zone chat with a bounded 100-line client display.
