@@ -1,6 +1,6 @@
 # Player-to-Player Trade Design
 
-Status: design baseline; implementation is not enabled yet.
+Status: invite/accept/read API slice implemented; escrow offer updates, confirmations, settlement, cancellation and Godot trade UI are not implemented. Do not enable player trading for production until the full lifecycle and required tests are complete.
 
 ## Goals
 
