@@ -30,14 +30,15 @@ func scanPlayer(row scanner) (game.Player, error) {
 	var createdAt, lastMoveAt time.Time
 	var skillsJSON, inventoryJSON, bankJSON []byte
 	var x, z float64
-	if err := row.Scan(&id, &name, &createdAt, &skillsJSON, &inventoryJSON, &bankJSON, &zoneID, &x, &z, &lastMoveAt); err != nil {
+	var coins int64
+	if err := row.Scan(&id, &name, &createdAt, &skillsJSON, &inventoryJSON, &bankJSON, &coins, &zoneID, &x, &z, &lastMoveAt); err != nil {
 		if errors.Is(err, sql.ErrNoRows) { return game.Player{}, game.ErrPlayerNotFound }
 		return game.Player{}, fmt.Errorf("scan player: %w", err)
 	}
 	player := game.Player{
 		ID: game.PlayerID(id), Name: name, CreatedAt: createdAt.UTC(),
 		Position: game.WorldPosition{ZoneID: zoneID, X: x, Z: z},
-		LastMoveAt: lastMoveAt.UTC(),
+		LastMoveAt: lastMoveAt.UTC(), Coins: coins,
 	}
 	if err := json.Unmarshal(skillsJSON, &player.Skills); err != nil { return game.Player{}, fmt.Errorf("decode player skills: %w", err) }
 	if err := json.Unmarshal(inventoryJSON, &player.Inventory); err != nil { return game.Player{}, fmt.Errorf("decode player inventory: %w", err) }
@@ -56,9 +57,9 @@ func (r *PlayerRepository) Create(ctx context.Context, player game.Player) error
 	bank, err := json.Marshal(player.Bank)
 	if err != nil { return fmt.Errorf("encode bank: %w", err) }
 	_, err = r.db.ExecContext(ctx, `INSERT INTO players
-		(id, name, created_at, skills, inventory, bank, zone_id, position_x, position_z, last_move_at)
-		VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10)`,
-		string(player.ID), player.Name, player.CreatedAt, string(skills), string(inventory), string(bank),
+		(id, name, created_at, skills, inventory, bank, coins, zone_id, position_x, position_z, last_move_at)
+		VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11)`,
+		string(player.ID), player.Name, player.CreatedAt, string(skills), string(inventory), string(bank), player.Coins,
 		player.Position.ZoneID, player.Position.X, player.Position.Z, player.LastMoveAt)
 	if err != nil {
 		var pgErr *pgconn.PgError
@@ -95,9 +96,9 @@ func updatePlayer(ctx context.Context, exec executor, player game.Player) error 
 	if err != nil { return fmt.Errorf("encode inventory: %w", err) }
 	bank, err := json.Marshal(player.Bank)
 	if err != nil { return fmt.Errorf("encode bank: %w", err) }
-	_, err = exec.ExecContext(ctx, `UPDATE players SET skills=$2, inventory=$3, bank=$4, zone_id=$5,
-		position_x=$6, position_z=$7, last_move_at=$8 WHERE id=$1`,
-		string(player.ID), string(skills), string(inventory), string(bank), player.Position.ZoneID,
+	_, err = exec.ExecContext(ctx, `UPDATE players SET skills=$2, inventory=$3, bank=$4, coins=$5, zone_id=$6,
+		position_x=$7, position_z=$8, last_move_at=$9 WHERE id=$1`,
+		string(player.ID), string(skills), string(inventory), string(bank), player.Coins, player.Position.ZoneID,
 		player.Position.X, player.Position.Z, player.LastMoveAt)
 	if err != nil { return fmt.Errorf("update player: %w", err) }
 	return nil
