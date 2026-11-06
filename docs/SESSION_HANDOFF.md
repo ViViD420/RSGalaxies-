@@ -22,8 +22,8 @@ An original sandbox MMORPG combining long-form skill progression and item gamepl
 - Defensive in-memory repository copies and concurrency-safe experience awards.
 - Starter zone, spawn point, server-time movement validation and world bounds.
 - Tree, stone, copper and wild-herb gathering nodes with range checks, charges, respawn and atomic inventory/XP rewards. The Foraging skill feeds a new herbal-bundle workbench recipe. Godot chooses the nearest target and builds resource props from the server node catalog rather than hardcoded node IDs.
-- Starter workbench and forge; recipes cover basic planks, herbal bundles, copper smelting and a crafted training sword. Crafting validates range, skill level, ingredients and output stack capacity.
-- Player inventory, 100-slot bank storage, coin wallet, persistent equipment slots and consumable healing potions. New characters start with 100 coins.
+- Starter workbench and forge; recipes cover basic planks, herbal bundles, healing herbal tea, copper smelting and a crafted training sword. Crafting validates range, skill level, ingredients and output stack capacity.
+- Player inventory, 100-slot bank storage, coin wallet, persistent equipment slots, merchant healing potions and crafted herbal tea. New characters start with 100 coins.
 - Starter merchant catalog with server-defined buy/sell prices. Buy/sell operations update coins and inventory atomically.
 - PostgreSQL migrations 0001–0008 cover player state, gathering, accounts/sessions, character ownership, bank storage, currency, equipment, health, shared enemy spawn state, persistent zone chat and leased zone presence.
 - PostgreSQL transactions and row locks protect XP, movement, gathering, crafting, bank transfers, market trades, equipment changes, PvE combat and presence heartbeat updates.
