@@ -9,8 +9,6 @@ The world service listens on port 8080 by default. Responses are JSON unless the
 
 ## Public catalogs
 
- — process liveness; remains healthy during dependency outages.
-- `GET /readyz` — readiness; checks PostgreSQL with a two-second timeout when database-backed services are enabled.
 - `GET /api/v1/skills`
 - `GET /api/v1/world/zones`
 - `GET /api/v1/world/nodes`
