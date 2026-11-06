@@ -18,7 +18,7 @@ Status: implemented foundation. PostgreSQL accounts/sessions, bearer authenticat
 - sessions: token digest primary/unique key, account foreign key, created/expiry/last-used/revoked timestamps, optional user-agent metadata (never a raw credential).
 - players: nullable account_id during migration for legacy development rows; indexed account_id. New character creation must require an authenticated account.
 - Migration 0002 adds accounts, sessions and nullable player ownership without deleting legacy development characters. Production character reads and writes include account ownership in SQL predicates.
-- Account-scoped operations now include XP awards, movement, gathering, crafting and bank deposits/withdrawals, each using player row locks and transactions; gathering also locks shared node state. Bank transfers validate item definitions, quantities, stack limits and bank slots before atomically moving items between inventory and bank. A starter merchant supports buy/sell trades with server-defined prices; coin balances are persisted and changed in the same transaction as inventory.
+- Account-scoped operations now include XP awards, movement, gathering, crafting and bank deposits/withdrawals, each using player row locks and transactions; gathering also locks shared node state. Bank transfers validate item definitions, quantities, stack limits and bank slots before atomically moving items between inventory and bank. A starter merchant supports buy/sell trades with server-defined prices; coin balances are persisted and changed in the same transaction as inventory. Equipment slots persist on each character; equip/unequip operations atomically move items between inventory and slots and expose derived attack/defense bonuses.
 
 ## HTTP behavior
 
