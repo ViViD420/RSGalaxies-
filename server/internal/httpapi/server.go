@@ -29,7 +29,7 @@ func (s *Server) Routes() http.Handler {
 	mux.HandleFunc("POST /api/v1/players", s.createPlayer)
 	mux.HandleFunc("GET /api/v1/players/{id}", s.getPlayer)
 	mux.HandleFunc("GET /api/v1/players/{id}/skills", s.getPlayerSkills)
-	// This shortcut is disabled in production; real XP must come from validated gameplay actions.
+	// Development-only mutation shortcuts are disabled in production until authenticated gameplay actions are ready.
 	if os.Getenv("RS_GALAXIES_ENV") != "production" {
 		mux.HandleFunc("POST /api/v1/players/{id}/skills/{skill}/experience", s.awardExperience)
 		mux.HandleFunc("POST /api/v1/players/{id}/move", s.movePlayer)
