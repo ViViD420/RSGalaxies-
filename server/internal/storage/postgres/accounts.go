@@ -145,10 +145,10 @@ func (r *AccountRepository) CreateCharacter(ctx context.Context, accountID strin
 	equipment, err := json.Marshal(player.Equipment)
 	if err != nil { return fmt.Errorf("encode character equipment: %w", err) }
 	_, err = r.db.ExecContext(ctx,`INSERT INTO players
-		(id,account_id,name,created_at,skills,inventory,bank,coins,equipment,zone_id,position_x,position_z,last_move_at)
-		VALUES ($1,$2,$3,$4,$5::jsonb,$6::jsonb,$7::jsonb,$8,$9::jsonb,$10,$11,$12,$13)`,
+		(id,account_id,name,created_at,skills,inventory,bank,coins,equipment,zone_id,position_x,position_z,last_move_at,health,last_combat_at)
+		VALUES ($1,$2,$3,$4,$5::jsonb,$6::jsonb,$7::jsonb,$8,$9::jsonb,$10,$11,$12,$13,$14,$15)`,
 		string(player.ID),accountID,player.Name,player.CreatedAt,string(skills),string(inventory),string(bank),player.Coins,string(equipment),
-		player.Position.ZoneID,player.Position.X,player.Position.Z,player.LastMoveAt)
+		player.Position.ZoneID,player.Position.X,player.Position.Z,player.LastMoveAt,player.Health,player.LastCombatAt)
 	if err != nil {
 		var pgErr *pgconn.PgError
 		if errors.As(err,&pgErr) {
@@ -193,8 +193,8 @@ func updateOwnedPlayer(ctx context.Context, tx *sql.Tx, accountID string, player
 	if err!=nil{return fmt.Errorf("encode owned player bank: %w",err)}
 	equipment,err:=json.Marshal(player.Equipment)
 	if err!=nil{return fmt.Errorf("encode owned player equipment: %w",err)}
-	result,err:=tx.ExecContext(ctx,`UPDATE players SET skills=$3,inventory=$4,bank=$5,coins=$6,equipment=$7,zone_id=$8,position_x=$9,position_z=$10,last_move_at=$11 WHERE account_id=$1 AND id=$2`,
-		accountID,string(player.ID),string(skills),string(inventory),string(bank),player.Coins,string(equipment),player.Position.ZoneID,player.Position.X,player.Position.Z,player.LastMoveAt)
+	result,err:=tx.ExecContext(ctx,`UPDATE players SET skills=$3,inventory=$4,bank=$5,coins=$6,equipment=$7,zone_id=$8,position_x=$9,position_z=$10,last_move_at=$11,health=$12,last_combat_at=$13 WHERE account_id=$1 AND id=$2`,
+		accountID,string(player.ID),string(skills),string(inventory),string(bank),player.Coins,string(equipment),player.Position.ZoneID,player.Position.X,player.Position.Z,player.LastMoveAt,player.Health,player.LastCombatAt)
 	if err!=nil{return fmt.Errorf("update owned player: %w",err)}
 	affected,err:=result.RowsAffected()
 	if err!=nil{return fmt.Errorf("count updated owned player: %w",err)}
