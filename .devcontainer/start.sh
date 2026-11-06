@@ -8,6 +8,13 @@ if ! curl -fsS http://127.0.0.1:8080/healthz >/dev/null 2>&1; then
   (cd server && nohup go run ./cmd/worldd > /tmp/rs-galaxies-world.log 2>&1 < /dev/null &)
 fi
 
+for attempt in {1..30}; do
+  if curl -fsS http://127.0.0.1:8080/healthz >/dev/null 2>&1; then
+    break
+  fi
+  sleep 1
+done
+
 mkdir -p client/build/web
 (cd client && godot --headless --path . --export-release "Web" build/web/index.html)
 (cd client/build/web && nohup python3 -m http.server 8000 --bind 0.0.0.0 > /tmp/rs-galaxies-web.log 2>&1 < /dev/null &)
