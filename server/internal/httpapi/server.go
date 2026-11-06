@@ -13,10 +13,29 @@ import (
 	"time"
 
 	"github.com/ViViD420/RSGalaxies-/server/internal/game"
+	"github.com/ViViD420/RSGalaxies-/server/internal/auth"
 )
 
-type Server struct { players game.PlayerRepository; now func() time.Time }
-func New(players game.PlayerRepository) *Server { return &Server{players:players, now:time.Now} }
+type characterStore interface {
+	CreateCharacter(context.Context, string, game.Player) error
+	GetCharacter(context.Context, string, game.PlayerID) (game.Player, error)
+	ListCharacters(context.Context, string) ([]game.Player, error)
+}
+
+type Server struct {
+	players game.PlayerRepository
+	accounts auth.AccountStore
+	characters characterStore
+	now func() time.Time
+}
+
+func New(players game.PlayerRepository) *Server {
+	return &Server{players: players, now: time.Now}
+}
+
+func NewWithAccounts(players game.PlayerRepository, accounts auth.AccountStore, characters characterStore) *Server {
+	return &Server{players: players, accounts: accounts, characters: characters, now: time.Now}
+}
 
 func (s *Server) Routes() http.Handler {
 	mux := http.NewServeMux()
@@ -37,6 +56,15 @@ func (s *Server) Routes() http.Handler {
 		mux.HandleFunc("POST /api/v1/players/{id}/move", s.movePlayer)
 		mux.HandleFunc("POST /api/v1/players/{id}/gather/{nodeID}", s.gather)
 		mux.HandleFunc("POST /api/v1/players/{id}/craft/{recipeID}", s.craft)
+	}
+	if s.accounts != nil && s.characters != nil {
+		mux.HandleFunc("POST /api/v1/auth/register", s.register)
+		mux.HandleFunc("POST /api/v1/auth/login", s.login)
+		mux.HandleFunc("POST /api/v1/auth/logout", s.logout)
+		mux.HandleFunc("GET /api/v1/auth/me", s.me)
+		mux.HandleFunc("GET /api/v1/account/characters", s.listOwnedCharacters)
+		mux.HandleFunc("POST /api/v1/account/characters", s.createOwnedCharacter)
+		mux.HandleFunc("GET /api/v1/account/characters/{id}", s.getOwnedCharacter)
 	}
 	return securityHeaders(mux)
 }
@@ -211,4 +239,163 @@ func securityHeaders(next http.Handler) http.Handler {
 		}
 		next.ServeHTTP(w, r)
 	})
+}
+
+type credentialsRequest struct {
+	Email string `json:"email"`
+	Password string `json:"password"`
+}
+
+func decodeStrictJSON(w http.ResponseWriter, r *http.Request, limit int64, destination any) bool {
+	r.Body = http.MaxBytesReader(w, r.Body, limit)
+	defer r.Body.Close()
+	decoder := json.NewDecoder(r.Body)
+	decoder.DisallowUnknownFields()
+	if err := decoder.Decode(destination); err != nil {
+		writeError(w, http.StatusBadRequest, "invalid_json")
+		return false
+	}
+	if err := decoder.Decode(&struct{}{}); err != io.EOF {
+		writeError(w, http.StatusBadRequest, "invalid_json")
+		return false
+	}
+	return true
+}
+
+func (s *Server) register(w http.ResponseWriter, r *http.Request) {
+	var request credentialsRequest
+	if !decodeStrictJSON(w, r, 4<<10, &request) { return }
+	account, token, err := s.accounts.Register(r.Context(), request.Email, request.Password, s.now())
+	if err != nil {
+		switch {
+		case errors.Is(err, auth.ErrInvalidEmail), errors.Is(err, auth.ErrInvalidPassword):
+			writeError(w, http.StatusUnprocessableEntity, "invalid_registration")
+		case errors.Is(err, auth.ErrAccountExists):
+			writeError(w, http.StatusConflict, "account_exists")
+		default:
+			log.Printf("register account: %v", err)
+			writeError(w, http.StatusInternalServerError, "internal_error")
+		}
+		return
+	}
+	writeJSON(w, http.StatusCreated, map[string]any{"account": account, "accessToken": token, "tokenType": "Bearer", "expiresIn": int64((30*24*time.Hour).Seconds())})
+}
+
+func (s *Server) login(w http.ResponseWriter, r *http.Request) {
+	var request credentialsRequest
+	if !decodeStrictJSON(w, r, 4<<10, &request) { return }
+	account, token, err := s.accounts.Login(r.Context(), request.Email, request.Password, s.now())
+	if err != nil {
+		if errors.Is(err, auth.ErrInvalidCredentials) {
+			writeError(w, http.StatusUnauthorized, "invalid_credentials")
+			return
+		}
+		log.Printf("login account: %v", err)
+		writeError(w, http.StatusInternalServerError, "internal_error")
+		return
+	}
+	writeJSON(w, http.StatusOK, map[string]any{"account": account, "accessToken": token, "tokenType": "Bearer", "expiresIn": int64((30*24*time.Hour).Seconds())})
+}
+
+func (s *Server) bearerToken(r *http.Request) (string, bool) {
+	header := r.Header.Get("Authorization")
+	parts := strings.Split(header, " ")
+	if len(parts) != 2 || !strings.EqualFold(parts[0], "Bearer") || parts[1] == "" || strings.Contains(parts[1], " ") {
+		return "", false
+	}
+	return parts[1], true
+}
+
+func (s *Server) authenticatedAccount(w http.ResponseWriter, r *http.Request) (auth.Account, string, bool) {
+	token, ok := s.bearerToken(r)
+	if !ok {
+		writeError(w, http.StatusUnauthorized, "authentication_required")
+		return auth.Account{}, "", false
+	}
+	account, err := s.accounts.AuthenticateSession(r.Context(), token, s.now())
+	if err != nil {
+		if errors.Is(err, auth.ErrSessionNotFound) {
+			writeError(w, http.StatusUnauthorized, "invalid_session")
+		} else {
+			log.Printf("authenticate account session: %v", err)
+			writeError(w, http.StatusInternalServerError, "internal_error")
+		}
+		return auth.Account{}, "", false
+	}
+	return account, token, true
+}
+
+func (s *Server) logout(w http.ResponseWriter, r *http.Request) {
+	_, token, ok := s.authenticatedAccount(w, r)
+	if !ok { return }
+	if err := s.accounts.RevokeSession(r.Context(), token, s.now()); err != nil {
+		log.Printf("revoke account session: %v", err)
+		writeError(w, http.StatusInternalServerError, "internal_error")
+		return
+	}
+	w.WriteHeader(http.StatusNoContent)
+}
+
+func (s *Server) me(w http.ResponseWriter, r *http.Request) {
+	account, _, ok := s.authenticatedAccount(w, r)
+	if !ok { return }
+	writeJSON(w, http.StatusOK, map[string]any{"account": account})
+}
+
+func (s *Server) listOwnedCharacters(w http.ResponseWriter, r *http.Request) {
+	account, _, ok := s.authenticatedAccount(w, r)
+	if !ok { return }
+	players, err := s.characters.ListCharacters(r.Context(), account.ID)
+	if err != nil {
+		log.Printf("list owned characters: %v", err)
+		writeError(w, http.StatusInternalServerError, "internal_error")
+		return
+	}
+	writeJSON(w, http.StatusOK, map[string]any{"characters": players})
+}
+
+func (s *Server) createOwnedCharacter(w http.ResponseWriter, r *http.Request) {
+	account, _, ok := s.authenticatedAccount(w, r)
+	if !ok { return }
+	var request struct { Name string `json:"name"` }
+	if !decodeStrictJSON(w, r, 4<<10, &request) { return }
+	id, err := newID()
+	if err != nil {
+		log.Printf("generate character ID: %v", err)
+		writeError(w, http.StatusInternalServerError, "internal_error")
+		return
+	}
+	player, err := game.NewPlayer(game.PlayerID(id), request.Name, s.now())
+	if err != nil {
+		writeError(w, http.StatusUnprocessableEntity, "invalid_character")
+		return
+	}
+	if err := s.characters.CreateCharacter(r.Context(), account.ID, player); err != nil {
+		if errors.Is(err, game.ErrPlayerAlreadyExists) {
+			writeError(w, http.StatusConflict, "character_conflict")
+		} else if errors.Is(err, auth.ErrAccountNotFound) {
+			writeError(w, http.StatusUnauthorized, "invalid_account")
+		} else {
+			log.Printf("create owned character: %v", err)
+			writeError(w, http.StatusInternalServerError, "internal_error")
+		}
+		return
+	}
+	writeJSON(w, http.StatusCreated, player)
+}
+
+func (s *Server) getOwnedCharacter(w http.ResponseWriter, r *http.Request) {
+	account, _, ok := s.authenticatedAccount(w, r)
+	if !ok { return }
+	player, err := s.characters.GetCharacter(r.Context(), account.ID, game.PlayerID(strings.TrimSpace(r.PathValue("id"))))
+	if err != nil {
+		if errors.Is(err, game.ErrPlayerNotFound) {
+			writeError(w, http.StatusNotFound, "character_not_found")
+		} else {
+			log.Printf("get owned character: %v", err)
+			writeError(w, http.StatusInternalServerError, "internal_error")
+		}
+		return
+	}
+	writeJSON(w, http.StatusOK, player)
 }
