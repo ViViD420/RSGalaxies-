@@ -113,8 +113,8 @@ func TestPostgresMigrationsAreIdempotent(t *testing.T) {
  ctx:=context.Background()
  if err:=Migrate(ctx,db);err!=nil{t.Fatalf("second migration: %v",err)}
  var count int
- if err:=db.QueryRowContext(ctx,"SELECT COUNT(*) FROM schema_migrations WHERE version IN (1,2,3,4,5,6,7)").Scan(&count);err!=nil{t.Fatal(err)}
- if count!=7{t.Fatalf("migration versions applied=%d want=7",count)}
+ if err:=db.QueryRowContext(ctx,"SELECT COUNT(*) FROM schema_migrations WHERE version IN (1,2,3,4,5,6,7,8)").Scan(&count);err!=nil{t.Fatal(err)}
+ if count!=8{t.Fatalf("migration versions applied=%d want=8",count)}
 }
 
 func TestPostgresOwnedGatheringLocksSharedNodeAndChecksOwner(t *testing.T) {
@@ -258,4 +258,21 @@ func TestPostgresOwnedConsumableUsePersistsHealthAndInventory(t *testing.T) {
  if healed!=25||used.Health!=85||used.Inventory["minor_healing_potion"]!=1{t.Fatalf("potion result healed=%d player=%+v",healed,used)}
  persisted,err:=repo.GetCharacter(ctx,account.ID,player.ID);if err!=nil{t.Fatal(err)}
  if persisted.Health!=85||persisted.Inventory["minor_healing_potion"]!=1{t.Fatalf("potion use not persisted: %+v",persisted)}
+}
+
+func TestPostgresZonePresenceHeartbeatLeaseAndOwnership(t *testing.T) {
+	db:=integrationDatabase(t);repo:=NewAccountRepository(db);ctx:=context.Background();now:=time.Now().UTC()
+	first,_,err:=repo.Register(ctx,fmt.Sprintf("presence-a-%d@example.test",now.UnixNano()),"correct-horse-battery-staple",now);if err!=nil{t.Fatal(err)}
+	second,_,err:=repo.Register(ctx,fmt.Sprintf("presence-b-%d@example.test",now.UnixNano()),"correct-horse-battery-staple",now);if err!=nil{t.Fatal(err)}
+	t.Cleanup(func(){cleanupTestAccounts(db,first.ID,second.ID)})
+	one,err:=game.NewPlayer(game.PlayerID(fmt.Sprintf("presence-one-%d",now.UnixNano())),"PresenceOne",now);if err!=nil{t.Fatal(err)}
+	two,err:=game.NewPlayer(game.PlayerID(fmt.Sprintf("presence-two-%d",now.UnixNano())),"PresenceTwo",now);if err!=nil{t.Fatal(err)}
+	if err:=repo.CreateCharacter(ctx,first.ID,one);err!=nil{t.Fatal(err)}
+	if err:=repo.CreateCharacter(ctx,second.ID,two);err!=nil{t.Fatal(err)}
+	if err:=repo.HeartbeatPresenceForAccount(ctx,second.ID,two.ID,now);err!=nil{t.Fatalf("presence heartbeat: %v",err)}
+	visible,err:=repo.ListZonePresenceForAccount(ctx,first.ID,one.ID,now.Add(time.Second));if err!=nil{t.Fatalf("list active presence: %v",err)}
+	if len(visible)!=1||visible[0].CharacterID!=two.ID||visible[0].Name!=two.Name||visible[0].ZoneID!=two.Position.ZoneID{t.Fatalf("presence roster=%+v",visible)}
+	expired,err:=repo.ListZonePresenceForAccount(ctx,first.ID,one.ID,now.Add(game.PresenceLease+time.Second));if err!=nil{t.Fatal(err)}
+	if len(expired)!=0{t.Fatalf("expired presence remained visible: %+v",expired)}
+	if _,err:=repo.ListZonePresenceForAccount(ctx,first.ID,two.ID,now);!errors.Is(err,game.ErrPlayerNotFound){t.Fatalf("foreign character presence error=%v",err)}
 }
