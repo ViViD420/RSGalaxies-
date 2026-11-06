@@ -793,7 +793,7 @@ func TestAuthenticatedTradeInvitationAcceptanceAndPrivacy(t *testing.T) {
 	foreign:=httptest.NewRecorder();foreignRequest:=httptest.NewRequest(http.MethodGet,"/api/v1/account/trades/"+trade.ID,nil)
 	foreignRequest.Header.Set("Authorization","Bearer "+outsiderToken);handler.ServeHTTP(foreign,foreignRequest)
 	if foreign.Code!=http.StatusNotFound{t.Fatalf("outsider trade read status=%d body=%s",foreign.Code,foreign.Body.String())}
-	accept:=httptest.NewRecorder();acceptRequest:=httptest.NewRequest(http.MethodPost,"/api/v1/account/trades/"+trade.ID+"/characters/"+string(second.ID)+"/accept",bytes.NewBufferString(`{"offer":{"items":{},"coins":0}}`))
+	accept:=httptest.NewRecorder();acceptRequest:=httptest.NewRequest(http.MethodPost,"/api/v1/account/characters/"+string(second.ID)+"/trades/accept/"+trade.ID,bytes.NewBufferString(`{"offer":{"items":{},"coins":0}}`))
 	acceptRequest.Header.Set("Authorization","Bearer "+secondToken);handler.ServeHTTP(accept,acceptRequest)
 	if accept.Code!=http.StatusOK{t.Fatalf("accept status=%d body=%s",accept.Code,accept.Body.String())}
 	var accepted game.TradeSnapshot;if err:=json.Unmarshal(accept.Body.Bytes(),&accepted);err!=nil{t.Fatal(err)}
@@ -808,21 +808,21 @@ func TestAuthenticatedTradeInvitationAcceptanceAndPrivacy(t *testing.T) {
 		if player,ok:=players[second.ID];ok{player.Inventory["rough_stone"]=3;characters.players[owner][second.ID]=player}
 	}
 	firstOffer:=httptest.NewRecorder()
-	firstOfferRequest:=httptest.NewRequest(http.MethodPut,"/api/v1/account/trades/"+trade.ID+"/characters/"+string(first.ID)+"/offer",bytes.NewBufferString(fmt.Sprintf(`{"revision":%d,"offer":{"items":{"softwood_log":2},"coins":10}}`,accepted.Revision)))
+	firstOfferRequest:=httptest.NewRequest(http.MethodPut,"/api/v1/account/characters/"+string(first.ID)+"/trades/offer/"+trade.ID,bytes.NewBufferString(fmt.Sprintf(`{"revision":%d,"offer":{"items":{"softwood_log":2},"coins":10}}`,accepted.Revision)))
 	firstOfferRequest.Header.Set("Authorization","Bearer "+firstToken);handler.ServeHTTP(firstOffer,firstOfferRequest)
 	if firstOffer.Code!=http.StatusOK{t.Fatalf("first offer status=%d body=%s",firstOffer.Code,firstOffer.Body.String())}
 	var revised game.TradeSnapshot;if err:=json.Unmarshal(firstOffer.Body.Bytes(),&revised);err!=nil{t.Fatal(err)}
 	secondOffer:=httptest.NewRecorder()
-	secondOfferRequest:=httptest.NewRequest(http.MethodPut,"/api/v1/account/trades/"+trade.ID+"/characters/"+string(second.ID)+"/offer",bytes.NewBufferString(fmt.Sprintf(`{"revision":%d,"offer":{"items":{"rough_stone":1},"coins":5}}`,revised.Revision)))
+	secondOfferRequest:=httptest.NewRequest(http.MethodPut,"/api/v1/account/characters/"+string(second.ID)+"/trades/offer/"+trade.ID,bytes.NewBufferString(fmt.Sprintf(`{"revision":%d,"offer":{"items":{"rough_stone":1},"coins":5}}`,revised.Revision)))
 	secondOfferRequest.Header.Set("Authorization","Bearer "+secondToken);handler.ServeHTTP(secondOffer,secondOfferRequest)
 	if secondOffer.Code!=http.StatusOK{t.Fatalf("second offer status=%d body=%s",secondOffer.Code,secondOffer.Body.String())}
 	if err:=json.Unmarshal(secondOffer.Body.Bytes(),&revised);err!=nil{t.Fatal(err)}
 	confirmFirst:=httptest.NewRecorder()
-	confirmFirstRequest:=httptest.NewRequest(http.MethodPost,"/api/v1/account/trades/"+trade.ID+"/characters/"+string(first.ID)+"/confirm",bytes.NewBufferString(fmt.Sprintf(`{"revision":%d}`,revised.Revision)))
+	confirmFirstRequest:=httptest.NewRequest(http.MethodPost,"/api/v1/account/characters/"+string(first.ID)+"/trades/confirm/"+trade.ID,bytes.NewBufferString(fmt.Sprintf(`{"revision":%d}`,revised.Revision)))
 	confirmFirstRequest.Header.Set("Authorization","Bearer "+firstToken);handler.ServeHTTP(confirmFirst,confirmFirstRequest)
 	if confirmFirst.Code!=http.StatusOK{t.Fatalf("first confirmation status=%d body=%s",confirmFirst.Code,confirmFirst.Body.String())}
 	confirmSecond:=httptest.NewRecorder()
-	confirmSecondRequest:=httptest.NewRequest(http.MethodPost,"/api/v1/account/trades/"+trade.ID+"/characters/"+string(second.ID)+"/confirm",bytes.NewBufferString(fmt.Sprintf(`{"revision":%d}`,revised.Revision)))
+	confirmSecondRequest:=httptest.NewRequest(http.MethodPost,"/api/v1/account/characters/"+string(second.ID)+"/trades/confirm/"+trade.ID,bytes.NewBufferString(fmt.Sprintf(`{"revision":%d}`,revised.Revision)))
 	confirmSecondRequest.Header.Set("Authorization","Bearer "+secondToken);handler.ServeHTTP(confirmSecond,confirmSecondRequest)
 	if confirmSecond.Code!=http.StatusOK{t.Fatalf("second confirmation status=%d body=%s",confirmSecond.Code,confirmSecond.Body.String())}
 	if err:=json.Unmarshal(confirmSecond.Body.Bytes(),&revised);err!=nil{t.Fatal(err)}
