@@ -47,3 +47,16 @@ func TestConcurrentExperienceAwardsAreNotLost(t *testing.T) {
 		t.Fatalf("experience = %d, want %d", got, awards)
 	}
 }
+
+func TestMemoryRepositoryReturnsIndependentBankAndInventoryMaps(t *testing.T) {
+ repository:=NewMemoryPlayerRepository()
+ player,err:=NewPlayer("p-bank","BankWayfarer",time.Now());if err!=nil{t.Fatal(err)}
+ player.Inventory["softwood_log"]=3
+ player.Bank["rough_stone"]=7
+ if err:=repository.Create(context.Background(),player);err!=nil{t.Fatal(err)}
+ loaded,err:=repository.Get(context.Background(),player.ID);if err!=nil{t.Fatal(err)}
+ loaded.Bank["rough_stone"]=0
+ loaded.Inventory["softwood_log"]=0
+ again,err:=repository.Get(context.Background(),player.ID);if err!=nil{t.Fatal(err)}
+ if again.Bank["rough_stone"]!=7||again.Inventory["softwood_log"]!=3{t.Fatalf("mutating returned bank/inventory changed repository state: bank=%v inventory=%v",again.Bank,again.Inventory)}
+}
