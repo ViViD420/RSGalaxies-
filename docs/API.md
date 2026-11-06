@@ -56,6 +56,8 @@ Send `Authorization: Bearer <accessToken>`:
 - `POST /api/v1/account/characters/{characterId}/equipment/unequip/{slot}`
 - `POST /api/v1/account/characters/{characterId}/combat/attack/{enemyId}`
 - `POST /api/v1/account/characters/{characterId}/rest` — recover at the safe spawn, or respawn there after defeat.
+- `GET /api/v1/account/characters/{characterId}/chat/local?after={messageId}&limit=50`
+- `POST /api/v1/account/characters/{characterId}/chat/local` with `{"message":"Hello, zone!"}`.
 
 Every character operation is scoped by the authenticated account in its SQL query or transaction. A character belonging to another account is reported as not found.
 
