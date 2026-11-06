@@ -26,8 +26,8 @@ An original sandbox MMORPG combining long-form skill progression and item gamepl
 - Starter item definitions and stack-count inventory.
 - Two gathering nodes (tree and stone) with interaction range, three charges, timed respawn and atomic inventory/XP rewards.
 - One frontier workbench and a basic plank recipe: consume two softwood logs, create one wooden plank and award Crafting XP. Crafting checks station range, skill level, ingredient counts and output stack capacity atomically.
-- HTTP routes expose skills, world zones, gathering nodes, items, players and player skills. Development-only XP, movement, gathering and crafting routes are disabled when RS_GALAXIES_ENV=production.
-- Domain, API, movement, gathering and repository concurrency tests.
+- HTTP routes expose public skills, world zones, gathering nodes, items and crafting definitions. Player-specific routes and development-only XP, movement, gathering and crafting routes are all disabled when RS_GALAXIES_ENV=production until authentication and character ownership are implemented.
+- Domain, API, movement, gathering, crafting, PostgreSQL persistence and repository concurrency tests.
 - Go CI runs tests with the race detector and go vet.
 
 ### Client
@@ -52,7 +52,7 @@ An original sandbox MMORPG combining long-form skill progression and item gamepl
 - PostgreSQL persistence is implemented and used in Codespaces. Standalone local runs fall back to in-memory storage unless RS_GALAXIES_DATABASE_URL is configured.
 - XP award, movement, gathering and crafting shortcuts are development-only. They must not be exposed publicly.
 - Authentication, secure sessions, realtime replication, production operations, NPCs, combat, additional recipes, player trading and production hardening remain incomplete.
-- Code and tests are committed. GitHub Actions execution results have not yet been inspected in this session; do not claim CI passes until verified.
+- Code and tests are committed. Recent GitHub Actions runs are being checked; verify the latest run against the current HEAD before claiming CI passes.
 
 ## Next engineering tasks
 
