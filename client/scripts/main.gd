@@ -2140,6 +2140,9 @@ func _on_trade_request_completed(result: int, response_code: int, _headers: Pack
 		_refresh_character_after_trade()
 	if trade_button != null and str(current_trade.get("status", "")) == "pending":
 		trade_button.text = "Trade • 1"
+		for participant in current_trade.get("participants", []):
+			if participant is Dictionary and str(participant.get("characterId", "")) != player_id:
+				status_label.text = "Trade invitation from " + str(participant.get("name", "nearby player"))
 	elif trade_button != null:
 		trade_button.text = "Trade"
 
