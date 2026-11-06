@@ -50,6 +50,7 @@ type Server struct {
 	accounts auth.AccountStore
 	characters characterStore
 	now func() time.Time
+	readinessCheck func(context.Context) error
 }
 
 func New(players game.PlayerRepository) *Server {
@@ -63,6 +64,7 @@ func NewWithAccounts(players game.PlayerRepository, accounts auth.AccountStore, 
 func (s *Server) Routes() http.Handler {
 	mux := http.NewServeMux()
 	mux.HandleFunc("GET /healthz", s.health)
+	mux.HandleFunc("GET /readyz", s.ready)
 	mux.HandleFunc("GET /api/v1/skills", s.listSkills)
 	mux.HandleFunc("GET /api/v1/world/zones", s.listWorldZones)
 	mux.HandleFunc("GET /api/v1/world/nodes", s.listGatheringNodes)
@@ -113,6 +115,26 @@ func (s *Server) Routes() http.Handler {
 }
 
 func (s *Server) health(w http.ResponseWriter, _ *http.Request) { writeJSON(w,200,map[string]string{"status":"ok","service":"rs-galaxies-world"}) }
+
+// SetReadinessCheck installs a dependency probe used by /readyz. Liveness remains
+// independent so orchestrators do not restart a healthy process during DB outages.
+func (s *Server) SetReadinessCheck(check func(context.Context) error) {
+	s.readinessCheck = check
+}
+
+func (s *Server) ready(w http.ResponseWriter,r *http.Request) {
+	if s.readinessCheck == nil {
+		writeJSON(w,http.StatusOK,map[string]string{"status":"ready"})
+		return
+	}
+	ctx,cancel:=context.WithTimeout(r.Context(),2*time.Second)
+	defer cancel()
+	if err:=s.readinessCheck(ctx);err!=nil {
+		writeJSON(w,http.StatusServiceUnavailable,map[string]string{"status":"not_ready"})
+		return
+	}
+	writeJSON(w,http.StatusOK,map[string]string{"status":"ready"})
+}
 func (s *Server) listSkills(w http.ResponseWriter, _ *http.Request) { writeJSON(w,200,map[string]any{"skills":game.SkillDefinitions(),"maxLevel":game.MaxSkillLevel,"maxExperience":game.MaxSkillExperience}) }
 func (s *Server) listWorldZones(w http.ResponseWriter, _ *http.Request) {
 	writeJSON(w, http.StatusOK, map[string]any{"zones": game.WorldZones()})
