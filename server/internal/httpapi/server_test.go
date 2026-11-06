@@ -658,3 +658,24 @@ func TestAuthenticatedZonePresenceHeartbeatAndRoster(t *testing.T) {
 	handler.ServeHTTP(foreign,foreignRequest)
 	if foreign.Code!=http.StatusNotFound{t.Fatalf("foreign presence status=%d body=%s",foreign.Code,foreign.Body.String())}
 }
+
+func TestWorldCatalogBundlesAllPublicDefinitions(t *testing.T) {
+	handler:=New(game.NewMemoryPlayerRepository()).Routes()
+	response:=httptest.NewRecorder()
+	handler.ServeHTTP(response,httptest.NewRequest(http.MethodGet,"/api/v1/world/catalog",nil))
+	if response.Code!=http.StatusOK{t.Fatalf("world catalog status=%d body=%s",response.Code,response.Body.String())}
+	var payload struct {
+		Skills []game.SkillDefinition `json:"skills"`
+		Zones []game.WorldZone `json:"zones"`
+		Nodes []game.GatheringNodeDefinition `json:"nodes"`
+		Items []game.ItemDefinition `json:"items"`
+		Enemies []game.EnemyDefinition `json:"enemies"`
+		Recipes []game.CraftingRecipeDefinition `json:"recipes"`
+		Stations []game.CraftingStationDefinition `json:"stations"`
+		StartingCoins int64 `json:"startingCoins"`
+	}
+	if err:=json.Unmarshal(response.Body.Bytes(),&payload);err!=nil{t.Fatal(err)}
+	if len(payload.Skills)!=10||len(payload.Zones)!=1||len(payload.Nodes)!=4||len(payload.Items)!=15||len(payload.Enemies)!=2||len(payload.Recipes)!=5||len(payload.Stations)!=2||payload.StartingCoins!=game.StartingCoins {
+		t.Fatalf("incomplete world catalog skills=%d zones=%d nodes=%d items=%d enemies=%d recipes=%d stations=%d coins=%d",len(payload.Skills),len(payload.Zones),len(payload.Nodes),len(payload.Items),len(payload.Enemies),len(payload.Recipes),len(payload.Stations),payload.StartingCoins)
+	}
+}
