@@ -21,6 +21,7 @@ var (
 
 // MoveTo validates a requested destination against server-measured elapsed time.
 func (p *Player) MoveTo(x, z float64, now time.Time) error {
+	if err:=p.CanAct();err!=nil{return err}
 	zone, ok := FindWorldZone(p.Position.ZoneID)
 	if !ok {
 		return ErrUnknownWorldZone
