@@ -258,7 +258,7 @@ func (r *AccountRepository) ConfirmTradeForAccount(ctx context.Context,accountID
 	}
 	if snapshot.Status!=game.TradeStatusOpen{return game.TradeSnapshot{},game.ErrTradeNotAccepted}
 	if snapshot.Revision!=revision{return game.TradeSnapshot{},game.ErrTradeRevisionConflict}
-	participant,ok:=participantRole(snapshot,id);if !ok{return game.TradeSnapshot{},game.ErrTradeNotParticipant}
+	_,ok:=participantRole(snapshot,id);if !ok{return game.TradeSnapshot{},game.ErrTradeNotParticipant}
 	players,err:=lockTradePlayers(ctx,tx,tradeID);if err!=nil{return game.TradeSnapshot{},err}
 	ref:=players[id];if ref.AccountID!=accountID{return game.TradeSnapshot{},game.ErrTradeNotParticipant}
 	if err:=validateLockedTradeProximity(snapshot,players);err!=nil{return game.TradeSnapshot{},err}
@@ -324,16 +324,3 @@ func (r *AccountRepository) GetTradeForAccount(ctx context.Context,accountID,tra
 	if !allowed{return game.TradeSnapshot{},game.ErrTradeNotFound}
 	return loadTradeSnapshot(ctx,r.db,tradeID)
 }
-
-func (r *AccountRepository) CreateTradeInviteForAccount(ctx context.Context,accountID string,initiatorID,targetID game.PlayerID,now time.Time)(game.TradeSnapshot,error){
-	return r.CreateTradeForAccount(ctx,accountID,initiatorID,targetID,game.TradeOffer{Items:map[string]int{}},now)
-}
-
-func (r *AccountRepository) AcceptTradeInviteForAccount(ctx context.Context,accountID,tradeID string,now time.Time)(game.TradeSnapshot,error){
-	var targetID string
-	err:=r.db.QueryRowContext(ctx,`SELECT character_id FROM player_trade_participants WHERE trade_id=$1 AND account_id=$2 AND role='target'`,tradeID,accountID).Scan(&targetID)
-	if errors.Is(err,sql.ErrNoRows){return game.TradeSnapshot{},game.ErrTradeNotFound}
-	if err!=nil{return game.TradeSnapshot{},fmt.Errorf("resolve accepting trade character: %w",err)}
-	return r.AcceptTradeForAccount(ctx,accountID,game.PlayerID(targetID),tradeID,game.TradeOffer{Items:map[string]int{}},now)
-}
-
