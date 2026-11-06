@@ -537,7 +537,7 @@ func _on_gather_completed(result: int, response_code: int, _headers: PackedStrin
 		_update_inventory(payload.get("inventory", player_data.get("inventory", {})), player_data.get("bank", {}), payload.get("coins", player_data.get("coins", current_coins)))
 		var trade_message := trade_action + " " + str(trade.get("quantity", 1)) + " " + str(trade.get("itemId", "item")).replace("_", " ") + " for " + str(trade.get("coins", 0)) + " coins"
 		status_label.text = "Trader: " + trade_message
-		market_status_label.text = trade_message
+		market_status_label.text = trade_message + " • Balance: " + str(current_coins)
 		return
 	if interaction_type == "bank_deposit" or interaction_type == "bank_withdraw":
 		var bank_action := "Deposited" if interaction_type == "bank_deposit" else "Withdrew"
@@ -778,6 +778,7 @@ func _show_character_selection(characters: Array) -> void:
 func _show_market_panel() -> void:
 	if market_panel != null:
 		market_panel.visible = true
+		market_status_label.text = "Coins: " + str(current_coins)
 		return
 	market_panel = PanelContainer.new()
 	market_panel.position = Vector2(420, 155)
@@ -790,14 +791,19 @@ func _show_market_panel() -> void:
 	column.add_child(heading)
 	market_item_select = OptionButton.new()
 	market_item_select.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-	var market_items := [
-		{"id":"softwood_log","name":"Softwood Log"},
-		{"id":"rough_stone","name":"Rough Stone"},
-		{"id":"wooden_plank","name":"Wooden Plank"}
-	]
+	var market_items := market_catalog
+	if market_items.is_empty():
+		market_items = [
+			{"id":"softwood_log","name":"Softwood Log","buyPrice":5,"sellPrice":2},
+			{"id":"rough_stone","name":"Rough Stone","buyPrice":3,"sellPrice":1},
+			{"id":"wooden_plank","name":"Wooden Plank","buyPrice":12,"sellPrice":5}
+		]
 	for item in market_items:
-		market_item_select.add_item(item.name)
-		market_item_select.set_item_metadata(market_item_select.item_count-1,item.id)
+		if item is Dictionary:
+			var item_name := str(item.get("name", item.get("id", "Item")))
+			var prices := " (buy %d / sell %d)" % [int(item.get("buyPrice", 0)), int(item.get("sellPrice", 0))]
+			market_item_select.add_item(item_name + prices)
+			market_item_select.set_item_metadata(market_item_select.item_count-1,str(item.get("id", "")))
 	column.add_child(market_item_select)
 	market_quantity_input = LineEdit.new()
 	market_quantity_input.text = "1"
