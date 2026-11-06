@@ -2,6 +2,7 @@ package game
 
 import (
 	"errors"
+	"math"
 	"time"
 )
 
@@ -85,7 +86,7 @@ func FindCraftingRecipe(id string) (CraftingRecipeDefinition, bool) {
 }
 
 func (p *Player) Craft(recipe CraftingRecipeDefinition, station CraftingStationDefinition, _ time.Time) (CraftingResult, error) {
-	if p.Position.ZoneID != station.Position.ZoneID || distance2D(p.Position.X, p.Position.Z, station.Position.X, station.Position.Z) > station.InteractionRange {
+	if p.Position.ZoneID != station.Position.ZoneID || math.Hypot(p.Position.X-station.Position.X, p.Position.Z-station.Position.Z) > station.InteractionRange {
 		return CraftingResult{}, ErrCraftingOutOfRange
 	}
 	if p.Skills[recipe.SkillID].Level < recipe.RequiredLevel {
