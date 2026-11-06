@@ -1,3 +1,6 @@
+CREATE UNIQUE INDEX IF NOT EXISTS players_id_account_id_trade_fk_idx
+    ON players (id, account_id);
+
 CREATE TABLE IF NOT EXISTS player_trades (
     id TEXT PRIMARY KEY,
     status TEXT NOT NULL CHECK (status IN ('pending', 'open', 'completed', 'cancelled', 'expired')),
@@ -16,12 +19,14 @@ CREATE INDEX IF NOT EXISTS player_trades_expiry_idx
 
 CREATE TABLE IF NOT EXISTS player_trade_participants (
     trade_id TEXT NOT NULL REFERENCES player_trades(id) ON DELETE CASCADE,
-    character_id TEXT NOT NULL REFERENCES players(id) ON DELETE CASCADE,
+    character_id TEXT NOT NULL,
     account_id TEXT NOT NULL REFERENCES accounts(id) ON DELETE CASCADE,
     role TEXT NOT NULL CHECK (role IN ('initiator', 'target')),
     confirmed_revision BIGINT NULL,
     PRIMARY KEY (trade_id, character_id),
     UNIQUE (trade_id, role),
+    FOREIGN KEY (character_id, account_id)
+        REFERENCES players (id, account_id) ON DELETE CASCADE,
     CHECK (confirmed_revision IS NULL OR confirmed_revision > 0)
 );
 
@@ -50,9 +55,11 @@ CREATE TABLE IF NOT EXISTS player_trade_escrow_items (
 -- This reservation table enforces one active trade per character even when a
 -- character appears as the target in one trade and initiator in another.
 CREATE TABLE IF NOT EXISTS player_trade_active_characters (
-    character_id TEXT PRIMARY KEY REFERENCES players(id) ON DELETE CASCADE,
+    character_id TEXT PRIMARY KEY,
     trade_id TEXT NOT NULL,
-    account_id TEXT NOT NULL REFERENCES accounts(id) ON DELETE CASCADE,
+    account_id TEXT NOT NULL,
+    FOREIGN KEY (character_id, account_id)
+        REFERENCES players (id, account_id) ON DELETE CASCADE,
     FOREIGN KEY (trade_id, character_id)
         REFERENCES player_trade_participants (trade_id, character_id) ON DELETE CASCADE
 );
