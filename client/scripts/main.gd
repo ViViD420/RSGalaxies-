@@ -76,8 +76,8 @@ func _build_world() -> void:
 	floor_body.add_child(floor_collision)
 	add_child(floor_body)
 
-	_add_tree(Vector3(5.0, 0.0, 0.0))
-	_add_stone_deposit(Vector3(-5.0, 0.0, 0.0))
+	_add_tree(Vector3(2.0, 0.0, 0.0))
+	_add_stone_deposit(Vector3(-2.0, 0.0, 0.0))
 
 	player_node = PLAYER_SCENE.instantiate() as CharacterBody3D
 	player_node.position = Vector3(0.0, 0.05, 0.0)
@@ -273,8 +273,8 @@ func _start_gathering() -> void:
 	gather_request.request_completed.connect(_on_gather_completed)
 
 func _request_gather() -> void:
-	var tree_distance := Vector2(player_node.global_position.x - 5.0, player_node.global_position.z).length()
-	var stone_distance := Vector2(player_node.global_position.x + 5.0, player_node.global_position.z).length()
+	var tree_distance := Vector2(player_node.global_position.x - 2.0, player_node.global_position.z).length()
+	var stone_distance := Vector2(player_node.global_position.x + 2.0, player_node.global_position.z).length()
 	var node_id := "tree-001" if tree_distance <= stone_distance else "stone-001"
 	var nearest_distance := minf(tree_distance, stone_distance)
 	if nearest_distance > 3.0:
