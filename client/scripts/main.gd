@@ -7,9 +7,24 @@ var api_request: HTTPRequest
 var api_base_url := "http://127.0.0.1:8080"
 
 func _ready() -> void:
+	_setup_input_actions()
 	_build_world()
 	_build_hud()
 	_connect_api()
+
+func _setup_input_actions() -> void:
+	_register_key_action("move_forward", KEY_W)
+	_register_key_action("move_back", KEY_S)
+	_register_key_action("move_left", KEY_A)
+	_register_key_action("move_right", KEY_D)
+	_register_key_action("jump", KEY_SPACE)
+
+func _register_key_action(action_name: String, key: Key) -> void:
+	if not InputMap.has_action(action_name):
+		InputMap.add_action(action_name)
+	var event := InputEventKey.new()
+	event.physical_keycode = key
+	InputMap.action_add_event(action_name, event)
 
 func _build_world() -> void:
 	var environment := WorldEnvironment.new()
@@ -66,13 +81,41 @@ func _build_hud() -> void:
 	column.add_child(heading)
 
 	var instructions := Label.new()
-	instructions.text = "WASD move  •  Space jump  •  Mouse look  •  Esc release cursor"
+	instructions.text = "WASD / touch pad: move  •  Space / jump: jump  •  Drag / mouse: look"
 	column.add_child(instructions)
 
 	status_label = Label.new()
 	status_label.text = "Server: checking local development API..."
 	column.add_child(status_label)
+
+	if DisplayServer.is_touchscreen_available():
+		_add_hold_button(layer, "▲", "move_forward", 95, -230, 165, -160)
+		_add_hold_button(layer, "◀", "move_left", 20, -155, 90, -85)
+		_add_hold_button(layer, "▼", "move_back", 95, -155, 165, -85)
+		_add_hold_button(layer, "▶", "move_right", 170, -155, 240, -85)
+		_add_hold_button(layer, "JUMP", "jump", -125, -120, -25, -25, true)
+
 	add_child(layer)
+
+func _add_hold_button(parent: Control, caption: String, action: String, left: float, top: float, right: float, bottom: float, anchor_right: bool = false) -> void:
+	var button := Button.new()
+	button.text = caption
+	button.custom_minimum_size = Vector2(70, 70)
+	if anchor_right:
+		button.anchor_left = 1.0
+		button.anchor_right = 1.0
+		button.anchor_top = 1.0
+		button.anchor_bottom = 1.0
+	else:
+		button.anchor_top = 1.0
+		button.anchor_bottom = 1.0
+	button.offset_left = left
+	button.offset_top = top
+	button.offset_right = right
+	button.offset_bottom = bottom
+	button.button_down.connect(func() -> void: Input.action_press(action))
+	button.button_up.connect(func() -> void: Input.action_release(action))
+	parent.add_child(button)
 
 func _connect_api() -> void:
 	api_request = HTTPRequest.new()
