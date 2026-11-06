@@ -72,6 +72,23 @@ var presence_heartbeat_pending := false
 var presence_roster_pending := false
 var remote_player_nodes: Dictionary = {}
 var remote_player_targets: Dictionary = {}
+var remote_player_names: Dictionary = {}
+var trade_button: Button
+var trade_panel: PanelContainer
+var trade_target_select: OptionButton
+var trade_item_select: OptionButton
+var trade_quantity_input: LineEdit
+var trade_coins_input: LineEdit
+var trade_status_label: Label
+var trade_accept_button: Button
+var trade_update_button: Button
+var trade_confirm_button: Button
+var trade_cancel_button: Button
+var trade_request: HTTPRequest
+var trade_poll_timer: Timer
+var trade_pending := false
+var trade_action := "poll"
+var current_trade: Dictionary = {}
 const game_max_health := 100
 var market_catalog: Array = []
 var enemy_catalog: Array = []
@@ -622,6 +639,17 @@ func _build_hud() -> void:
 	logout_button.visible = false
 	logout_button.pressed.connect(_logout)
 	layer.add_child(logout_button)
+	trade_button = Button.new()
+	trade_button.text = "Trade"
+	trade_button.anchor_left = 1.0
+	trade_button.anchor_right = 1.0
+	trade_button.offset_left = -828
+	trade_button.offset_top = 18
+	trade_button.offset_right = -728
+	trade_button.offset_bottom = 62
+	trade_button.visible = false
+	trade_button.pressed.connect(_toggle_trade_panel)
+	layer.add_child(trade_button)
 
 	if DisplayServer.is_touchscreen_available():
 		_add_hold_button(layer, "▲", "move_forward", 95, -230, 165, -160)
@@ -1258,6 +1286,7 @@ func _activate_character(character_data: Dictionary) -> void:
 	if market_panel != null:
 		market_panel.visible = false
 	logout_button.visible = true
+	trade_button.visible = true
 	character_button.visible = true
 	equipment_button.visible = true
 	rest_button.visible = true
