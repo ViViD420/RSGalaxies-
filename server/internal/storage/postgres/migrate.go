@@ -32,6 +32,9 @@ var localChatMigration string
 //go:embed migrations/0008_zone_presence.sql
 var zonePresenceMigration string
 
+//go:embed migrations/0009_player_trade_escrow.sql
+var playerTradeEscrowMigration string
+
 func Migrate(ctx context.Context, db *sql.DB) error {
 	tx, err := db.BeginTx(ctx, nil)
 	if err != nil { return fmt.Errorf("begin migration: %w", err) }
@@ -55,6 +58,7 @@ func Migrate(ctx context.Context, db *sql.DB) error {
 		{version: 6, sql: combatMigration},
 		{version: 7, sql: localChatMigration},
 		{version: 8, sql: zonePresenceMigration},
+		{version: 9, sql: playerTradeEscrowMigration},
 	}
 	for _, migration := range migrations {
 		var applied bool
