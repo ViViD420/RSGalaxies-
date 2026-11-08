@@ -106,6 +106,27 @@ func jsonFieldPresent(data, field string) bool {
 	return false
 }
 
+
+func TestEnsureSkillProgressBackfillsWithoutResettingExistingProgress(t *testing.T) {
+	existing := map[string]SkillProgress{
+		"combat": {Experience: 1234, Level: 5},
+		"woodcutting": {Experience: 83, Level: 2},
+	}
+	got := EnsureSkillProgress(existing)
+	if got["combat"] != (SkillProgress{Experience: 1234, Level: 5}) {
+		t.Fatalf("existing combat progress was changed: %+v", got["combat"])
+	}
+	if got["woodcutting"] != (SkillProgress{Experience: 83, Level: 2}) {
+		t.Fatalf("existing woodcutting progress was changed: %+v", got["woodcutting"])
+	}
+	if got["magic"] != (SkillProgress{Level: 1}) || got["pistols"] != (SkillProgress{Level: 1}) || got["rifles"] != (SkillProgress{Level: 1}) {
+		t.Fatalf("new skills were not initialized at level 1: magic=%+v pistols=%+v rifles=%+v", got["magic"], got["pistols"], got["rifles"])
+	}
+	if len(got) != len(SkillDefinitions()) {
+		t.Fatalf("got %d initialized skills, want %d", len(got), len(SkillDefinitions()))
+	}
+}
+
 func TestAwardExperience(t *testing.T) {
 	player, err := NewPlayer("p-1", "Wayfarer", time.Now())
 	if err != nil {
