@@ -62,7 +62,7 @@ The Godot client trade panel displays the other character's public name, both st
 - Concurrent confirm requests settle once; duplicate requests cannot reapply settled assets (covered by PostgreSQL race test; HTTP retry semantics remain an API-level follow-up).
 - Concurrent cancel/confirm, simultaneous offer edits at one revision, and expiry-worker/confirm cannot duplicate or destroy escrow (PostgreSQL race tests are implemented; keep the tests in the required CI suite).
 - Destination inventory-full or currency-cap failures leave both characters and escrow unchanged.
-- Crash/restart recovery preserves open escrow and expiry behavior.
+- Crash/restart recovery preserves open escrow and expiry behavior (integration test recreates the repository after trade creation and resumes expiry processing).
 - Race-enabled Go tests and PostgreSQL integration tests pass before production routes are registered.
 
 ## Implementation status and release boundary
