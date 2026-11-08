@@ -636,3 +636,64 @@ func TestPostgresConcurrentTradeOfferEditsSerializeByRevision(t *testing.T) {
 		t.Fatalf("coin conservation failed: initiator=%d target=%d total=%d; expected one winning offer to escrow 7 or 11 coins", finalInitiator.Coins, finalTarget.Coins, totalCoins)
 	}
 }
+
+
+func TestPostgresTradeExpiryRacesConfirmationWithoutLosingEscrow(t *testing.T) {
+	db := integrationDatabase(t)
+	repo := NewAccountRepository(db)
+	ctx := context.Background()
+	now := time.Now().UTC().Truncate(time.Microsecond)
+	first, _, err := repo.Register(ctx, fmt.Sprintf("trade-expiry-race-a-%d@example.test", now.UnixNano()), "correct-horse-battery-staple", now)
+	if err != nil { t.Fatal(err) }
+	second, _, err := repo.Register(ctx, fmt.Sprintf("trade-expiry-race-b-%d@example.test", now.UnixNano()), "correct-horse-battery-staple", now)
+	if err != nil { cleanupTestAccounts(db, first.ID); t.Fatal(err) }
+	t.Cleanup(func() { cleanupTestAccounts(db, first.ID, second.ID) })
+
+	initiator, err := game.NewPlayer(game.PlayerID(fmt.Sprintf("trade-expiry-race-a-%d", now.UnixNano())), "TradeExpiryA", now)
+	if err != nil { t.Fatal(err) }
+	target, err := game.NewPlayer(game.PlayerID(fmt.Sprintf("trade-expiry-race-b-%d", now.UnixNano())), "TradeExpiryB", now)
+	if err != nil { t.Fatal(err) }
+	initiator.Inventory["softwood_log"] = 3
+	if err := repo.CreateCharacter(ctx, first.ID, initiator); err != nil { t.Fatal(err) }
+	if err := repo.CreateCharacter(ctx, second.ID, target); err != nil { t.Fatal(err) }
+	if err := repo.HeartbeatPresenceForAccount(ctx, second.ID, target.ID, now); err != nil { t.Fatal(err) }
+	invite, err := repo.CreateTradeInviteForAccount(ctx, first.ID, initiator.ID, target.ID, now)
+	if err != nil { t.Fatal(err) }
+	opened, err := repo.AcceptTradeInviteForAccount(ctx, second.ID, invite.ID, now.Add(time.Second))
+	if err != nil { t.Fatal(err) }
+	offered, err := repo.UpdateTradeOfferForAccount(ctx, first.ID, initiator.ID, invite.ID, opened.Revision, game.TradeOffer{Items: map[string]int{"softwood_log": 2}, Coins: 13}, now.Add(2*time.Second))
+	if err != nil { t.Fatalf("escrow offer: %v", err) }
+
+	expiredAt := offered.ExpiresAt.Add(time.Second)
+	start := make(chan struct{})
+	var wg sync.WaitGroup
+	var confirmErr, expireErr error
+	var expiredCount int
+	wg.Add(2)
+	go func() {
+		defer wg.Done()
+		<-start
+		_, confirmErr = repo.ConfirmTradeForAccount(ctx, first.ID, initiator.ID, invite.ID, offered.Revision, expiredAt)
+	}()
+	go func() {
+		defer wg.Done()
+		<-start
+		expiredCount, expireErr = repo.ExpireTrades(ctx, expiredAt, 50)
+	}()
+	close(start)
+	wg.Wait()
+
+	if !errors.Is(confirmErr, game.ErrTradeExpired) {
+		t.Fatalf("confirmation at/after expiry error=%v; want ErrTradeExpired", confirmErr)
+	}
+	if expireErr != nil { t.Fatalf("expiry worker error: %v", expireErr) }
+	if expiredCount < 0 || expiredCount > 1 { t.Fatalf("expiry worker processed %d rows; want at most one", expiredCount) }
+	finalTrade, err := repo.GetTradeForAccount(ctx, first.ID, invite.ID)
+	if err != nil { t.Fatal(err) }
+	if finalTrade.Status != game.TradeStatusExpired { t.Fatalf("final trade status=%s want expired", finalTrade.Status) }
+	restored, err := repo.GetCharacter(ctx, first.ID, initiator.ID)
+	if err != nil { t.Fatal(err) }
+	if restored.Inventory["softwood_log"] != 3 || restored.Coins != game.StartingCoins {
+		t.Fatalf("expiry/confirmation race did not refund escrow exactly once: %+v", restored)
+	}
+}
