@@ -541,3 +541,97 @@ func TestPostgresTradeConfirmCancelRaceReturnsEscrowExactlyOnce(t *testing.T) {
 		t.Fatalf("target escrow refund was not exactly once: %+v", finalTarget)
 	}
 }
+
+
+func TestPostgresConcurrentTradeOfferEditsSerializeByRevision(t *testing.T) {
+	db := integrationDatabase(t)
+	repo := NewAccountRepository(db)
+	ctx := context.Background()
+	now := time.Now().UTC().Truncate(time.Microsecond)
+	first, _, err := repo.Register(ctx, fmt.Sprintf("trade-edit-a-%d@example.test", now.UnixNano()), "correct-horse-battery-staple", now)
+	if err != nil { t.Fatal(err) }
+	second, _, err := repo.Register(ctx, fmt.Sprintf("trade-edit-b-%d@example.test", now.UnixNano()), "correct-horse-battery-staple", now)
+	if err != nil { cleanupTestAccounts(db, first.ID); t.Fatal(err) }
+	t.Cleanup(func() { cleanupTestAccounts(db, first.ID, second.ID) })
+
+	initiator, err := game.NewPlayer(game.PlayerID(fmt.Sprintf("trade-edit-a-%d", now.UnixNano())), "TradeEditA", now)
+	if err != nil { t.Fatal(err) }
+	target, err := game.NewPlayer(game.PlayerID(fmt.Sprintf("trade-edit-b-%d", now.UnixNano())), "TradeEditB", now)
+	if err != nil { t.Fatal(err) }
+	initiator.Inventory["softwood_log"] = 4
+	target.Inventory["rough_stone"] = 3
+	if err := repo.CreateCharacter(ctx, first.ID, initiator); err != nil { t.Fatal(err) }
+	if err := repo.CreateCharacter(ctx, second.ID, target); err != nil { t.Fatal(err) }
+	if err := repo.HeartbeatPresenceForAccount(ctx, second.ID, target.ID, now); err != nil { t.Fatal(err) }
+	invite, err := repo.CreateTradeInviteForAccount(ctx, first.ID, initiator.ID, target.ID, now)
+	if err != nil { t.Fatalf("create invite: %v", err) }
+	opened, err := repo.AcceptTradeInviteForAccount(ctx, second.ID, invite.ID, now.Add(time.Second))
+	if err != nil { t.Fatalf("accept invite: %v", err) }
+
+	type editResult struct { snapshot game.TradeSnapshot; err error }
+	start := make(chan struct{})
+	results := make(chan editResult, 2)
+	var wg sync.WaitGroup
+	offers := []struct {
+		account string
+		character game.PlayerID
+		offer game.TradeOffer
+	}{
+		{first.ID, initiator.ID, game.TradeOffer{Items: map[string]int{"softwood_log": 2}, Coins: 7}},
+		{second.ID, target.ID, game.TradeOffer{Items: map[string]int{"rough_stone": 1}, Coins: 11}},
+	}
+	for _, edit := range offers {
+		edit := edit
+		wg.Add(1)
+		go func() {
+			defer wg.Done()
+			<-start
+			snapshot, editErr := repo.UpdateTradeOfferForAccount(ctx, edit.account, edit.character, invite.ID, opened.Revision, edit.offer, now.Add(2*time.Second))
+			results <- editResult{snapshot: snapshot, err: editErr}
+		}()
+	}
+	close(start)
+	wg.Wait()
+	close(results)
+
+	successes, conflicts := 0, 0
+	for result := range results {
+		switch {
+		case result.err == nil:
+			successes++
+		case errors.Is(result.err, game.ErrTradeRevisionConflict):
+			conflicts++
+		default:
+			t.Fatalf("concurrent offer edit returned unexpected error: %v", result.err)
+		}
+	}
+	if successes != 1 || conflicts != 1 {
+		t.Fatalf("concurrent edits: successes=%d revision_conflicts=%d; want 1 each", successes, conflicts)
+	}
+
+	finalTrade, err := repo.GetTradeForAccount(ctx, first.ID, invite.ID)
+	if err != nil { t.Fatal(err) }
+	if finalTrade.Revision != opened.Revision+1 {
+		t.Fatalf("final revision=%d want=%d", finalTrade.Revision, opened.Revision+1)
+	}
+	offeredItems := 0
+	for _, participant := range finalTrade.Participants {
+		for _, quantity := range participant.Offer.Items { offeredItems += quantity }
+	}
+	if offeredItems != 1 && offeredItems != 2 {
+		t.Fatalf("unexpected winning offer item total=%d; snapshot=%+v", offeredItems, finalTrade)
+	}
+	finalInitiator, err := repo.GetCharacter(ctx, first.ID, initiator.ID)
+	if err != nil { t.Fatal(err) }
+	finalTarget, err := repo.GetCharacter(ctx, second.ID, target.ID)
+	if err != nil { t.Fatal(err) }
+	if finalInitiator.Inventory["softwood_log"]+finalTarget.Inventory["softwood_log"] != 4 {
+		t.Fatalf("softwood item conservation failed: initiator=%+v target=%+v", finalInitiator.Inventory, finalTarget.Inventory)
+	}
+	if finalInitiator.Inventory["rough_stone"]+finalTarget.Inventory["rough_stone"] != 3 {
+		t.Fatalf("stone item conservation failed: initiator=%+v target=%+v", finalInitiator.Inventory, finalTarget.Inventory)
+	}
+	if finalInitiator.Coins+finalTarget.Coins != 2*game.StartingCoins-18 {
+		t.Fatalf("coin conservation failed: initiator=%d target=%d want total=%d", finalInitiator.Coins, finalTarget.Coins, 2*game.StartingCoins-18)
+	}
+}
