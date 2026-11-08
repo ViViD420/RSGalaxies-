@@ -19,9 +19,9 @@ The unlock should feel like a discovery, not a visible checklist. Before it is e
 7. The unlock is an account entitlement earned by one eligible character. It permanently permits creation of the Jedi character archetype even if the qualifying character is later deleted, subject to the account's normal character-slot policy. The unlock record retains the earning character ID and timestamp for audit.
 8. Only one challenge may be active per eligible character. A later design may support multiple Jedi characters, but the first release should use a clear server-enforced account limit to prevent accidental duplicate creation.
 
-### Important content dependency
+### Combat roster dependency
 
-The current game has only two skill definitions with combat relevance (Combat and Ranged). The random requirement must not be implemented yet: there is not a sufficiently broad set of distinct combat skills for a meaningful 2–5 mastery threshold. First expand the combat skill catalog (for example melee, ranged, defense, tactics and weapon-form disciplines), decide which are genuinely separate progression tracks, and explicitly categorize them. Do not count a generic Combat skill plus a derived stat as two separate mastered skills.
+The core roster now contains 20 ordinary skills, including 12 combat skills: Combat, Melee, Defense, Strength, Tactics, Unarmed, Blades, Polearms, Ranged, Magic, Pistols and Rifles. All 12 combat skills are explicitly marked as mastery-eligible in server-internal metadata, including the broad Combat skill. Accuracy is not a skill and cannot count as a separate mastery. The random 2–5 requirement is supported by the expanded conceptual roster, but the unlock itself remains unimplemented until challenge persistence, transaction integration, concurrency tests and archetype gates are built. The eligibility flag and category are not serialized to public API responses. See SKILL_ROSTER.md and COMBAT_PROGRESSION.md.
 
 ## Jedi character and progression
 
@@ -76,7 +76,7 @@ Tests must cover:
 - Migrations work on both a fresh database and an existing populated database.
 
 Rollout sequence:
-1. Expand and categorize combat skills.
+1. Maintain the expanded, internally categorized combat roster and complete combat ability/weapon loops in focused slices.
 2. Implement and test the hidden challenge and account entitlement without exposing Jedi in the client.
 3. Add character archetypes and secure Jedi character creation.
 4. Add Jedi skills and Force ability definitions.
