@@ -1,6 +1,6 @@
 # RS Galaxies — Session Handoff
 
-Last updated: 2026-11-06
+Last updated: 2026-11-08
 
 ## Project identity
 
@@ -18,6 +18,7 @@ An original sandbox MMORPG combining long-form skill progression and item gamepl
 ### Go world server
 
 - Go authoritative world API, domain model and PostgreSQL persistence.
+- Hidden Jedi progression is a documented future feature in docs/JEDI_PROGRESSION_DESIGN.md. The proposed design requires a randomly generated, persistent level-99 combat-skill mastery count, then grants an account entitlement to create a separate Jedi character with Force disciplines and lightsaber weapon families. It is deliberately not implemented or exposed yet: the current skill catalog has only Combat and Ranged as combat-relevant entries, so the prerequisite combat-skill pool must be expanded and categorized first.
 - Ten skills, level 1–99, cumulative XP curve and 200,000,000 XP cap.
 - Defensive in-memory repository copies and concurrency-safe experience awards.
 - Starter zone, spawn point, server-time movement validation and world bounds.
@@ -58,8 +59,8 @@ An original sandbox MMORPG combining long-form skill progression and item gamepl
 
 - .devcontainer/ provides a GitHub Codespaces Go/Godot/PostgreSQL workspace with separate development and integration-test databases.
 - Codespaces setup installs Godot 4.3 and export templates, runs race-enabled Go tests, go vet, headless project import and Web export.
-- .env.example contains local-only sample settings; docs/API.md, docs/ACCOUNT_AUTH_DESIGN.md, docs/DEPLOYMENT.md, docs/COMBAT.md, docs/CHAT.md, docs/PRESENCE.md, docs/PLAYER_TRADE_DESIGN.md and refreshed docs/ARCHITECTURE.md describe routes, security boundaries, deployment, gameplay rules and escrow-safe trade requirements.
-- Go server CI runs race-enabled unit/integration tests against PostgreSQL and go vet. Runs #278–#284 passed the password-policy correction, migration-009 schema registration/idempotency, escrow constraints and consolidated catalog checks. Server runs #364 and #365 passed, including the production trading feature-gate correction and trade HTTP integration suite. Run #363's PostgreSQL confirm/cancel race test passed; its overall failure was the earlier HTTP test setup omitting the explicit production trading flag, corrected and verified in #364/#365. Server run #372 passed with the corrected concurrent offer-edit escrow accounting and movement-driven presence implementation/integration test. Server run #373 is validating a new two-party concurrent-confirmation test that asserts escrow settlement and duplicate retries cannot apply assets twice. Server run #374 validates the restart-recovery extension to the expiry test: a fresh repository instance reloads the durable open trade and processes its escrow expiry. Earlier runs #366–#368 and #371 failed only on prior revisions of the new test: it initially omitted escrowed items from the conservation total; the corrected test in #372 passes. Runs #369/#370 caught and corrected a transient compile mistake in the heartbeat refactor; the current server code is green in #372. Earlier failures exposed duplicate definitions, stale test helpers and Go ServeMux route-pattern conflicts; the current commits remove those conflicts and correct the affected tests. Runs #260–#263 passed presence persistence, privacy, heartbeat write-coalescing and account-scoped roster tests. Runs #245–#253 passed chat-history, readiness and rate-limiter hardening.
+- .env.example contains local-only sample settings; docs/API.md, docs/ACCOUNT_AUTH_DESIGN.md, docs/DEPLOYMENT.md, docs/COMBAT.md, docs/CHAT.md, docs/PRESENCE.md, docs/PLAYER_TRADE_DESIGN.md, docs/JEDI_PROGRESSION_DESIGN.md and refreshed docs/ARCHITECTURE.md describe routes, security boundaries, deployment, gameplay rules, escrow-safe trade requirements and the future Jedi unlock.
+- Go server CI runs race-enabled unit/integration tests against PostgreSQL and go vet. Runs #278–#284 passed the password-policy correction, migration-009 schema registration/idempotency, escrow constraints and consolidated catalog checks. Server runs #364 and #365 passed, including the production trading feature-gate correction and trade HTTP integration suite. Run #363's PostgreSQL confirm/cancel race test passed; its overall failure was the earlier HTTP test setup omitting the explicit production trading flag, corrected and verified in #364/#365. Server run #372 passed with corrected concurrent offer-edit escrow accounting and movement-driven presence integration coverage. Server run #373 passed the two-party concurrent-confirmation test, including exactly-once settlement and duplicate retry protection. Server run #374 failed because its restart-recovery test created a pending invitation but asserted that it was an accepted/open trade; the failure was in test setup, not a demonstrated production recovery defect. The test has been corrected to heartbeat both characters, accept the invitation, then instantiate a fresh repository and recover the open trade before expiry. The correction is committed and awaiting CI verification (commit 53d981a). Runs #366–#371 exposed intermediate test issues and compile mistakes that were corrected in later commits. Earlier failures exposed duplicate definitions, stale test helpers and Go ServeMux route-pattern conflicts; current code removes those conflicts and corrects affected tests. Runs #260–#263 passed presence persistence, privacy, heartbeat write-coalescing and account-scoped roster tests. Runs #245–#253 passed chat-history, readiness and rate-limiter hardening.
 - Godot client CI uses the official Godot 4.3 release and export templates. Client runs #99–#121 passed the trade HUD, presence polling, multi-item offer editor, inventory refresh, responsive panel layout, incoming/outgoing invitation notices and per-participant confirmation display. Client run #122 passed framerate-independent remote-avatar interpolation and movement-facing orientation. Runs #89–#98 passed data-driven gathering/station visuals, foraging, presence, inventory search/sort, world-catalog startup and bounded HTTP timeouts/redirect-safe requests.
 
 ## Production safeguards and remaining launch gates
@@ -75,12 +76,13 @@ An original sandbox MMORPG combining long-form skill progression and item gamepl
 
 ## Next engineering tasks
 
-1. Server run #372 and client run #122 passed; validate server runs #373–#374 and keep both workflows green as additional changes land.
-2. Validate the new concurrent-confirmation and repository-restart recovery tests (runs #373–#374), then run abuse/load tests before enabling public production trade.
-3. Test the multi-item Godot trade panel, invitation/confirmation feedback and remote-avatar movement on a real phone.
-4. Implement client-side interpolation/prediction correction using the now-fresher authoritative presence snapshots, then zone ownership; add enemy AI/movement and combat animations.
-5. Add unique item instances/durability, currency sinks, additional professions/recipes/NPCs, housing and settlements.
-6. Complete production account safeguards: email verification, recovery, MFA, distributed rate limiting, admin account tools and security/load review.
+1. Verify server CI for the restart-recovery test correction committed as 53d981a; run #373 passed and run #374 failed on the test's pending-vs-open setup mismatch.
+2. Keep the server/client workflows green, then run trade abuse/load tests before enabling public production trade.
+3. Expand the combat skill catalog and assign explicit progression categories before implementing the hidden Jedi unlock. Follow docs/JEDI_PROGRESSION_DESIGN.md; do not expose the unlock until its persistence, concurrency and anti-tampering tests pass.
+4. Test the multi-item Godot trade panel, invitation/confirmation feedback and remote-avatar movement on a real phone.
+5. Implement client-side interpolation/prediction correction using the now-fresher authoritative presence snapshots, then zone ownership; add enemy AI/movement and combat animations.
+6. Add unique item instances/durability, currency sinks, additional professions/recipes/NPCs, housing and settlements. Unique item instances are a prerequisite for correct dual-wield lightsaber equipment.
+7. Complete production account safeguards: email verification, recovery, MFA, distributed rate limiting, admin account tools and security/load review.
 
 ## Continuation instruction
 
