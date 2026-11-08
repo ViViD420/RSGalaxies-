@@ -464,6 +464,11 @@ func TestPostgresExpiredTradeReturnsEscrowExactlyOnce(t *testing.T) {
 	if err!=nil{t.Fatalf("create escrow trade: %v",err)}
 	reserved,err:=repo.GetCharacter(ctx,first.ID,initiator.ID);if err!=nil{t.Fatal(err)}
 	if reserved.Inventory["softwood_log"]!=2||reserved.Coins!=game.StartingCoins-25{t.Fatalf("assets not escrowed: %+v",reserved)}
+	// Simulate a world-server restart: a fresh repository instance must recover
+	// the durable open trade and be able to release its escrow after expiry.
+	repo = NewAccountRepository(db)
+	recovered,err:=repo.GetActiveTradeForAccount(ctx,first.ID,initiator.ID,now.Add(time.Second))
+	if err!=nil||recovered.ID!=trade.ID||recovered.Status!=game.TradeStatusOpen{t.Fatalf("recover open trade after restart: snapshot=%+v err=%v",recovered,err)}
 	count,err:=repo.ExpireTrades(ctx,now.Add(game.TradeLifetime+time.Second),50)
 	if err!=nil||count!=1{t.Fatalf("expire trades count=%d err=%v",count,err)}
 	expired,err:=repo.GetTradeForAccount(ctx,first.ID,trade.ID)
