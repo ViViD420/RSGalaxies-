@@ -46,7 +46,7 @@ func scanPlayer(row scanner) (game.Player, error) {
 	if err := json.Unmarshal(inventoryJSON, &player.Inventory); err != nil { return game.Player{}, fmt.Errorf("decode player inventory: %w", err) }
 	if err := json.Unmarshal(bankJSON, &player.Bank); err != nil { return game.Player{}, fmt.Errorf("decode player bank: %w", err) }
 	if err := json.Unmarshal(equipmentJSON, &player.Equipment); err != nil { return game.Player{}, fmt.Errorf("decode player equipment: %w", err) }
-	if player.Skills == nil { player.Skills = make(map[string]game.SkillProgress) }
+	player.Skills = game.EnsureSkillProgress(player.Skills)
 	if player.Inventory == nil { player.Inventory = make(map[string]int) }
 	if player.Bank == nil { player.Bank = make(map[string]int) }
 	if player.Equipment == nil { player.Equipment = make(map[string]string) }
