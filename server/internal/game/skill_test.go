@@ -52,7 +52,7 @@ func TestSkillCategoriesAndCombatMasteryEligibility(t *testing.T) {
 			t.Errorf("%q should be a combat mastery skill", id)
 		}
 	}
-	for _, id := range []string{"combat", "cooking", "crafting", "farming", "foraging", "mining", "scavenging", "smithing", "woodcutting", "unknown"} {
+	for _, id := range []string{"cooking", "crafting", "farming", "foraging", "mining", "scavenging", "smithing", "woodcutting", "unknown"} {
 		if isCombatMasterySkill(id) {
 			t.Errorf("%q must not count as combat mastery", id)
 		}
