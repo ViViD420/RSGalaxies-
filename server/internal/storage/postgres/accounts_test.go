@@ -286,7 +286,10 @@ func TestPostgresZonePresenceHeartbeatLeaseAndOwnership(t *testing.T) {
 	if err:=repo.HeartbeatPresenceForAccount(ctx,second.ID,two.ID,now);err!=nil{t.Fatalf("presence heartbeat: %v",err)}
 	visible,err:=repo.ListZonePresenceForAccount(ctx,first.ID,one.ID,now.Add(time.Second));if err!=nil{t.Fatalf("list active presence: %v",err)}
 	if len(visible)!=1||visible[0].CharacterID!=two.ID||visible[0].Name!=two.Name||visible[0].ZoneID!=two.Position.ZoneID{t.Fatalf("presence roster=%+v",visible)}
-	expired,err:=repo.ListZonePresenceForAccount(ctx,first.ID,one.ID,now.Add(game.PresenceLease+time.Second));if err!=nil{t.Fatal(err)}
+	moved,err:=repo.MovePlayerForAccount(ctx,second.ID,two.ID,1.2,0,now.Add(2*time.Second));if err!=nil{t.Fatalf("move presence character: %v",err)}
+	updated,err:=repo.ListZonePresenceForAccount(ctx,first.ID,one.ID,now.Add(2*time.Second));if err!=nil{t.Fatalf("list moved presence: %v",err)}
+	if len(updated)!=1||updated[0].CharacterID!=two.ID||math.Abs(updated[0].X-moved.Position.X)>0.000001||math.Abs(updated[0].Z-moved.Position.Z)>0.000001{t.Fatalf("remote presence did not reflect authoritative movement: %+v; moved=%+v",updated,moved.Position)}
+	expired,err:=repo.ListZonePresenceForAccount(ctx,first.ID,one.ID,now.Add(game.PresenceLease+3*time.Second));if err!=nil{t.Fatal(err)}
 	if len(expired)!=0{t.Fatalf("expired presence remained visible: %+v",expired)}
 	if _,err:=repo.ListZonePresenceForAccount(ctx,first.ID,two.ID,now);!errors.Is(err,game.ErrPlayerNotFound){t.Fatalf("foreign character presence error=%v",err)}
 }
