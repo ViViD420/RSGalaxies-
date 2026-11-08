@@ -60,7 +60,7 @@ The Godot client trade panel displays the other character's public name, both st
 - Any edit invalidates both confirmations.
 - Both confirmation orders settle correctly and atomically.
 - Concurrent confirm requests settle once; duplicate requests are idempotent.
-- Concurrent cancel/confirm and expiry/confirm cannot duplicate or destroy escrow.
+- Concurrent cancel/confirm, simultaneous offer edits at one revision, and expiry-worker/confirm cannot duplicate or destroy escrow (PostgreSQL race tests are implemented; keep the tests in the required CI suite).
 - Destination inventory-full or currency-cap failures leave both characters and escrow unchanged.
 - Crash/restart recovery preserves open escrow and expiry behavior.
 - Race-enabled Go tests and PostgreSQL integration tests pass before production routes are registered.
@@ -69,4 +69,4 @@ The Godot client trade panel displays the other character's public name, both st
 
 The initial backend and Godot client vertical slice is implemented. PostgreSQL enforces participant ownership and one active trade per character; the repository uses row locks and revision checks; offers are escrowed; confirmations settle atomically; cancellation and periodic expiry return escrow; character writes preserve reserved stack and coin capacity. The client polls for an active trade after login/reconnect and refreshes inventory when escrow changes.
 
-Before public production enablement, complete concurrency, crash/restart, cancel-versus-confirm, expiry-versus-confirm and full refund-capacity tests, plus real-device client validation. Keep trading disabled in production configuration until those gates pass. The merchant system remains separate and unchanged.
+Before public production enablement, finish validating the concurrent offer-edit and expiry-versus-confirm race tests, add duplicate-request and crash/restart recovery coverage, run abuse/load tests, and complete real-device client validation. Keep trading disabled in production configuration until those gates pass. The merchant system remains separate and unchanged.
