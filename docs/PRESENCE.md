@@ -11,7 +11,7 @@
 ## Persistence and concurrency
 
 - Migration 0008 creates the zone_presence table and indexes by active zone and account.
-- Heartbeat locks the owned character row and updates its presence in the same transaction. Repeated writes are coalesced to at most one persisted update per character per second.
+- Heartbeat and authoritative movement both lock the account-owned character row and update presence in the same transaction. Successful movement refreshes the remote position snapshot; repeated writes are coalesced to at most one persisted update per character per second.
 - Presence is one row per character. A reconnect refreshes the same row instead of creating duplicate sessions or avatars.
 - Roster lookup verifies ownership of the requesting character and never returns account IDs, emails, inventory, skills or session details.
 
@@ -20,7 +20,7 @@
 - The Godot prototype sends a heartbeat every five seconds and polls the roster every three seconds.
 - Remote characters are rendered as simple non-colliding placeholder avatars with nameplates.
 - When a character is no longer in the active roster, its placeholder is removed.
-- This is a polling prototype, not realtime replication. Movement is still periodically validated through the separate movement endpoint; interpolation, prediction correction, disconnect recovery and zone handoff remain future work.
+- This is a polling prototype, not realtime replication. Movement is periodically validated through the separate movement endpoint and its successful authoritative coordinates are reflected in presence snapshots (coalesced to one database update per second); interpolation, prediction correction, disconnect recovery and zone handoff remain future work.
 
 ## Operational limitations
 
