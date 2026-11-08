@@ -58,8 +58,8 @@ The Godot client trade panel displays the other character's public name, both st
 - Offer validation, insufficient inventory/coins and stack-cap checks.
 - Offer replacement restores old escrow exactly once and debits new escrow exactly once.
 - Any edit invalidates both confirmations.
-- Both confirmation orders settle correctly and atomically.
-- Concurrent confirm requests settle once; duplicate requests are idempotent.
+- Both confirmation orders settle correctly and atomically; concurrent two-party confirmations and a post-settlement duplicate confirmation must settle exactly once (covered by PostgreSQL race test).
+- Concurrent confirm requests settle once; duplicate requests cannot reapply settled assets (covered by PostgreSQL race test; HTTP retry semantics remain an API-level follow-up).
 - Concurrent cancel/confirm, simultaneous offer edits at one revision, and expiry-worker/confirm cannot duplicate or destroy escrow (PostgreSQL race tests are implemented; keep the tests in the required CI suite).
 - Destination inventory-full or currency-cap failures leave both characters and escrow unchanged.
 - Crash/restart recovery preserves open escrow and expiry behavior.
