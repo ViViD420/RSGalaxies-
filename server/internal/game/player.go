@@ -45,12 +45,12 @@ func NewPlayer(id PlayerID, name string, now time.Time) (Player, error) {
 func (p *Player) AwardExperience(skillID string, amount int) (bool, error) {
 	if err:=p.CanAct();err!=nil{return false,err}
 	skillID = strings.TrimSpace(strings.ToLower(skillID))
-	p.Skills = EnsureSkillProgress(p.Skills)
 	if !IsKnownSkill(skillID) { return false, ErrUnknownSkill }
 	if amount <= 0 { return false, ErrInvalidExperience }
 	current := p.Skills[skillID]
 	if current.Experience > MaxSkillExperience-amount { return false, ErrExperienceOverflow }
-	if p.Skills == nil { p.Skills = make(map[string]SkillProgress, len(skillDefinitions)) }
+	p.Skills = EnsureSkillProgress(p.Skills)
+	current = p.Skills[skillID]
 	if current.Level == 0 { current.Level = 1 }
 	nextXP := current.Experience + amount
 	nextLevel := LevelForExperience(nextXP)
