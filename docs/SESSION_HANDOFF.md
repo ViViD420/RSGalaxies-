@@ -48,7 +48,7 @@ An original sandbox MMORPG combining long-form skill progression and item gamepl
 - Client sends a presence heartbeat every five seconds, polls the current zone every three seconds and renders remote character avatars/nameplates with smoothed position updates; stale characters are removed.
 - Player-trade panel supports inviting nearby players, accepting invitations, staging up to 20 item types plus coins, editing/removing staged stacks, updating offers, confirming/cancelling, polling active trades after reconnect and refreshing inventory whenever assets enter or leave escrow.
 - All Godot API HTTPRequests use bounded timeouts and disable automatic redirects to prevent bearer-token forwarding to redirected hosts.
-- Live authenticated skills panel with all ten skills, per-skill XP progress bars and next-level XP remaining (including the 200M XP cap display at level 99); requests are cancelled when characters change or sign out.
+- Live authenticated skills panel with all 20 ordinary skills, per-skill XP progress bars and next-level XP remaining (including the 200M XP cap display at level 99); requests are cancelled when characters change or sign out.
 - Bearer-authenticated movement, gathering, crafting, bank transfers, merchant buy/sell panel, equipment panel and full inventory/bank contents panel with search, category filters, quantity sorting and selectable stack transfers.
 - Starter bank chest, merchant stall/NPC, copper vein, forge and enemy spawns in the test world; coin balance, health, attack/defense bonuses, bag and bank counts appear in the HUD. Equipped sword/armor pieces have simple client-side visuals.
 - Market panel loads item names and prices from the server catalog.
