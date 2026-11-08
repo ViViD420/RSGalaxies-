@@ -44,7 +44,7 @@ func TestSkillDefinitionsAreDefensiveAndStable(t *testing.T) {
 
 func TestSkillCategoriesAndCombatMasteryEligibility(t *testing.T) {
 	wantMastery := []string{
-		"blades", "defense", "magic", "melee", "pistols", "polearms",
+		"blades", "combat", "defense", "magic", "melee", "pistols", "polearms",
 		"ranged", "rifles", "strength", "tactics", "unarmed",
 	}
 	for _, id := range wantMastery {
