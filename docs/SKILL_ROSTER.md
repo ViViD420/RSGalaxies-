@@ -23,7 +23,7 @@ The initial ordinary-character roster contains 20 skills. IDs are permanent API 
 
 Accuracy is deliberately **not** a skill. It is a derived combat outcome based on the attacker's relevant skill, the selected ability, the equipped weapon and other relevant equipment, plus target defenses and situational modifiers. The authoritative server will calculate hit chance and results.
 
-Combat remains a broad, foundational skill for compatibility with the current PvE slice. It is not treated as a separate weapon mastery track for the future Jedi prerequisite, avoiding double-counting a general combat rating alongside specialized disciplines.
+Combat remains a broad, foundational skill for compatibility with the current PvE slice and counts as one of the combat mastery tracks. Accuracy is not a skill and never counts as a separate mastery.
 
 ## Gathering skills (4)
 
