@@ -459,17 +459,20 @@ func TestPostgresExpiredTradeReturnsEscrowExactlyOnce(t *testing.T) {
 	initiator.Inventory["softwood_log"]=4
 	if err:=repo.CreateCharacter(ctx,first.ID,initiator);err!=nil{t.Fatal(err)}
 	if err:=repo.CreateCharacter(ctx,second.ID,target);err!=nil{t.Fatal(err)}
+	if err:=repo.HeartbeatPresenceForAccount(ctx,first.ID,initiator.ID,now);err!=nil{t.Fatal(err)}
 	if err:=repo.HeartbeatPresenceForAccount(ctx,second.ID,target.ID,now);err!=nil{t.Fatal(err)}
 	trade,err:=repo.CreateTradeForAccount(ctx,first.ID,initiator.ID,target.ID,game.TradeOffer{Items:map[string]int{"softwood_log":2},Coins:25},now)
 	if err!=nil{t.Fatalf("create escrow trade: %v",err)}
 	reserved,err:=repo.GetCharacter(ctx,first.ID,initiator.ID);if err!=nil{t.Fatal(err)}
 	if reserved.Inventory["softwood_log"]!=2||reserved.Coins!=game.StartingCoins-25{t.Fatalf("assets not escrowed: %+v",reserved)}
+	accepted,err:=repo.AcceptTradeForAccount(ctx,second.ID,target.ID,trade.ID,game.TradeOffer{},now.Add(time.Second))
+	if err!=nil||accepted.Status!=game.TradeStatusOpen{t.Fatalf("accept trade before restart: snapshot=%+v err=%v",accepted,err)}
 	// Simulate a world-server restart: a fresh repository instance must recover
 	// the durable open trade and be able to release its escrow after expiry.
 	repo = NewAccountRepository(db)
-	recovered,err:=repo.GetActiveTradeForAccount(ctx,first.ID,initiator.ID,now.Add(time.Second))
+	recovered,err:=repo.GetActiveTradeForAccount(ctx,first.ID,initiator.ID,now.Add(2*time.Second))
 	if err!=nil||recovered.ID!=trade.ID||recovered.Status!=game.TradeStatusOpen{t.Fatalf("recover open trade after restart: snapshot=%+v err=%v",recovered,err)}
-	count,err:=repo.ExpireTrades(ctx,now.Add(game.TradeLifetime+time.Second),50)
+	count,err:=repo.ExpireTrades(ctx,now.Add(game.TradeLifetime+2*time.Second),50)
 	if err!=nil||count!=1{t.Fatalf("expire trades count=%d err=%v",count,err)}
 	expired,err:=repo.GetTradeForAccount(ctx,first.ID,trade.ID)
 	if err!=nil||expired.Status!=game.TradeStatusExpired{t.Fatalf("expired trade snapshot=%+v err=%v",expired,err)}
