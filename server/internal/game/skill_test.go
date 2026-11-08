@@ -86,7 +86,7 @@ func TestCombatMasteryEligibilityIsNotSerialized(t *testing.T) {
 	if string(data) == "" {
 		t.Fatal("serialized skill catalog is empty")
 	}
-	for _, forbidden := range []string{"combatMastery", "jedi", "unlock"} {
+	for _, forbidden := range []string{"combatMastery", "category", "jedi", "unlock"} {
 		if contains := string(data); contains != "" && jsonFieldPresent(contains, forbidden) {
 			t.Errorf("public skill catalog unexpectedly exposes %q", forbidden)
 		}
