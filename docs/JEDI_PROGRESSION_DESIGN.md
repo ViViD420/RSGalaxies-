@@ -10,7 +10,7 @@ The unlock should feel like a discovery, not a visible checklist. Before it is e
 
 ## Unlock rule
 
-1. Add explicit server-side skill metadata, including a stable skill ID and a progression category. Only skills categorized as combat mastery count. Do not infer eligibility from skill names or client-supplied IDs.
+1. Use explicit server-internal skill metadata, including a stable skill ID, progression category and a private combat-mastery eligibility flag. Only explicitly eligible skills count. Do not infer eligibility from skill names or client-supplied IDs. Never serialize the category or eligibility flag in public catalogs or character skill payloads.
 2. At the start of an eligible character's progression, generate and persist one required mastery count from a server-configured inclusive range. The proposed initial tuning range is 2–5, but it must be reviewed against the size of the combat-skill catalog before activation.
 3. Count distinct eligible combat skills whose authoritative level is exactly 99. A skill counts once, regardless of XP above its level-99 threshold. Non-combat skills never count.
 4. The required count is fixed for that character for the lifetime of the challenge. It must not reroll on login, restart, character transfer, or repeated API calls.
