@@ -75,7 +75,7 @@ An original sandbox MMORPG combining long-form skill progression and item gamepl
 
 ## Next engineering tasks
 
-1. Finish validating server run #365 and rerun any affected checks until the latest server workflow is green.
+1. Server runs #364–#365 passed. Validate race-test runs #366–#368 and rerun any failures until the latest server workflow is green.
 2. Validate the new simultaneous offer-edit and expiry-versus-confirm tests (runs #366–#368), then add duplicate-request/restart-recovery coverage and run abuse/load tests before enabling public production trade.
 3. Test the multi-item Godot trade panel and invitation/confirmation feedback on a real phone.
 4. Implement authoritative remote-player movement snapshots/interpolation and zone ownership; then add enemy AI/movement and combat animations.
