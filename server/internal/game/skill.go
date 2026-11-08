@@ -18,23 +18,37 @@ var (
 )
 
 // SkillDefinition is immutable game data. IDs are stable API and persistence keys.
+// CombatMastery is deliberately private: it is progression metadata for future
+// server-side unlocks and must never be serialized into public catalogs.
 type SkillDefinition struct {
 	ID          string `json:"id"`
 	Name        string `json:"name"`
 	Description string `json:"description"`
+	Category    string `json:"category"`
+	combatMastery bool
 }
 
 var skillDefinitions = []SkillDefinition{
-	{ID: "combat", Name: "Combat", Description: "Defeat hostile creatures and master battlefield techniques."},
-	{ID: "cooking", Name: "Cooking", Description: "Prepare food and provisions from gathered ingredients."},
-	{ID: "crafting", Name: "Crafting", Description: "Shape materials into useful tools, equipment and goods."},
-	{ID: "farming", Name: "Farming", Description: "Cultivate crops and manage productive land."},
-	{ID: "foraging", Name: "Foraging", Description: "Find useful plants, fungi and natural materials."},
-	{ID: "mining", Name: "Mining", Description: "Extract ores, stone and mineral resources."},
-	{ID: "ranged", Name: "Ranged", Description: "Use bows, firearms and other ranged weapons."},
-	{ID: "scavenging", Name: "Scavenging", Description: "Recover components and useful materials from ruins."},
-	{ID: "smithing", Name: "Smithing", Description: "Refine ores and work metals into equipment."},
-	{ID: "woodcutting", Name: "Woodcutting", Description: "Harvest timber and other renewable plant resources."},
+	{ID: "blades", Name: "Blades", Description: "Master edged melee weapons and their techniques.", Category: "combat", combatMastery: true},
+	{ID: "combat", Name: "Combat", Description: "Build general combat experience and battlefield fundamentals.", Category: "combat"},
+	{ID: "cooking", Name: "Cooking", Description: "Prepare food and provisions from gathered ingredients.", Category: "production"},
+	{ID: "crafting", Name: "Crafting", Description: "Shape materials into useful tools, equipment and goods.", Category: "production"},
+	{ID: "defense", Name: "Defense", Description: "Improve defensive technique, timing and damage mitigation.", Category: "combat", combatMastery: true},
+	{ID: "farming", Name: "Farming", Description: "Cultivate crops and manage productive land.", Category: "gathering"},
+	{ID: "foraging", Name: "Foraging", Description: "Find useful plants, fungi and natural materials.", Category: "gathering"},
+	{ID: "magic", Name: "Magic", Description: "Study and use offensive, defensive and utility magic.", Category: "combat", combatMastery: true},
+	{ID: "melee", Name: "Melee", Description: "Develop fundamentals for close-quarters weapon combat.", Category: "combat", combatMastery: true},
+	{ID: "mining", Name: "Mining", Description: "Extract ores, stone and mineral resources.", Category: "gathering"},
+	{ID: "pistols", Name: "Pistols", Description: "Improve proficiency with one-handed firearms.", Category: "combat", combatMastery: true},
+	{ID: "polearms", Name: "Polearms", Description: "Master staffs, spears and other long-reach melee weapons.", Category: "combat", combatMastery: true},
+	{ID: "ranged", Name: "Ranged", Description: "Use bows, thrown weapons and other non-firearm ranged weapons.", Category: "combat", combatMastery: true},
+	{ID: "rifles", Name: "Rifles", Description: "Improve proficiency with long guns and precision firearms.", Category: "combat", combatMastery: true},
+	{ID: "scavenging", Name: "Scavenging", Description: "Recover components and useful materials from ruins.", Category: "gathering"},
+	{ID: "smithing", Name: "Smithing", Description: "Refine ores and work metals into equipment.", Category: "production"},
+	{ID: "strength", Name: "Strength", Description: "Develop physical power for demanding combat techniques.", Category: "combat", combatMastery: true},
+	{ID: "tactics", Name: "Tactics", Description: "Learn positioning, timing and effective combat decisions.", Category: "combat", combatMastery: true},
+	{ID: "unarmed", Name: "Unarmed", Description: "Master hand-to-hand combat without a weapon.", Category: "combat", combatMastery: true},
+	{ID: "woodcutting", Name: "Woodcutting", Description: "Harvest timber and other renewable plant resources.", Category: "gathering"},
 }
 
 func SkillDefinitions() []SkillDefinition {
@@ -46,15 +60,33 @@ func SkillDefinitions() []SkillDefinition {
 func IsKnownSkill(id string) bool {
 	id = strings.TrimSpace(strings.ToLower(id))
 	for _, definition := range skillDefinitions {
-		if definition.ID == id { return true }
+		if definition.ID == id {
+			return true
+		}
+	}
+	return false
+}
+
+// isCombatMasterySkill is intentionally server-internal. Do not expose mastery
+// eligibility in public skill catalogs or character skill payloads.
+func isCombatMasterySkill(id string) bool {
+	id = strings.TrimSpace(strings.ToLower(id))
+	for _, definition := range skillDefinitions {
+		if definition.ID == id {
+			return definition.combatMastery
+		}
 	}
 	return false
 }
 
 // ExperienceForLevel returns the cumulative XP threshold for a level (1-99).
 func ExperienceForLevel(level int) int {
-	if level <= 1 { return 0 }
-	if level > MaxSkillLevel { level = MaxSkillLevel }
+	if level <= 1 {
+		return 0
+	}
+	if level > MaxSkillLevel {
+		level = MaxSkillLevel
+	}
 	total := 0
 	for current := 1; current < level; current++ {
 		total += int(math.Floor(float64(current) + 300*math.Pow(2, float64(current)/7)))
@@ -63,9 +95,15 @@ func ExperienceForLevel(level int) int {
 }
 
 func LevelForExperience(experience int) int {
-	if experience < 0 { return 1 }
-	if experience > MaxSkillExperience { experience = MaxSkillExperience }
+	if experience < 0 {
+		return 1
+	}
+	if experience > MaxSkillExperience {
+		experience = MaxSkillExperience
+	}
 	level := 1
-	for level < MaxSkillLevel && experience >= ExperienceForLevel(level+1) { level++ }
+	for level < MaxSkillLevel && experience >= ExperienceForLevel(level+1) {
+		level++
+	}
 	return level
 }
