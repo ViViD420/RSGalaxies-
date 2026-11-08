@@ -76,6 +76,9 @@ See docs/ARCHITECTURE.md, docs/ROADMAP.md, docs/SESSION_HANDOFF.md, docs/SKILL_R
 - [HTTP API reference](docs/API.md)
 - [Account authentication and session design](docs/ACCOUNT_AUTH_DESIGN.md)
 - [Architecture](docs/ARCHITECTURE.md)
-- [Development roadmap](docs/ROADMAP.md)\n- [Core skill roster](docs/SKILL_ROSTER.md)\n- [Combat progression and derived accuracy](docs/COMBAT_PROGRESSION.md)\n- [Future hidden Jedi progression design](docs/JEDI_PROGRESSION_DESIGN.md)
+- [Development roadmap](docs/ROADMAP.md)
+- [Core skill roster](docs/SKILL_ROSTER.md)
+- [Combat progression and derived accuracy](docs/COMBAT_PROGRESSION.md)
+- [Future hidden Jedi progression design](docs/JEDI_PROGRESSION_DESIGN.md)
 
 Copy `.env.example` for local configuration and adjust the PostgreSQL connection string for your environment.
