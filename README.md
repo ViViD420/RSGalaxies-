@@ -6,7 +6,7 @@ An original persistent-world sandbox MMORPG combining long-term skill progressio
 
 ## Project status
 
-**Foundation and progression prototype — in progress.** The Go server supports character creation, ten data-driven skills, deterministic XP-to-level progression, a starter world zone, server-validated movement, two resource nodes, stack-count inventory, a gathering loop and a first workbench crafting recipe. The Godot 4.3 client has a 3D movement prototype, touch controls and browser export. A PostgreSQL repository and schema migration are implemented; the Codespaces workspace runs a persistent Postgres volume. Standalone local runs still fall back to in-memory storage unless RS_GALAXIES_DATABASE_URL is set. Authentication, secure sessions, combat, broader crafting, realtime multiplayer and production deployment are not yet implemented.
+**Core gameplay prototype — in progress; not production-ready.** The Go server now includes account registration/login and secure sessions, account-owned characters, 20 ordinary skills with level 1–99 progression, a starter world, validated movement, gathering, crafting, PvE combat, inventory/bank, merchant economy, equipment, local chat, leased zone presence and transaction-backed player trading behind a production feature gate. PostgreSQL persists accounts and gameplay state. The Godot 4.3 client includes a third-person world, touch/keyboard controls, account and character UI, gathering/crafting, combat, inventory/economy panels, chat, presence and trade UI. Production launch still requires account recovery/verification, distributed abuse controls, operational monitoring, trade abuse/load review and fuller realtime replication. Jedi remains a documented hidden future progression path and is not implemented or exposed.
 
 ## Design pillars
 
@@ -57,7 +57,7 @@ The server listens on http://localhost:8080 by default. Without RS_GALAXIES_DATA
 - POST /api/v1/players/{id}/gather/{nodeID} — development gathering action that updates inventory and XP.
 - POST /api/v1/players/{id}/craft/{recipeID} — development crafting action that consumes ingredients and creates outputs.
 
-Create a character with POST /api/v1/players and JSON body {"name":"Wayfarer"}. The XP curve is cumulative and deterministic, with levels 1–99 and a 200,000,000 XP cap. All player-specific APIs, including character creation and lookup, and all development-only XP/movement/gathering/crafting actions are disabled when RS_GALAXIES_ENV=production. They remain unavailable until authenticated accounts and character ownership are implemented.
+Create a character with POST /api/v1/players and JSON body {"name":"Wayfarer"}. The XP curve is cumulative and deterministic, with levels 1–99 and a 200,000,000 XP cap. Legacy unscoped player-ID and development mutation routes are disabled in production. Authenticated character and gameplay APIs enforce account ownership. Production registration and player trading remain disabled unless their explicit feature flags are enabled; see docs/DEPLOYMENT.md and docs/ACCOUNT_AUTH_DESIGN.md.
 
 ## Engineering rules
 
@@ -68,7 +68,7 @@ Create a character with POST /api/v1/players and JSON body {"name":"Wayfarer"}. 
 5. No secrets, proprietary assets or copied game code are committed.
 6. Keep this repository and all project artifacts independent.
 
-See docs/ARCHITECTURE.md, docs/ROADMAP.md and docs/SESSION_HANDOFF.md.
+See docs/ARCHITECTURE.md, docs/ROADMAP.md, docs/SESSION_HANDOFF.md, docs/SKILL_ROSTER.md, docs/COMBAT_PROGRESSION.md and docs/JEDI_PROGRESSION_DESIGN.md.
 
 
 ## API and security design
@@ -76,6 +76,6 @@ See docs/ARCHITECTURE.md, docs/ROADMAP.md and docs/SESSION_HANDOFF.md.
 - [HTTP API reference](docs/API.md)
 - [Account authentication and session design](docs/ACCOUNT_AUTH_DESIGN.md)
 - [Architecture](docs/ARCHITECTURE.md)
-- [Development roadmap](docs/ROADMAP.md)
+- [Development roadmap](docs/ROADMAP.md)\n- [Core skill roster](docs/SKILL_ROSTER.md)\n- [Combat progression and derived accuracy](docs/COMBAT_PROGRESSION.md)\n- [Future hidden Jedi progression design](docs/JEDI_PROGRESSION_DESIGN.md)
 
 Copy `.env.example` for local configuration and adjust the PostgreSQL connection string for your environment.
