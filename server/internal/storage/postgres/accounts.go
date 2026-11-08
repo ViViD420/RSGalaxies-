@@ -228,6 +228,7 @@ func (r *AccountRepository) MovePlayerForAccount(ctx context.Context,accountID s
 	player,err:=r.lockOwnedPlayer(ctx,tx,accountID,id);if err!=nil{return game.Player{},err}
 	if err:=player.MoveTo(x,z,now);err!=nil{return player,err}
 	if err:=updateOwnedPlayer(ctx,tx,accountID,player);err!=nil{return game.Player{},err}
+	if err:=upsertZonePresence(ctx,tx,accountID,player,now);err!=nil{return game.Player{},err}
 	if err:=tx.Commit();err!=nil{return game.Player{},fmt.Errorf("commit owned movement: %w",err)}
 	return player,nil
 }
@@ -399,16 +400,22 @@ func (r *AccountRepository) UseItemForAccount(ctx context.Context,accountID stri
 
 func (r *AccountRepository) HeartbeatPresenceForAccount(ctx context.Context,accountID string,id game.PlayerID,now time.Time) error {
 	tx,err:=r.db.BeginTx(ctx,nil);if err!=nil{return err};defer tx.Rollback()
-	player,err:=r.lockOwnedPlayer(ctx,tx,accountID,id);if err!=nil{return err}
-	_,err=tx.ExecContext(ctx,`INSERT INTO zone_presence(character_id,account_id,zone_id,position_x,position_z,last_seen_at)
+	player,err:=r.lockOwnedPlayer(ctx,tx,id);if err!=nil{return err}
+	if player.AccountID != accountID { return game.ErrPlayerNotFound }
+	if err:=upsertZonePresence(ctx,tx,accountID,player,now);err!=nil{return err}
+	if _,err:=tx.ExecContext(ctx,`DELETE FROM zone_presence WHERE last_seen_at < $1`,now.UTC().Add(-5*time.Minute));err!=nil{return fmt.Errorf("prune stale character presence: %w",err)}
+	if err:=tx.Commit();err!=nil{return fmt.Errorf("commit character presence: %w",err)}
+	return nil
+}
+
+func upsertZonePresence(ctx context.Context,tx *sql.Tx,accountID string,player game.Player,now time.Time) error {
+	_,err:=tx.ExecContext(ctx,`INSERT INTO zone_presence(character_id,account_id,zone_id,position_x,position_z,last_seen_at)
 		VALUES($1,$2,$3,$4,$5,$6)
 		ON CONFLICT(character_id) DO UPDATE SET account_id=EXCLUDED.account_id,zone_id=EXCLUDED.zone_id,
 		position_x=EXCLUDED.position_x,position_z=EXCLUDED.position_z,last_seen_at=EXCLUDED.last_seen_at
 		WHERE zone_presence.last_seen_at <= EXCLUDED.last_seen_at - INTERVAL '1 second'`,
 		string(player.ID),accountID,player.Position.ZoneID,player.Position.X,player.Position.Z,now.UTC())
 	if err!=nil{return fmt.Errorf("upsert character presence: %w",err)}
-	if _,err:=tx.ExecContext(ctx,`DELETE FROM zone_presence WHERE last_seen_at < $1`,now.UTC().Add(-5*time.Minute));err!=nil{return fmt.Errorf("prune stale character presence: %w",err)}
-	if err:=tx.Commit();err!=nil{return fmt.Errorf("commit character presence: %w",err)}
 	return nil
 }
 
