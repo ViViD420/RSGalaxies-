@@ -618,8 +618,15 @@ func TestPostgresConcurrentTradeOfferEditsSerializeByRevision(t *testing.T) {
 		t.Fatalf("final revision=%d want=%d", finalTrade.Revision, opened.Revision+1)
 	}
 	offeredItems := 0
+	escrowedSoftwood, escrowedStone := 0, 0
 	for _, participant := range finalTrade.Participants {
-		for _, quantity := range participant.Offer.Items { offeredItems += quantity }
+		for itemID, quantity := range participant.Offer.Items {
+			offeredItems += quantity
+			switch itemID {
+			case "softwood_log": escrowedSoftwood += quantity
+			case "rough_stone": escrowedStone += quantity
+			}
+		}
 	}
 	if offeredItems != 1 && offeredItems != 2 {
 		t.Fatalf("unexpected winning offer item total=%d; snapshot=%+v", offeredItems, finalTrade)
@@ -628,11 +635,11 @@ func TestPostgresConcurrentTradeOfferEditsSerializeByRevision(t *testing.T) {
 	if err != nil { t.Fatal(err) }
 	finalTarget, err := repo.GetCharacter(ctx, second.ID, target.ID)
 	if err != nil { t.Fatal(err) }
-	if finalInitiator.Inventory["softwood_log"]+finalTarget.Inventory["softwood_log"] != 4 {
-		t.Fatalf("softwood item conservation failed: initiator=%+v target=%+v", finalInitiator.Inventory, finalTarget.Inventory)
+	if finalInitiator.Inventory["softwood_log"]+finalTarget.Inventory["softwood_log"]+escrowedSoftwood != 4 {
+		t.Fatalf("softwood item conservation failed including escrow=%d: initiator=%+v target=%+v", escrowedSoftwood, finalInitiator.Inventory, finalTarget.Inventory)
 	}
-	if finalInitiator.Inventory["rough_stone"]+finalTarget.Inventory["rough_stone"] != 3 {
-		t.Fatalf("stone item conservation failed: initiator=%+v target=%+v", finalInitiator.Inventory, finalTarget.Inventory)
+	if finalInitiator.Inventory["rough_stone"]+finalTarget.Inventory["rough_stone"]+escrowedStone != 3 {
+		t.Fatalf("stone item conservation failed including escrow=%d: initiator=%+v target=%+v", escrowedStone, finalInitiator.Inventory, finalTarget.Inventory)
 	}
 	totalCoins := finalInitiator.Coins + finalTarget.Coins
 	if totalCoins != 2*game.StartingCoins-7 && totalCoins != 2*game.StartingCoins-11 {
