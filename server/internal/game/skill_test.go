@@ -73,8 +73,8 @@ func TestSkillCategoriesAndCombatMasteryEligibility(t *testing.T) {
 			t.Errorf("non-combat skill %q is marked for combat mastery", definition.ID)
 		}
 	}
-	if len(wantMastery) != 11 {
-		t.Fatalf("test fixture expected 11 combat mastery skills, got %d", len(wantMastery))
+	if len(wantMastery) != 12 {
+		t.Fatalf("test fixture expected 12 combat mastery skills, got %d", len(wantMastery))
 	}
 }
 
