@@ -30,7 +30,7 @@ type SkillDefinition struct {
 
 var skillDefinitions = []SkillDefinition{
 	{ID: "blades", Name: "Blades", Description: "Master edged melee weapons and their techniques.", Category: "combat", combatMastery: true},
-	{ID: "combat", Name: "Combat", Description: "Build general combat experience and battlefield fundamentals.", Category: "combat"},
+	{ID: "combat", Name: "Combat", Description: "Build general combat experience and battlefield fundamentals.", Category: "combat", combatMastery: true},
 	{ID: "cooking", Name: "Cooking", Description: "Prepare food and provisions from gathered ingredients.", Category: "production"},
 	{ID: "crafting", Name: "Crafting", Description: "Shape materials into useful tools, equipment and goods.", Category: "production"},
 	{ID: "defense", Name: "Defense", Description: "Improve defensive technique, timing and damage mitigation.", Category: "combat", combatMastery: true},
