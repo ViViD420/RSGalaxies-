@@ -631,7 +631,8 @@ func TestPostgresConcurrentTradeOfferEditsSerializeByRevision(t *testing.T) {
 	if finalInitiator.Inventory["rough_stone"]+finalTarget.Inventory["rough_stone"] != 3 {
 		t.Fatalf("stone item conservation failed: initiator=%+v target=%+v", finalInitiator.Inventory, finalTarget.Inventory)
 	}
-	if finalInitiator.Coins+finalTarget.Coins != 2*game.StartingCoins-18 {
-		t.Fatalf("coin conservation failed: initiator=%d target=%d want total=%d", finalInitiator.Coins, finalTarget.Coins, 2*game.StartingCoins-18)
+	totalCoins := finalInitiator.Coins + finalTarget.Coins
+	if totalCoins != 2*game.StartingCoins-7 && totalCoins != 2*game.StartingCoins-11 {
+		t.Fatalf("coin conservation failed: initiator=%d target=%d total=%d; expected one winning offer to escrow 7 or 11 coins", finalInitiator.Coins, finalTarget.Coins, totalCoins)
 	}
 }
