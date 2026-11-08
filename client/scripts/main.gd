@@ -1779,12 +1779,21 @@ func _create_remote_player_visual(character_id: String, display_name: String, at
 
 
 func _update_remote_player_visuals(delta: float) -> void:
+	var blend := 1.0 - exp(-delta * 8.0)
 	for character_id in remote_player_nodes.keys():
 		var remote: Node3D = remote_player_nodes[character_id]
 		if not is_instance_valid(remote):
 			continue
 		var target: Vector3 = remote_player_targets.get(character_id, remote.position)
-		remote.position = remote.position.lerp(target, clampf(delta * 5.0, 0.0, 1.0))
+		var displacement := target - remote.position
+		displacement.y = 0.0
+		if displacement.length_squared() > 0.0025:
+			var desired_yaw := atan2(displacement.x, displacement.z)
+			remote.rotation.y = lerp_angle(remote.rotation.y, desired_yaw, blend)
+		if displacement.length() > 20.0:
+			remote.position = target
+		else:
+			remote.position = remote.position.lerp(target, blend)
 
 
 func _start_trade_polling() -> void:
