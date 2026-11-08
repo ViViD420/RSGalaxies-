@@ -39,7 +39,7 @@ The Go service selects PostgreSQL repositories when `RS_GALAXIES_DATABASE_URL` i
 ### World and progression
 
 - One bounded starter zone with a spawn point and server-time movement validation.
-- Ten data-driven skills, level 1–99 progression and a 200,000,000 XP cap.
+- Ten data-driven skills, level 1–99 progression and a 200,000,000 XP cap. A future hidden Jedi unlock is specified in docs/JEDI_PROGRESSION_DESIGN.md; it is not implemented or exposed yet and depends on expanding/categorizing the combat skill catalog.
 - Tree/stone/copper gathering, node charges and respawn, workbench/forge recipes and transactional skill XP awards.
 - Basic server-authoritative PvE with enemy health/respawn state, cooldowns, retaliation, loot and safe-spawn recovery.
 
