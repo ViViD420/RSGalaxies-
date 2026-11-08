@@ -707,3 +707,81 @@ func TestPostgresTradeExpiryRacesConfirmationWithoutLosingEscrow(t *testing.T) {
 		t.Fatalf("expiry/confirmation race did not refund escrow exactly once: %+v", restored)
 	}
 }
+
+
+func TestPostgresConcurrentTradeConfirmationsSettleExactlyOnce(t *testing.T) {
+	db := integrationDatabase(t)
+	repo := NewAccountRepository(db)
+	ctx := context.Background()
+	now := time.Now().UTC().Truncate(time.Microsecond)
+	first, _, err := repo.Register(ctx, fmt.Sprintf("trade-confirm-race-a-%d@example.test", now.UnixNano()), "correct-horse-battery-staple", now)
+	if err != nil { t.Fatal(err) }
+	second, _, err := repo.Register(ctx, fmt.Sprintf("trade-confirm-race-b-%d@example.test", now.UnixNano()), "correct-horse-battery-staple", now)
+	if err != nil { cleanupTestAccounts(db, first.ID); t.Fatal(err) }
+	t.Cleanup(func() { cleanupTestAccounts(db, first.ID, second.ID) })
+
+	initiator, err := game.NewPlayer(game.PlayerID(fmt.Sprintf("trade-confirm-race-a-%d", now.UnixNano())), "TradeConfirmA", now)
+	if err != nil { t.Fatal(err) }
+	target, err := game.NewPlayer(game.PlayerID(fmt.Sprintf("trade-confirm-race-b-%d", now.UnixNano())), "TradeConfirmB", now)
+	if err != nil { t.Fatal(err) }
+	initiator.Inventory["softwood_log"] = 3
+	target.Inventory["rough_stone"] = 2
+	if err := repo.CreateCharacter(ctx, first.ID, initiator); err != nil { t.Fatal(err) }
+	if err := repo.CreateCharacter(ctx, second.ID, target); err != nil { t.Fatal(err) }
+	if err := repo.HeartbeatPresenceForAccount(ctx, second.ID, target.ID, now); err != nil { t.Fatal(err) }
+	invite, err := repo.CreateTradeInviteForAccount(ctx, first.ID, initiator.ID, target.ID, now)
+	if err != nil { t.Fatal(err) }
+	opened, err := repo.AcceptTradeInviteForAccount(ctx, second.ID, invite.ID, now.Add(time.Second))
+	if err != nil { t.Fatal(err) }
+	firstOffer, err := repo.UpdateTradeOfferForAccount(ctx, first.ID, initiator.ID, invite.ID, opened.Revision, game.TradeOffer{Items: map[string]int{"softwood_log": 1}, Coins: 10}, now.Add(2*time.Second))
+	if err != nil { t.Fatal(err) }
+	bothOffers, err := repo.UpdateTradeOfferForAccount(ctx, second.ID, target.ID, invite.ID, firstOffer.Revision, game.TradeOffer{Items: map[string]int{"rough_stone": 1}, Coins: 20}, now.Add(3*time.Second))
+	if err != nil { t.Fatal(err) }
+
+	start := make(chan struct{})
+	var wg sync.WaitGroup
+	results := make(chan error, 2)
+	for _, participant := range []struct{ account string; character game.PlayerID }{
+		{first.ID, initiator.ID}, {second.ID, target.ID},
+	} {
+		participant := participant
+		wg.Add(1)
+		go func() {
+			defer wg.Done()
+			<-start
+			_, confirmErr := repo.ConfirmTradeForAccount(ctx, participant.account, participant.character, invite.ID, bothOffers.Revision, now.Add(4*time.Second))
+			results <- confirmErr
+		}()
+	}
+	close(start)
+	wg.Wait()
+	close(results)
+	for confirmErr := range results {
+		if confirmErr != nil { t.Fatalf("concurrent participant confirmation failed: %v", confirmErr) }
+	}
+
+	finalTrade, err := repo.GetTradeForAccount(ctx, first.ID, invite.ID)
+	if err != nil { t.Fatal(err) }
+	if finalTrade.Status != game.TradeStatusCompleted { t.Fatalf("final trade status=%s want completed", finalTrade.Status) }
+	finalInitiator, err := repo.GetCharacter(ctx, first.ID, initiator.ID)
+	if err != nil { t.Fatal(err) }
+	finalTarget, err := repo.GetCharacter(ctx, second.ID, target.ID)
+	if err != nil { t.Fatal(err) }
+	if finalInitiator.Inventory["softwood_log"] != 2 || finalInitiator.Inventory["rough_stone"] != 1 {
+		t.Fatalf("initiator did not receive exactly one settlement: %+v", finalInitiator.Inventory)
+	}
+	if finalTarget.Inventory["softwood_log"] != 1 || finalTarget.Inventory["rough_stone"] != 1 {
+		t.Fatalf("target did not receive exactly one settlement: %+v", finalTarget.Inventory)
+	}
+	if finalInitiator.Coins != game.StartingCoins+10 || finalTarget.Coins != game.StartingCoins-10 {
+		t.Fatalf("coin settlement mismatch: initiator=%d target=%d", finalInitiator.Coins, finalTarget.Coins)
+	}
+	if _, err := repo.ConfirmTradeForAccount(ctx, first.ID, initiator.ID, invite.ID, bothOffers.Revision, now.Add(5*time.Second)); !errors.Is(err, game.ErrTradeNotAccepted) {
+		t.Fatalf("post-settlement duplicate confirmation error=%v", err)
+	}
+	afterRetry, err := repo.GetCharacter(ctx, first.ID, initiator.ID)
+	if err != nil { t.Fatal(err) }
+	if afterRetry.Coins != finalInitiator.Coins || afterRetry.Inventory["softwood_log"] != finalInitiator.Inventory["softwood_log"] || afterRetry.Inventory["rough_stone"] != finalInitiator.Inventory["rough_stone"] {
+		t.Fatalf("duplicate confirmation changed settled assets: before=%+v after=%+v", finalInitiator, afterRetry)
+	}
+}
