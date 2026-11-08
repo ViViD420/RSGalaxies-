@@ -57,7 +57,21 @@ func SkillDefinitions() []SkillDefinition {
 	return result
 }
 
-// EnsureSkillProgress adds level-1 entries for newly introduced skills while preserving\n// every existing progress record. It keeps older persisted characters compatible.\nfunc EnsureSkillProgress(skills map[string]SkillProgress) map[string]SkillProgress {\n\tif skills == nil {\n\t\tskills = make(map[string]SkillProgress, len(skillDefinitions))\n\t}\n\tfor _, definition := range skillDefinitions {\n\t\tif _, exists := skills[definition.ID]; !exists {\n\t\t\tskills[definition.ID] = SkillProgress{Level: 1}\n\t\t}\n\t}\n\treturn skills\n}\n\nfunc IsKnownSkill(id string) bool {
+// EnsureSkillProgress adds level-1 entries for newly introduced skills while preserving
+// every existing progress record. It keeps older persisted characters compatible.
+func EnsureSkillProgress(skills map[string]SkillProgress) map[string]SkillProgress {
+	if skills == nil {
+		skills = make(map[string]SkillProgress, len(skillDefinitions))
+	}
+	for _, definition := range skillDefinitions {
+		if _, exists := skills[definition.ID]; !exists {
+			skills[definition.ID] = SkillProgress{Level: 1}
+		}
+	}
+	return skills
+}
+
+func IsKnownSkill(id string) bool {
 	id = strings.TrimSpace(strings.ToLower(id))
 	for _, definition := range skillDefinitions {
 		if definition.ID == id {
