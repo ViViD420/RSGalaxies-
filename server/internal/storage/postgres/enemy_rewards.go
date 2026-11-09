@@ -67,24 +67,24 @@ func settleEncounterRewards(ctx context.Context, tx *sql.Tx, enemy game.EnemyDef
 	if err := rows.Err(); err != nil {
 		return fmt.Errorf("iterate encounter reward participants: %w", err)
 	}
+	if err := rows.Close(); err != nil {
+		return fmt.Errorf("close encounter reward participants: %w", err)
+	}
 	if len(eligible) == 0 || totalDamage <= 0 {
 		return nil
 	}
 
 	// The first participant is the deterministic highest-damage contributor.
 	// One enemy drop is assigned once; XP is split proportionally by damage.
-	remainingXP := int64(enemy.Experience)
-	for index, participant := range eligible {
-		xp := int64(0)
-		if index == 0 {
-			// Give integer-division remainder to the top contributor so the
-			// claims account for the complete base XP value.
-			share := int64(enemy.Experience) * participant.DamageDealt / totalDamage
-			xp = share
-		} else {
-			xp = int64(enemy.Experience) * participant.DamageDealt / totalDamage
+	shares := make([]int64, len(eligible))
+		var distributed int64
+		for index, participant := range eligible {
+			shares[index] = int64(enemy.Experience) * participant.DamageDealt / totalDamage
+			distributed += shares[index]
 		}
-		remainingXP -= xp
+		shares[0] += int64(enemy.Experience) - distributed
+	for index, participant := range eligible {
+		xp := shares[index]
 		parentSkillID := ""
 		for _, skill := range game.SkillDefinitions() {
 			if skill.ID == participant.ExperienceSkillID {
@@ -114,6 +114,5 @@ func settleEncounterRewards(ctx context.Context, tx *sql.Tx, enemy game.EnemyDef
 			return fmt.Errorf("create encounter reward claim for %s: %w", participant.CharacterID, err)
 		}
 	}
-	_ = remainingXP // kept explicit for policy accounting; integer remainder is reviewed below.
 	return nil
 }
