@@ -756,13 +756,16 @@ func _build_hud() -> void:
 
 	status_label = Label.new()
 	status_label.text = "Server: connecting..."
+	status_label.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
 	column.add_child(status_label)
 	presence_label = Label.new()
 	presence_label.text = "Nearby players: offline"
+	presence_label.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
 	column.add_child(presence_label)
 
 	inventory_label = Label.new()
 	inventory_label.text = "Inventory: empty"
+	inventory_label.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
 	column.add_child(inventory_label)
 
 	_build_chat_panel(layer)
@@ -848,7 +851,7 @@ func _update_hud_layout() -> void:
 	var info_width := minf(390.0, maxf(140.0, viewport_width * 0.42))
 	var toolbar_width := minf(224.0, maxf(164.0, viewport_width * 0.46))
 	hud_info_panel.custom_minimum_size.x = info_width
-	action_toolbar.offset_left = -toolbar_width
+	action_toolbar.offset_left = -(toolbar_width + 18.0)
 	action_toolbar.offset_right = -18.0
 
 
