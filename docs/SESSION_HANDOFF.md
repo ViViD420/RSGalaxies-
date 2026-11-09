@@ -1679,3 +1679,11 @@ The procedural placement algorithm is deterministic by design and now has direct
 - Root cause: use of JSON.parse_string() in the interaction response callback, which logs a parser error for malformed JSON.
 - Correction: switch to an instance JSON parser and inspect JSON.parse()'s returned Error and data type explicitly. Keep the malformed payload regression; do not remove or weaken it.
 - Run #191 remains a recorded failure. Client Action #192 must verify the corrected parser, the malformed-payload message, request-start feedback, full terrain/movement smoke, editor import and Web export with no Godot errors or resource leaks.
+
+
+### Checked JSON parser correction — verification pending
+
+- Commit 92c74c62b9290bab8e7ca63e3f9f35e712b507d5 replaces JSON.parse_string() in the shared interaction completion handler with JSON.new().parse().
+- The callback now checks the parser Error return and requires Dictionary data before accessing response fields. Invalid data is surfaced as a player-facing interaction error without invoking the static parser helper that emitted Godot ERROR output.
+- The malformed-response regression remains in place.
+- Client Action #192 / run 42620660363 is the required verification run and is pending at this checkpoint.

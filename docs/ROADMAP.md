@@ -252,3 +252,6 @@ Client Action #183 (run 42604378304) passed; #182 (42604361140) passed. Client #
 
 
 - [ ] Replace JSON.parse_string() with checked JSON.parse() in the shared interaction response path and verify malformed-payload feedback without Godot ERROR output in Client Action #192.
+
+
+- [ ] Verify checked JSON parsing and malformed-payload feedback in Client Action #192 (42620660363).

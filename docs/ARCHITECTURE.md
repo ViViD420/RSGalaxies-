@@ -257,3 +257,8 @@ The E/USE interaction path now displays request-start failures, and the shared r
 ### Safe interaction JSON parsing
 
 The shared interaction callback is being changed from JSON.parse_string() to JSON.new().parse(), checking the returned Error and parsed data type before accessing fields. This prevents malformed server data from being silently ignored or producing the parser's static ERROR diagnostic. Client #191 exposed the diagnostic; Client #192 is the required regression verification.
+
+
+### Checked JSON parser verification
+
+The interaction response callback now uses JSON.new().parse(), checks the returned Error and confirms the parsed value is a Dictionary before using it. The malformed-payload regression remains active and should now validate graceful error reporting without an engine diagnostic. Client Action #192 is pending.
