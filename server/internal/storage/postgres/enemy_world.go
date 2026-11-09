@@ -123,6 +123,7 @@ func (r *AccountRepository) TickEnemyAI(ctx context.Context, enemyID string, now
 				if errors.Is(err, game.ErrEnemyOutOfRange) || errors.Is(err, game.ErrPlayerDefeated) { return nil }
 				return fmt.Errorf("resolve telegraphed enemy attack: %w", err)
 			}
+			if player.Health <= 0 { result.State.TargetCharacterID = "" }
 			if err := updateOwnedPlayer(ctx, tx, candidate.accountID, player); err != nil {
 				_ = tx.Rollback(); return fmt.Errorf("persist enemy attack target: %w", err)
 			}
