@@ -1121,3 +1121,10 @@ Core game focus only. The player controller now has smooth ground acceleration/d
 - Commit 3d46875 replaced it with get_viewport().get_visible_rect().size.x and an explicit float declaration.
 - Client Action #180 (run 42604040649, commit 3d46875) passed the complete client job: movement/terrain/camera/attack smoke test, editor import, and Web export. Full logs contained no Godot SCRIPT ERROR or engine ERROR lines. https://github.com/ViViD420/RSGalaxies-/actions/runs/42604040649
 - Follow-up commit dd32e8a removed the toolbar's 100px minimum button width and shortened Characters to Chars so the two-column grid can shrink on narrow viewports. Action #181 is pending to validate that refinement.
+
+## Responsive HUD strict validation complete (2026-11-09)
+
+- Client Action #181 (run 42604113289, commit dd32e8a) passed the complete client job after the toolbar shrink refinement. The full log includes the terrain/movement/camera/attack PASS line and no Godot SCRIPT ERROR or engine ERROR lines. https://github.com/ViViD420/RSGalaxies-/actions/runs/42604113289
+- The responsive action toolbar now has no fixed horizontal minimum width, uses two columns and short Chars label, and computes its width from the current viewport. The information panel also scales to 42% of viewport width up to 390px, and its status/instruction labels wrap.
+- #180 (viewport API fix) and #181 (narrow button sizing) both passed. #178/#179 parse failures remain documented above.
+- Desktop/mobile visual and touch usability still need interactive device testing; headless import/export cannot prove layout feel or touch ergonomics.
