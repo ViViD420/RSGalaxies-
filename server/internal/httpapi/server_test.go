@@ -338,13 +338,19 @@ func TestAuthenticatedCharacterLifecycleAndOwnership(t *testing.T) {
 	characters.rewardClaims[player.ID] = []game.EncounterRewardClaim{{
 		EnemyID:"frontier-rat-001",EncounterID:"encounter-success",CharacterID:player.ID,
 		ExperienceSkillID:"blades",ExperienceAmount:25,ParentSkillID:"melee",
-		ParentExperienceAmount:6,Status:"pending",CreatedAt:time.Now().UTC(),
+		ParentExperienceAmount:6,LootItems:[]game.ItemQuantity{
+			{ItemID:"rat_pelt",Quantity:1},
+			{ItemID:"rat_tooth",Quantity:2},
+		},Status:"pending",CreatedAt:time.Now().UTC(),
 	}}
 	claimSuccess:=httptest.NewRecorder()
 	claimSuccessRequest:=httptest.NewRequest(http.MethodPost,"/api/v1/account/characters/"+string(player.ID)+"/rewards/frontier-rat-001/encounter-success/claim",nil)
 	claimSuccessRequest.Header.Set("Authorization","Bearer "+registration.AccessToken)
 	handler.ServeHTTP(claimSuccess,claimSuccessRequest)
-	if claimSuccess.Code!=http.StatusOK||!strings.Contains(claimSuccess.Body.String(),"\"status\":\"claimed\""){t.Fatalf("successful reward claim status=%d body=%s",claimSuccess.Code,claimSuccess.Body.String())}
+	if claimSuccess.Code!=http.StatusOK||!strings.Contains(claimSuccess.Body.String(),"\"status\":\"claimed\"")||
+		!strings.Contains(claimSuccess.Body.String(),"\"lootItems\":[{\"itemId\":\"rat_pelt\",\"quantity\":1},{\"itemId\":\"rat_tooth\",\"quantity\":2}]"){
+		t.Fatalf("successful multi-item reward claim status=%d body=%s",claimSuccess.Code,claimSuccess.Body.String())
+	}
 	foreignClaim:=httptest.NewRecorder()
 	foreignClaimRequest:=httptest.NewRequest(http.MethodPost,"/api/v1/account/characters/foreign-character/rewards/frontier-rat-001/encounter-success/claim",nil)
 	foreignClaimRequest.Header.Set("Authorization","Bearer "+registration.AccessToken)
