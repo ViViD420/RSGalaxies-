@@ -105,6 +105,13 @@ func (r *AccountRepository) TickEnemyAI(ctx context.Context, enemyID string, now
 		}
 		health, initialized, respawnAt, state, err := readEnemyAIStateForUpdate(ctx, tx, enemy)
 		if err != nil { _ = tx.Rollback(); return err }
+
+		if !initialized { health, initialized = enemy.MaxHealth, true }
+		if health <= 0 {
+			if respawnAt.Valid && now.Before(respawnAt.Time) { _ = tx.Rollback(); return nil }
+			health, respawnAt = enemy.MaxHealth, sql.NullTime{}
+			state = game.EnemyAIState{Behavior: game.EnemyIdle, Position: enemy.Position}
+		}
 		if state.TargetCharacterID != "" && state.TargetCharacterID != string(candidate.characterID) &&
 			(state.Behavior == game.EnemyChasing || state.Behavior == game.EnemyTelegraphing) {
 			var stickyTargetStillActive bool
@@ -120,12 +127,6 @@ func (r *AccountRepository) TickEnemyAI(ctx context.Context, enemyID string, now
 			).Scan(&stickyTargetStillActive)
 			if err != nil { _ = tx.Rollback(); return fmt.Errorf("revalidate sticky enemy target: %w", err) }
 			if stickyTargetStillActive { _ = tx.Rollback(); return nil }
-		}
-		if !initialized { health, initialized = enemy.MaxHealth, true }
-		if health <= 0 {
-			if respawnAt.Valid && now.Before(respawnAt.Time) { _ = tx.Rollback(); return nil }
-			health, respawnAt = enemy.MaxHealth, sql.NullTime{}
-			state = game.EnemyAIState{Behavior: game.EnemyIdle, Position: enemy.Position}
 		}
 		result := game.AdvanceEnemyAI(enemy, enemyAIConfig(enemy), state, player.Position, now)
 		if (result.State.Behavior == game.EnemyChasing || result.State.Behavior == game.EnemyTelegraphing) && player.Health > 0 {
