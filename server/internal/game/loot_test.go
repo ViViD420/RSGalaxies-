@@ -91,13 +91,23 @@ func TestLootTableCatalogIsValidAndDefensivelyCopied(t *testing.T) {
 			t.Fatalf("table %s has no outcomes", table.ID)
 		}
 	}
-	tables[0].Drops[0].ItemID = "corrupted"
+	for index := range tables {
+		if tables[index].ID == "frontier-rat-common" {
+			tables[index].Drops[0].ItemID = "corrupted"
+			break
+		}
+	}
 	again, _ := FindLootTable("frontier-rat-common")
 	if again.Drops[0].ItemID != "rat_pelt" {
 		t.Fatal("legacy loot table catalog exposed mutable internal slices")
 	}
-	tables[2].GuaranteedDrops[0].ItemID = "corrupted"
-	tables[2].BonusRolls[0].Drops[0].ItemID = "corrupted"
+	for index := range tables {
+		if tables[index].ID == "frontier-rat-harvest" {
+			tables[index].GuaranteedDrops[0].ItemID = "corrupted"
+			tables[index].BonusRolls[0].Drops[0].ItemID = "corrupted"
+			break
+		}
+	}
 	again, _ = FindLootTable("frontier-rat-harvest")
 	if again.GuaranteedDrops[0].ItemID != "rat_pelt" || again.BonusRolls[0].Drops[0].ItemID != "rat_tooth" {
 		t.Fatal("multi-drop loot table catalog exposed mutable nested slices")
@@ -141,8 +151,13 @@ func TestRollLootTableDropsValidatesRollCountAndBounds(t *testing.T) {
 func TestLootTableCatalogCopiesNestedMultiDropSlices(t *testing.T) {
 	tables:=LootTableDefinitions()
 	if len(tables)!=4{t.Fatalf("loot table count=%d, want 4",len(tables))}
-	tables[2].GuaranteedDrops[0].ItemID="corrupted"
-	tables[2].BonusRolls[0].Drops[0].ItemID="corrupted"
+	for index := range tables {
+		if tables[index].ID == "frontier-rat-harvest" {
+			tables[index].GuaranteedDrops[0].ItemID = "corrupted"
+			tables[index].BonusRolls[0].Drops[0].ItemID = "corrupted"
+			break
+		}
+	}
 	again,ok:=FindLootTable("frontier-rat-harvest")
 	if !ok || again.GuaranteedDrops[0].ItemID!="rat_pelt" ||
 		again.BonusRolls[0].Drops[0].ItemID!="rat_tooth" {
