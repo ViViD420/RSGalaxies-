@@ -24,14 +24,15 @@ func readEnemyAIState(ctx context.Context, reader enemyStateReader, enemy game.E
 	var initialized bool
 	var respawnAt sql.NullTime
 	var behavior string
-	var zoneID sql.NullString
+	var zoneID, targetCharacterID sql.NullString
 	var x, z sql.NullFloat64
 	var telegraphUntil, nextAttackAt, lastUpdatedAt sql.NullTime
 	err := reader.QueryRowContext(ctx, `SELECT health, initialized, respawn_at, behavior,
-		position_zone_id, position_x, position_z, telegraph_until, next_attack_at, last_ai_updated_at
+		position_zone_id, position_x, position_z, target_character_id,
+		telegraph_until, next_attack_at, last_ai_updated_at
 		FROM enemy_spawn_state WHERE enemy_id=$1`, enemy.ID).Scan(
 		&health, &initialized, &respawnAt, &behavior, &zoneID, &x, &z,
-		&telegraphUntil, &nextAttackAt, &lastUpdatedAt,
+		&targetCharacterID, &telegraphUntil, &nextAttackAt, &lastUpdatedAt,
 	)
 	if errors.Is(err, sql.ErrNoRows) {
 		return 0, false, sql.NullTime{}, game.EnemyAIState{Behavior: game.EnemyIdle, Position: enemy.Position}, nil
@@ -162,14 +163,15 @@ func readEnemyAIStateForUpdate(ctx context.Context, tx *sql.Tx, enemy game.Enemy
 	var initialized bool
 	var respawnAt sql.NullTime
 	var behavior string
-	var zoneID sql.NullString
+	var zoneID, targetCharacterID sql.NullString
 	var x, z sql.NullFloat64
 	var telegraphUntil, nextAttackAt, lastUpdatedAt sql.NullTime
 	err := tx.QueryRowContext(ctx, `SELECT health, initialized, respawn_at, behavior,
-		position_zone_id, position_x, position_z, telegraph_until, next_attack_at, last_ai_updated_at
+		position_zone_id, position_x, position_z, target_character_id,
+		telegraph_until, next_attack_at, last_ai_updated_at
 		FROM enemy_spawn_state WHERE enemy_id=$1 FOR UPDATE`, enemy.ID).Scan(
 		&health, &initialized, &respawnAt, &behavior, &zoneID, &x, &z,
-		&telegraphUntil, &nextAttackAt, &lastUpdatedAt,
+		&targetCharacterID, &telegraphUntil, &nextAttackAt, &lastUpdatedAt,
 	)
 	if err != nil { return 0, false, sql.NullTime{}, game.EnemyAIState{}, fmt.Errorf("lock enemy AI state: %w", err) }
 	state := game.EnemyAIState{Behavior: game.EnemyBehaviorState(behavior), Position: enemy.Position}
@@ -179,6 +181,11 @@ func readEnemyAIStateForUpdate(ctx context.Context, tx *sql.Tx, enemy game.Enemy
 	if nextAttackAt.Valid { state.NextAttackAt = nextAttackAt.Time.UTC() }
 	if lastUpdatedAt.Valid { state.LastUpdatedAt = lastUpdatedAt.Time.UTC() }
 	return health, initialized, respawnAt, state, nil
+}
+
+func nullableString(value string) any {
+	if value == "" { return nil }
+	return value
 }
 
 func persistEnemyAIState(ctx context.Context, tx *sql.Tx, enemyID string, health int, initialized bool, respawnAt sql.NullTime, state game.EnemyAIState) error {
