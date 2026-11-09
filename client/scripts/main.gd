@@ -86,6 +86,7 @@ var boss_hud_name_label: Label
 var boss_hud_phase_label: Label
 var boss_hud_health_bar: ProgressBar
 var boss_hud_ability_label: Label
+var boss_hud_status_label: Label
 var trade_button: Button
 var trade_panel: PanelContainer
 var trade_target_select: OptionButton
@@ -510,15 +511,28 @@ func _on_enemy_snapshots_completed(result: int, response_code: int, _headers: Pa
 		var boss_id := str(snapshot.get("bossId", ""))
 		var boss_phase := str(snapshot.get("bossPhaseId", ""))
 		var boss_ability := str(snapshot.get("bossActiveAbilityId", ""))
-		if not boss_id.is_empty() and health > 0:
+		if not boss_id.is_empty():
+			# Keep the encounter panel alive through defeat. The zero-health
+			# snapshot is authoritative and should not disappear before players
+			# can read the completion/reward feedback.
 			boss_seen = true
 			if boss_hud_panel != null:
 				boss_hud_panel.visible = true
 				boss_hud_name_label.text = display_name.to_upper()
 				boss_hud_health_bar.max_value = maxi(maximum, 1)
 				boss_hud_health_bar.value = clampi(health, 0, maxi(maximum, 1))
-				boss_hud_phase_label.text = boss_phase.replace("-", " ").to_upper() if not boss_phase.is_empty() else "ENCOUNTER"
-				boss_hud_ability_label.text = "⚠ " + boss_ability.replace("-", " ").to_upper() if not boss_ability.is_empty() else "Watching for an opening..."
+				if health <= 0:
+					boss_hud_phase_label.text = "ENCOUNTER COMPLETE"
+					boss_hud_ability_label.text = "DEFEATED"
+					boss_hud_status_label.text = "Rewards are ready to claim from the Rewards panel."
+				elif not boss_ability.is_empty():
+					boss_hud_phase_label.text = boss_phase.replace("-", " ").to_upper() if not boss_phase.is_empty() else "ENCOUNTER"
+					boss_hud_ability_label.text = "⚠ " + boss_ability.replace("-", " ").to_upper() + " — MOVE NOW"
+					boss_hud_status_label.text = "Telegraph active • leave the boss's attack range."
+				else:
+					boss_hud_phase_label.text = boss_phase.replace("-", " ").to_upper() if not boss_phase.is_empty() else "ENCOUNTER"
+					boss_hud_ability_label.text = "No attack telegraphed"
+					boss_hud_status_label.text = "Watch the boss for its next tell."
 		if health <= 0:
 			label.text = display_name + "\nRespawning..."
 		elif not boss_id.is_empty():
@@ -848,7 +862,7 @@ func _build_boss_hud(layer: CanvasLayer) -> void:
 	boss_hud_panel.offset_left = -190
 	boss_hud_panel.offset_right = 190
 	boss_hud_panel.offset_top = 78
-	boss_hud_panel.offset_bottom = 174
+	boss_hud_panel.offset_bottom = 194
 	boss_hud_panel.visible = false
 	var column := VBoxContainer.new()
 	boss_hud_panel.add_child(column)
@@ -866,7 +880,13 @@ func _build_boss_hud(layer: CanvasLayer) -> void:
 	column.add_child(boss_hud_phase_label)
 	boss_hud_ability_label = Label.new()
 	boss_hud_ability_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	boss_hud_ability_label.add_theme_font_size_override("font_size", 15)
 	column.add_child(boss_hud_ability_label)
+	boss_hud_status_label = Label.new()
+	boss_hud_status_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	boss_hud_status_label.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+	boss_hud_status_label.add_theme_font_size_override("font_size", 12)
+	column.add_child(boss_hud_status_label)
 	layer.add_child(boss_hud_panel)
 
 func _add_hold_button(parent: Control, caption: String, action: String, left: float, top: float, right: float, bottom: float, anchor_right: bool = false) -> void:
