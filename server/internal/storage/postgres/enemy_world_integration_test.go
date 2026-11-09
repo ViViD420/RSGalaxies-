@@ -82,6 +82,19 @@ func TestPostgresEnemyWorldTickCommitsAttackExactlyOnce(t *testing.T) {
 		t.Fatalf("attack against moving enemy result = %+v", combat)
 	}
 
+	// The immediate retaliation above must reset the autonomous cooldown and
+	// cancel any pending telegraph; otherwise the worker could double-strike.
+	for _, offset := range []time.Duration{7*time.Second, 8*time.Second} {
+		if err := accountRepo.TickEnemyAI(ctx, enemyID, now.Add(offset)); err != nil { t.Fatalf("tick during shared enemy cooldown: %v", err) }
+	}
+	var healthAfterCooldown int
+	if err := db.QueryRowContext(ctx, "SELECT health FROM players WHERE id=$1", string(playerID)).Scan(&healthAfterCooldown); err != nil { t.Fatal(err) }
+	if healthAfterCooldown != 96 { t.Fatalf("enemy attacked during shared cooldown: health=%d, want 96", healthAfterCooldown) }
+	if err := accountRepo.TickEnemyAI(ctx, enemyID, now.Add(9*time.Second)); err != nil { t.Fatal(err) }
+	if err := accountRepo.TickEnemyAI(ctx, enemyID, now.Add(10*time.Second)); err != nil { t.Fatal(err) }
+	if err := db.QueryRowContext(ctx, "SELECT health FROM players WHERE id=$1", string(playerID)).Scan(&healthAfterCooldown); err != nil { t.Fatal(err) }
+	if healthAfterCooldown != 94 { t.Fatalf("enemy did not resume after shared cooldown/telegraph: health=%d, want 94", healthAfterCooldown) }
+
 	snapshots, err := accountRepo.ListEnemySnapshotsForAccount(ctx, account.ID, playerID, now.Add(4*time.Second))
 	if err != nil { t.Fatalf("list enemy snapshots: %v", err) }
 	if len(snapshots) != 2 { t.Fatalf("snapshot count = %d, want two zone enemies", len(snapshots)) }
