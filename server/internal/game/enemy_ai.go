@@ -21,6 +21,7 @@ const (
 type EnemyAIState struct {
 	Behavior EnemyBehaviorState
 	Position WorldPosition
+	TargetCharacterID string
 	TelegraphUntil time.Time
 	NextAttackAt time.Time
 	LastUpdatedAt time.Time
