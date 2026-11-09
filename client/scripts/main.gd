@@ -104,6 +104,13 @@ var trade_poll_timer: Timer
 var trade_pending := false
 var trade_action := "poll"
 var current_trade: Dictionary = {}
+var rewards_button: Button
+var rewards_panel: PanelContainer
+var rewards_claims_column: VBoxContainer
+var rewards_status_label: Label
+var rewards_request: HTTPRequest
+var rewards_pending := false
+var rewards_action := "list"
 const game_max_health := 100
 var market_catalog: Array = []
 var enemy_catalog: Array = []
@@ -761,8 +768,23 @@ func _build_hud() -> void:
 	trade_button.offset_right = 118
 	trade_button.offset_bottom = 189
 	trade_button.visible = false
+	rewards_button.visible = false
 	trade_button.pressed.connect(_toggle_trade_panel)
 	layer.add_child(trade_button)
+	rewards_button = Button.new()
+	rewards_button.text = "Rewards"
+	rewards_button.anchor_left = 0.0
+	rewards_button.anchor_right = 0.0
+	rewards_button.offset_left = 18
+	rewards_button.offset_top = 195
+	rewards_button.offset_right = 118
+	rewards_button.offset_bottom = 239
+	rewards_button.visible = false
+	rewards_button.pressed.connect(_show_rewards_panel)
+	layer.add_child(rewards_button)
+	rewards_request = _new_api_request()
+	add_child(rewards_request)
+	rewards_request.request_completed.connect(_on_rewards_request_completed)
 
 	if DisplayServer.is_touchscreen_available():
 		_add_hold_button(layer, "▲", "move_forward", 95, -230, 165, -160)
@@ -1408,6 +1430,7 @@ func _activate_character(character_data: Dictionary) -> void:
 		market_panel.visible = false
 	logout_button.visible = true
 	trade_button.visible = true
+	rewards_button.visible = true
 	character_button.visible = true
 	equipment_button.visible = true
 	rest_button.visible = true
@@ -1496,6 +1519,7 @@ func _show_character_selection(characters: Array) -> void:
 	auth_panel.visible = false
 	logout_button.visible = true
 	character_button.visible = false
+	rewards_button.visible = false
 	equipment_button.visible = false
 	rest_button.visible = false
 	bag_button.visible = false
@@ -2558,6 +2582,169 @@ func _on_chat_send_completed(result: int, response_code: int, _headers: PackedSt
 		chat_status_label.text = "Chat cooldown • wait a moment"
 	else:
 		chat_status_label.text = "Chat: " + str(payload.get("error", "send_failed") if payload is Dictionary else "send_failed")
+
+
+func _show_rewards_panel() -> void:
+	if rewards_panel != null:
+		rewards_panel.visible = not rewards_panel.visible
+		if rewards_panel.visible:
+			_request_reward_claims()
+		return
+	if skills_panel != null:
+		skills_panel.visible = false
+	if inventory_panel != null:
+		inventory_panel.visible = false
+	if market_panel != null:
+		market_panel.visible = false
+	if equipment_panel != null:
+		equipment_panel.visible = false
+	rewards_panel = PanelContainer.new()
+	rewards_panel.position = Vector2(420, 155)
+	rewards_panel.custom_minimum_size = Vector2(380, 280)
+	var column := VBoxContainer.new()
+	rewards_panel.add_child(column)
+	var heading := Label.new()
+	heading.text = "ENCOUNTER REWARDS"
+	heading.add_theme_font_size_override("font_size", 18)
+	column.add_child(heading)
+	var description := Label.new()
+	description.text = "Pending XP and loot are stored until claimed."
+	description.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+	column.add_child(description)
+	var scroll := ScrollContainer.new()
+	scroll.custom_minimum_size = Vector2(350, 170)
+	scroll.size_flags_vertical = Control.SIZE_EXPAND_FILL
+	column.add_child(scroll)
+	rewards_claims_column = VBoxContainer.new()
+	rewards_claims_column.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	scroll.add_child(rewards_claims_column)
+	rewards_status_label = Label.new()
+	rewards_status_label.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+	rewards_status_label.text = "Loading reward claims..."
+	column.add_child(rewards_status_label)
+	var refresh_button := Button.new()
+	refresh_button.text = "Refresh claims"
+	refresh_button.pressed.connect(_request_reward_claims)
+	column.add_child(refresh_button)
+	auth_panel.get_parent().add_child(rewards_panel)
+	_request_reward_claims()
+
+
+func _request_reward_claims() -> void:
+	if player_id.is_empty() or auth_token.is_empty() or rewards_pending or rewards_request == null:
+		return
+	rewards_action = "list"
+	var url := api_base_url + "/api/v1/account/characters/" + player_id + "/rewards"
+	var error := rewards_request.request(url, _api_headers(), HTTPClient.METHOD_GET)
+	if error == OK:
+		rewards_pending = true
+		if rewards_status_label != null:
+			rewards_status_label.text = "Loading reward claims..."
+	elif rewards_status_label != null:
+		rewards_status_label.text = "Could not request reward claims."
+
+
+func _claim_encounter_reward(enemy_id: String, encounter_id: String) -> void:
+	if player_id.is_empty() or auth_token.is_empty() or rewards_pending or rewards_request == null:
+		return
+	rewards_action = "claim"
+	var url := api_base_url + "/api/v1/account/characters/" + player_id + "/rewards/" + enemy_id + "/" + encounter_id + "/claim"
+	var error := rewards_request.request(url, _api_headers(), HTTPClient.METHOD_POST, "")
+	if error == OK:
+		rewards_pending = true
+		rewards_status_label.text = "Claiming encounter reward..."
+	else:
+		rewards_status_label.text = "Could not submit reward claim."
+
+
+func _on_rewards_request_completed(result: int, response_code: int, _headers: PackedStringArray, body: PackedByteArray) -> void:
+	rewards_pending = false
+	if player_id.is_empty():
+		return
+	if response_code == 401:
+		_expire_session()
+		return
+	var payload: Variant = JSON.parse_string(body.get_string_from_utf8())
+	if rewards_action == "list":
+		if result != HTTPRequest.RESULT_SUCCESS or response_code != 200 or not payload is Dictionary:
+			if rewards_status_label != null:
+				rewards_status_label.text = "Could not load reward claims."
+			return
+		_render_reward_claims(payload.get("claims", []))
+		return
+	if response_code == 409:
+		if rewards_status_label != null:
+			var error_code := str(payload.get("error", "reward_claim_failed")) if payload is Dictionary else "reward_claim_failed"
+			if error_code == "reward_inventory_full":
+				rewards_status_label.text = "Inventory stack full. Free space in that item stack, then retry; the reward remains pending."
+			else:
+				rewards_status_label.text = "Reward claim conflict: " + error_code
+		_request_reward_claims_deferred()
+		return
+	if result != HTTPRequest.RESULT_SUCCESS or response_code != 200 or not payload is Dictionary:
+		if rewards_status_label != null:
+			rewards_status_label.text = "Reward claim failed."
+		return
+	var character: Variant = payload.get("character", {})
+	if character is Dictionary:
+		_update_inventory(character.get("inventory", {}), character.get("bank", {}),
+			character.get("coins", current_coins), character.get("equipment", {}),
+			character.get("health", current_health))
+	if rewards_status_label != null:
+		rewards_status_label.text = "Reward claimed successfully."
+	_request_reward_claims_deferred()
+
+
+func _request_reward_claims_deferred() -> void:
+	# Avoid starting a second request from inside HTTPRequest.request_completed.
+	call_deferred("_request_reward_claims")
+
+
+func _render_reward_claims(claims: Variant) -> void:
+	if rewards_claims_column == null:
+		return
+	for child in rewards_claims_column.get_children():
+		child.queue_free()
+	if not claims is Array or claims.is_empty():
+		var empty_label := Label.new()
+		empty_label.text = "No encounter rewards are waiting."
+		rewards_claims_column.add_child(empty_label)
+		if rewards_status_label != null:
+			rewards_status_label.text = "Reward list is up to date."
+		return
+	var pending_count := 0
+	for value in claims:
+		if not value is Dictionary:
+			continue
+		var claim: Dictionary = value
+		var enemy_id := str(claim.get("enemyId", ""))
+		var encounter_id := str(claim.get("encounterId", ""))
+		var skill_id := str(claim.get("experienceSkillId", "combat"))
+		var xp := int(claim.get("experienceAmount", 0))
+		var parent_skill := str(claim.get("parentSkillId", ""))
+		var parent_xp := int(claim.get("parentExperienceAmount", 0))
+		var loot_id := str(claim.get("lootItemId", ""))
+		var loot_quantity := int(claim.get("lootQuantity", 0))
+		var status := str(claim.get("status", "pending"))
+		var summary := Label.new()
+		var reward_text := skill_id.capitalize() + " XP " + str(xp)
+		if not parent_skill.is_empty() and parent_xp > 0:
+			reward_text += " • " + parent_skill.capitalize() + " XP " + str(parent_xp)
+		if not loot_id.is_empty() and loot_quantity > 0:
+			reward_text += " • " + loot_id.replace("_", " ").capitalize() + " x" + str(loot_quantity)
+		summary.text = enemy_id.replace("-", " ").capitalize() + "\n" + reward_text + " • " + status.capitalize()
+		summary.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+		rewards_claims_column.add_child(summary)
+		if status == "pending":
+			pending_count += 1
+			var claim_button := Button.new()
+			claim_button.text = "Claim reward"
+			claim_button.pressed.connect(_claim_encounter_reward.bind(enemy_id, encounter_id))
+			rewards_claims_column.add_child(claim_button)
+		var separator := HSeparator.new()
+		rewards_claims_column.add_child(separator)
+	if rewards_status_label != null:
+		rewards_status_label.text = str(pending_count) + " pending encounter reward(s)."
 
 
 func _show_inventory_panel() -> void:
