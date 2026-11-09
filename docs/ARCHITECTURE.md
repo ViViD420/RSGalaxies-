@@ -153,3 +153,34 @@ Never hide or silently bypass an error. Stop, reproduce, diagnose and fix it bef
 - The responsive HUD action toolbar is viewport-aware and uses a two-column grid; device-level visual/touch QA remains outstanding.
 - Client Actions #182 (biome palette implementation) and #183 (biome regression tests) passed complete headless import/runtime smoke/Web export validation. Logs included the PASS line and no Godot SCRIPT ERROR or engine ERROR lines.
 - Boss development is intentionally paused while core movement, terrain, animation, interaction, UI and mobile controls are prioritized.
+
+
+## Source-driven design baseline — 2026-11-09
+
+The complete user-supplied SWG Pre-CU, OSRS and RS3 JSON manuals have been read and validated. The source-attributed synthesis is in `docs/DESIGN_SYNTHESIS.md`; accepted/adapted/rejected/deferred decisions are in `docs/DESIGN_DECISIONS.md`.
+
+The manuals support research into resource pools, skill/profession structures, resource attributes, crafting experimentation, settlement progression, faction states, action timing, movement models, XP progression, combat formulas, ability categories, salvage and economy sinks. They do not provide meaningful detail for quests, terrain/world layout, mobile ergonomics, accessibility, detailed UI design, animation systems or housing decoration. Do not attribute those topics to these files.
+
+The accepted product invariant remains broad skill progression with no arbitrary cap on skills learned. Specialization is expressed through equipment, tools, recipes, resources, stations, access and player investment. The SWG 250-point budget and box-dropping model are explicitly rejected. Exact tick rates, movement grids, combat formulas, market taxes, faction flags and distinctive reference-game rules are not to be copied.
+
+### Movement contract audit — 2026-11-09
+
+Inspected `client/scripts/player_controller.gd`, `client/scripts/main.gd`, `client/tests/player_controller_smoke_test.gd`, `client/scripts/world_terrain.gd`, `server/internal/game/movement.go` and `server/internal/httpapi/server.go`.
+
+- Client movement is continuous third-person 3D with camera-relative input, ground/air acceleration and deceleration, smoothed facing, jump buffer/coyote timers, local gravity/fall cap, bounded spring-arm zoom and mesh-only presentation.
+- Client movement sync sends planar X/Z every 200 ms, serializes one request at a time and applies the server's returned position/correction.
+- Server validates action eligibility, finite X/Z, zone bounds and planar speed at 7 units/second with 0.15 tolerance. It caps the elapsed-time calculation window at 250 ms. No Y, jump arc or terrain-height authority exists.
+- Terrain is deterministic and client-generated: 240-unit square, 96 subdivisions per side, broad/detail/biome noise, vertex-color surfaces and integrated trails. The same mesh creates trimesh collision and is sampled for local presentation.
+
+**Open correctness risk, not yet a reproduced defect:** because requests are serialized, network latency can make the interval between accepted movement updates exceed 250 ms. The server caps elapsed time at 250 ms while the client may have moved for longer, potentially causing an avoidable correction. Add a delayed-response/latency regression test before changing the protocol or constants. Do not relax speed or zone-bound checks to mask the issue.
+
+Vertical movement remains local presentation only. Any authoritative height/jump/collision implementation requires a complete server-side model for slopes, gravity, jump arcs, collision, latency, speed exploits and respawn.
+
+### Verified client/server checkpoint
+
+- Client Action #183 passed movement/terrain/camera/attack smoke, Godot 4.3 import and Web export. The smoke test reported the explicit PASS line and the log had no Godot `SCRIPT ERROR:` or `ERROR:` lines.
+- Client Actions #178/#179 failed on the unsupported `get_viewport_rect()` call and its type-inference consequence. The code was corrected to use `get_viewport().get_visible_rect().size.x`; Actions #180/#181 subsequently passed.
+- Server Action #602 passed race-enabled Go/PostgreSQL integration tests and `go vet ./...`. PostgreSQL emitted expected constraint-rejection log lines from negative-path integration tests (unique/check/FK constraints); Go test packages and Vet passed. Do not silently discard such database logs; classify them as expected only when the corresponding test intentionally exercises that rejection.
+- The CI runner also emitted a Node.js 20 deprecation warning for `actions/checkout@v4`. This is a tooling maintenance warning, not a Godot or Go test failure.
+
+Boss implementation remains preserved and boss expansion remains paused. Core movement, world presentation, interaction, animation, UI and mobile usability remain the active priorities.
