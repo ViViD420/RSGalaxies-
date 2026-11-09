@@ -1,6 +1,6 @@
 # RS Galaxies — Session Handoff
 
-Last updated: 2026-11-09 (boss damage primitive added; CI pending)
+Last updated: 2026-11-09 (boss snapshot contract added; CI pending)
 
 ## Project identity
 
@@ -349,3 +349,23 @@ Continue the existing boss vertical slice: integrate cycle-scoped boss persisten
 3. Extend player attack/defeat transaction paths so a boss killed by a player immediately receives terminal boss state and cannot attack during the same cycle.
 4. Add PostgreSQL concurrency/retry, defeat and respawn-cycle tests; verify actual server CI.
 5. Extend EnemySnapshot and Godot rendering, then register Stoneback Colossus only after full CI verification.
+
+## Authoritative boss snapshot groundwork (2026-11-09)
+
+- Added optional boss fields to game.EnemySnapshot: boss identity/version, phase ID/start time, active ability and telegraph start/deadline.
+- PostgreSQL enemy snapshot retrieval now LEFT JOINs boss_encounter_states using both enemy_id and the currently active encounter_id. Old-cycle boss data cannot leak into the current snapshot.
+- Boss timestamp fields are pointers so ordinary enemy snapshots omit all optional boss timestamp keys rather than emitting zero-time placeholders. Regression tests verify ordinary snapshots omit boss keys and boss snapshots serialize the supplied phase/ability/timing.
+- Commits:
+  - 2c7abb53e3a01848df77ab6faab725eb80fe661c — add boss snapshot fields.
+  - a44fc761bf983f78d7a3c1407cea067281ef647d — make optional boss timestamps pointer-backed.
+  - 1dc7623261eb06238cd0b8e076ea27806253be89 — populate optional timestamps only from non-NULL database values.
+  - 3c98572b1392c8a27f72926145df979faeb0c665 — add JSON contract regression tests.
+- This snapshot groundwork is not CI-verified and is not yet connected to a live boss. Since Stoneback Colossus is not in the enemy catalog and TickEnemyAI does not persist/advance boss state, current snapshots will continue to contain ordinary enemy data only.
+- Latest verified server Actions checkpoint is still #550 (42587608297); no current status checks are exposed for the new code commits. Do not claim tests passed.
+
+### Next integration steps
+1. Fetch live HEAD and check current Actions results before edits.
+2. Wire boss state into TickEnemyAI and player-initiated defeat paths. Keep the player-then-enemy lock order and persist player health, Defense XP, enemy AI and boss state in one transaction.
+3. Add PostgreSQL tests for one boss ability resolving once under concurrent ticks, stale worker rejection, player defeat, boss death, and a fresh state after respawn.
+4. Render the optional fields in Godot only after the authoritative transactional server path is integrated; preserve Rewards and all existing HUD panels.
+5. Only then register Stoneback Colossus and reuse the existing multi-item reward claims.
