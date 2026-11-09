@@ -255,3 +255,6 @@ Client Action #183 (run 42604378304) passed; #182 (42604361140) passed. Client #
 
 
 - [ ] Verify checked JSON parsing and malformed-payload feedback in Client Action #192 (42620660363).
+
+
+- [ ] Verify the targeted interaction JSON parser correction in Client Action #193 (42620773070).

@@ -1687,3 +1687,12 @@ The procedural placement algorithm is deterministic by design and now has direct
 - The callback now checks the parser Error return and requires Dictionary data before accessing response fields. Invalid data is surfaced as a player-facing interaction error without invoking the static parser helper that emitted Godot ERROR output.
 - The malformed-response regression remains in place.
 - Client Action #192 / run 42620660363 is the required verification run and is pending at this checkpoint.
+
+
+### Checked-parser patch targeting correction — 2026-11-09
+
+- Client Action #192 / run 42620660363 failed because the first patch matched an earlier JSON.parse_string() occurrence in _on_enemy_snapshots_completed rather than the intended _on_gather_completed callback. The interaction callback therefore still emitted the static JSON.parse_string() diagnostic for malformed input, and the focused regression failed.
+- The accidental enemy-snapshot parser change was reverted to its previous behavior.
+- Commit 912081d8cf0a3d1da5c35d641987ea0970a0ffaf now applies JSON.new().parse() only inside _on_gather_completed, with explicit Error and Dictionary checks.
+- Client Action #193 / run 42620773070 is the required validation run. Do not mark malformed-response handling verified until the focused test, full existing client smoke, import and Web export pass without engine errors.
+- Preserve #191 and #192 as separate historical failures: #191 demonstrated the static parser diagnostic; #192 demonstrated the patch was applied to the wrong callback.

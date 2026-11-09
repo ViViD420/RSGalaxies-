@@ -262,3 +262,8 @@ The shared interaction callback is being changed from JSON.parse_string() to JSO
 ### Checked JSON parser verification
 
 The interaction response callback now uses JSON.new().parse(), checks the returned Error and confirms the parsed value is a Dictionary before using it. The malformed-payload regression remains active and should now validate graceful error reporting without an engine diagnostic. Client Action #192 is pending.
+
+
+### Checked-parser patch targeting correction
+
+Client #192 exposed that the checked-parser edit had matched the earlier enemy snapshot parser instead of the shared interaction completion callback. The enemy snapshot edit was reverted; the checked JSON parser is now applied specifically to _on_gather_completed. Client Action #193 is pending verification. The two failed runs remain documented separately.
