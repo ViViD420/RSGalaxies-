@@ -103,7 +103,7 @@ func TestPostgresBossEncounterStatePersistsAndRejectsStaleCycles(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	definition, ok := game.FindBossEncounter("stoneback-colossus")
+	definition, ok := game.FindBossEncounterForEnemy("stoneback-colossus")
 	if !ok {
 		t.Fatal("Stoneback Colossus definition missing")
 	}
