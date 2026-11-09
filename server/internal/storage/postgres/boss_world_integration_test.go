@@ -369,6 +369,25 @@ func TestPostgresBossAbilityCanDefeatPlayerAndClearsTarget(t *testing.T) {
 	if err != nil {
 		t.Fatalf("seed boss spawn cycle: %v", err)
 	}
+	seedBossTx, err := db.BeginTx(ctx, nil)
+	if err != nil {
+		t.Fatal(err)
+	}
+	seedBossState := game.BossEncounterState{
+		EncounterID: encounterID,
+		DefinitionVersion: definition.Version,
+		PhaseID: "rampage",
+		PhaseStartedAt: now.Add(-time.Minute),
+		AbilityCooldowns: map[string]time.Time{"stone-fist": now.Add(10 * time.Second)},
+		LastUpdatedAt: now.Add(-time.Second),
+	}
+	if err := persistBossEncounterState(ctx, seedBossTx, enemy.ID, definition.ID, seedBossState); err != nil {
+		_ = seedBossTx.Rollback()
+		t.Fatalf("seed Rampage cooldown: %v", err)
+	}
+	if err := seedBossTx.Commit(); err != nil {
+		t.Fatal(err)
+	}
 	t.Cleanup(func() {
 		_, _ = db.ExecContext(context.Background(), "DELETE FROM zone_presence WHERE character_id=$1", string(playerID))
 		_, _ = db.ExecContext(context.Background(), "DELETE FROM enemy_spawn_state WHERE enemy_id=$1", enemy.ID)
@@ -379,9 +398,8 @@ func TestPostgresBossAbilityCanDefeatPlayerAndClearsTarget(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	// At 50% health the Rampage phase enables Ground Shatter. The seeded
-	// chasing state moves the boss to four units from the player, outside
-	// Stone Fist range but inside Ground Shatter's six-unit radius.
+	// Rampage is seeded with Stone Fist on cooldown. The target remains
+	// within Ground Shatter range, so the only eligible ability is Ground Shatter.
 	if err := accountRepo.tickEnemyAIForDefinition(ctx, enemy, now); err != nil {
 		t.Fatalf("start Ground Shatter telegraph: %v", err)
 	}
