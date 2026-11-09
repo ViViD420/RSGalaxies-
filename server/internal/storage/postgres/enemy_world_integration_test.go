@@ -53,17 +53,17 @@ func TestPostgresEnemyWorldTickCommitsAttackExactlyOnce(t *testing.T) {
 	// Two world workers may reach the same deadline concurrently. The player
 	// then enemy row-lock order must serialize them and allow only one hit.
 	var wait sync.WaitGroup
-	errors := make(chan error, 2)
+	tickErrors := make(chan error, 2)
 	for i := 0; i < 2; i++ {
 		wait.Add(1)
 		go func() {
 			defer wait.Done()
-			errors <- accountRepo.TickEnemyAI(ctx, enemyID, now.Add(4*time.Second))
+			tickErrors <- accountRepo.TickEnemyAI(ctx, enemyID, now.Add(4*time.Second))
 		}()
 	}
 	wait.Wait()
-	close(errors)
-	for err := range errors { if err != nil { t.Fatalf("concurrent enemy tick: %v", err) } }
+	close(tickErrors)
+	for err := range tickErrors { if err != nil { t.Fatalf("concurrent enemy tick: %v", err) } }
 
 	updated, err := accountRepo.GetCharacter(ctx, account.ID, playerID)
 	if err != nil { t.Fatal(err) }
