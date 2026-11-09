@@ -18,6 +18,7 @@ var (
 	ErrCombatCooldown = errors.New("combat action is cooling down")
 	ErrPlayerDefeated = errors.New("player is defeated")
 	ErrRestOutOfRange = errors.New("resting is only possible near a safe spawn")
+	ErrInvalidBossAttack = errors.New("invalid boss attack parameters")
 )
 
 type EnemyDefinition struct {
@@ -148,6 +149,46 @@ func (p *Player) ReceiveEnemyAttack(enemy EnemyDefinition, enemyPosition WorldPo
 	_, defenseBonus := p.EquipmentBonuses()
 	defenseLevel := p.Skills["defense"].Level
 	incoming := enemy.Attack - defenseBonus - (defenseLevel-1)/10
+	if incoming < 0 {
+		incoming = 0
+	}
+	if incoming > p.Health {
+		incoming = p.Health
+	}
+	if incoming > 0 {
+		if _, err := p.AwardExperience("defense", 1); err != nil && !errors.Is(err, ErrExperienceOverflow) {
+			return EnemyAttackResult{}, err
+		}
+	}
+	p.Health -= incoming
+	p.LastCombatAt = now.UTC()
+	return EnemyAttackResult{DamageReceived: incoming, PlayerDefeated: p.Health == 0}, nil
+}
+
+// ReceiveBossAttack resolves one completed, server-owned boss ability.
+// The ability supplies its own range because large-area boss attacks may reach
+// farther than an ordinary enemy's melee interaction radius. The caller must
+// persist this player mutation atomically with the boss telegraph transition.
+func (p *Player) ReceiveBossAttack(damage int, bossPosition WorldPosition, minRange, maxRange float64, now time.Time) (EnemyAttackResult, error) {
+	if damage <= 0 || bossPosition.ZoneID == "" || minRange < 0 || maxRange < minRange ||
+		math.IsNaN(minRange) || math.IsNaN(maxRange) ||
+		math.IsInf(minRange, 0) || math.IsInf(maxRange, 0) {
+		return EnemyAttackResult{}, ErrInvalidBossAttack
+	}
+	if err := p.CanAct(); err != nil {
+		return EnemyAttackResult{}, err
+	}
+	if p.Position.ZoneID != bossPosition.ZoneID {
+		return EnemyAttackResult{}, ErrEnemyOutOfRange
+	}
+	distance := math.Hypot(p.Position.X-bossPosition.X, p.Position.Z-bossPosition.Z)
+	if distance < minRange || distance > maxRange {
+		return EnemyAttackResult{}, ErrEnemyOutOfRange
+	}
+
+	_, defenseBonus := p.EquipmentBonuses()
+	defenseLevel := p.Skills["defense"].Level
+	incoming := damage - defenseBonus - (defenseLevel-1)/10
 	if incoming < 0 {
 		incoming = 0
 	}
