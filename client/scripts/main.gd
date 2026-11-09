@@ -5,6 +5,8 @@ const WORLD_TERRAIN_SCRIPT := preload("res://scripts/world_terrain.gd")
 const CORE_SKILL_IDS := ["blades", "cooking", "crafting", "defense", "farming", "foraging", "magic", "melee", "mining", "pistols", "polearms", "ranged", "rifles", "scavenging", "smithing", "strength", "unarmed", "woodcutting"]
 
 var status_label: Label
+var hud_info_panel: PanelContainer
+var action_toolbar: GridContainer
 var presence_label: Label
 var inventory_label: Label
 var auth_panel: PanelContainer
@@ -737,6 +739,7 @@ func _build_hud() -> void:
 	var panel := PanelContainer.new()
 	panel.position = Vector2(18, 18)
 	panel.custom_minimum_size = Vector2(390, 120)
+	hud_info_panel = panel
 	layer.add_child(panel)
 
 	var column := VBoxContainer.new()
@@ -748,6 +751,7 @@ func _build_hud() -> void:
 
 	var instructions := Label.new()
 	instructions.text = "WASD / pad: move  •  E / USE: gather or craft  •  Drag / mouse: look"
+	instructions.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
 	column.add_child(instructions)
 
 	status_label = Label.new()
@@ -763,72 +767,32 @@ func _build_hud() -> void:
 
 	_build_chat_panel(layer)
 	_build_auth_panel(layer)
-	skills_button = Button.new()
-	skills_button.text = "Skills"
-	skills_button.anchor_left = 1.0
-	skills_button.anchor_right = 1.0
-	skills_button.offset_left = -718
-	skills_button.offset_top = 18
-	skills_button.offset_right = -608
-	skills_button.offset_bottom = 62
+	action_toolbar = GridContainer.new()
+	action_toolbar.name = "ActionToolbar"
+	action_toolbar.columns = 2
+	action_toolbar.add_theme_constant_override("h_separation", 6)
+	action_toolbar.add_theme_constant_override("v_separation", 6)
+	action_toolbar.anchor_left = 1.0
+	action_toolbar.anchor_right = 1.0
+	action_toolbar.anchor_top = 0.0
+	action_toolbar.anchor_bottom = 0.0
+	action_toolbar.offset_top = 18
+	action_toolbar.offset_bottom = 132
+	layer.add_child(action_toolbar)
+
+	skills_button = _create_action_button(action_toolbar, "Skills", _toggle_skills_panel)
 	skills_button.visible = false
-	skills_button.pressed.connect(_toggle_skills_panel)
-	layer.add_child(skills_button)
-	bag_button = Button.new()
-	bag_button.text = "Bag"
-	bag_button.anchor_left = 1.0
-	bag_button.anchor_right = 1.0
-	bag_button.offset_left = -598
-	bag_button.offset_top = 18
-	bag_button.offset_right = -488
-	bag_button.offset_bottom = 62
+	bag_button = _create_action_button(action_toolbar, "Bag", _show_inventory_panel)
 	bag_button.visible = false
-	bag_button.pressed.connect(_show_inventory_panel)
-	layer.add_child(bag_button)
-	rest_button = Button.new()
-	rest_button.text = "Rest"
-	rest_button.anchor_left = 1.0
-	rest_button.anchor_right = 1.0
-	rest_button.offset_left = -478
-	rest_button.offset_top = 18
-	rest_button.offset_right = -368
-	rest_button.offset_bottom = 62
+	rest_button = _create_action_button(action_toolbar, "Rest", _rest_character)
 	rest_button.visible = false
-	rest_button.pressed.connect(_rest_character)
-	layer.add_child(rest_button)
-	equipment_button = Button.new()
-	equipment_button.text = "Gear"
-	equipment_button.anchor_left = 1.0
-	equipment_button.anchor_right = 1.0
-	equipment_button.offset_left = -358
-	equipment_button.offset_top = 18
-	equipment_button.offset_right = -248
-	equipment_button.offset_bottom = 62
+	equipment_button = _create_action_button(action_toolbar, "Gear", _show_equipment_panel)
 	equipment_button.visible = false
-	equipment_button.pressed.connect(_show_equipment_panel)
-	layer.add_child(equipment_button)
-	character_button = Button.new()
-	character_button.text = "Characters"
-	character_button.anchor_left = 1.0
-	character_button.anchor_right = 1.0
-	character_button.offset_left = -238
-	character_button.offset_top = 18
-	character_button.offset_right = -128
-	character_button.offset_bottom = 62
+	character_button = _create_action_button(action_toolbar, "Characters", _request_character_list)
 	character_button.visible = false
-	character_button.pressed.connect(_request_character_list)
-	layer.add_child(character_button)
-	logout_button = Button.new()
-	logout_button.text = "Sign out"
-	logout_button.anchor_left = 1.0
-	logout_button.anchor_right = 1.0
-	logout_button.offset_left = -118
-	logout_button.offset_top = 18
-	logout_button.offset_right = -18
-	logout_button.offset_bottom = 62
+	logout_button = _create_action_button(action_toolbar, "Sign out", _logout)
 	logout_button.visible = false
-	logout_button.pressed.connect(_logout)
-	layer.add_child(logout_button)
+
 	trade_button = Button.new()
 	trade_button.text = "Trade"
 	trade_button.anchor_left = 0.0
@@ -862,6 +826,31 @@ func _build_hud() -> void:
 
 	_build_boss_hud(layer)
 	add_child(layer)
+	get_viewport().size_changed.connect(_update_hud_layout)
+	_update_hud_layout()
+
+
+func _create_action_button(parent: GridContainer, caption: String, action: Callable) -> Button:
+	var button := Button.new()
+	button.text = caption
+	button.custom_minimum_size = Vector2(100.0, 34.0)
+	button.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	button.add_theme_font_size_override("font_size", 12)
+	button.pressed.connect(action)
+	parent.add_child(button)
+	return button
+
+
+func _update_hud_layout() -> void:
+	if hud_info_panel == null or action_toolbar == null:
+		return
+	var viewport_width := get_viewport_rect().size.x
+	var info_width := minf(390.0, maxf(140.0, viewport_width * 0.42))
+	var toolbar_width := minf(224.0, maxf(164.0, viewport_width * 0.46))
+	hud_info_panel.custom_minimum_size.x = info_width
+	action_toolbar.offset_left = -toolbar_width
+	action_toolbar.offset_right = -18.0
+
 
 func _build_boss_hud(layer: CanvasLayer) -> void:
 	boss_hud_panel = PanelContainer.new()
