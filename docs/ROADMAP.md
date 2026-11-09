@@ -129,6 +129,6 @@ Each milestone is a tested, reviewable slice. A feature is not complete because 
 - [x] Deterministic terrain mesh/collision, player grounding and physics-ray smoke tests (Client #161/#163/#172).
 - [x] Bounded third-person camera zoom with min/max regression coverage (Client #172).
 - [x] Initial server-confirmed melee swing presentation with visible motion and neutral-pose regression coverage (Client #172).
-- [ ] Add richer terrain paths, environmental dressing and biome transitions. Four starter-zone trails are integrated into terrain vertex colors (no separate mesh); centerline/color smoke validation is pending.
+- [ ] Add richer terrain paths, environmental dressing and biome transitions. Four starter-zone trails are integrated into terrain vertex colors (no separate mesh); centerline/color smoke validation passed in Client Action #177.
 - [ ] Improve interaction feedback, combat hit reactions, ability VFX and weapon-family animation sets.
 - [ ] Responsive HUD layout and consistent desktop/mobile interaction playtesting.
