@@ -924,3 +924,16 @@ Full job logs, not just conclusions, were inspected:
 - Client Action #146 (run 42600724191) was queued at the time of this note. Inspect full job results and logs. The strict scan must pass both editor import and Web export with zero `SCRIPT ERROR:` or `ERROR:` lines before resuming new feature work.
 - These are additional pre-existing defects uncovered because the client workflow previously trusted process exit codes. Do not hide or downplay them; all fixes and failed runs remain recorded.
 
+
+## Strict client validation green; movement regression test added (2026-11-09)
+
+- Client Action #146 (run 42600724191, commit a00cd41db33458b3400b4437bd01550520dd67fa) passed the strict client workflow. The job's Godot install, editor import/script validation, Web export and cleanup all completed successfully. The captured full job log contains no Godot `SCRIPT ERROR:` or engine `ERROR:` output; the only literal `ERROR:` match is the workflow's own grep command.
+- This strict run includes the earlier fixes for malformed sign-out indentation, duplicate inventory ScrollContainer, CanvasLayer touch-control parent typing, missing account-status helper and invalid viewport API/type inference. The controller change from commit 21432e2 is also included and parses/exports.
+- Added `client/tests/player_controller_smoke_test.gd` in commit 598d2ae2880f3504855387ea4120534ea5b60302. It creates a real floor and player scene in a headless SceneTree and checks acceleration from rest, forward movement, sustained speed, deceleration after release, grounded jump impulse and that placeholder mesh animation does not move the collision shape.
+- Updated client CI in commit 47e1c0dbcc28ddd4ca03144b8be0cffb6195e22a to run the smoke test through the same strict Godot log scanner before editor import and Web export.
+- The new test/CI revision must pass its own workflow before claiming the movement behavior is verified. If the test fails or exposes additional Godot errors, fix them before continuing.
+- The strict CI failure chain remains transparent: #144 surfaced duplicate `scroll`; #145 surfaced six CanvasLayer/Control argument errors, four missing `_set_account_status` calls, and invalid `get_viewport_rect()`/type inference; all were fixed in a00cd41. #146 is the first strict green after these corrections.
+
+### Current active work
+
+Core game focus only. The player controller now has smooth ground acceleration/deceleration, air control, coyote time, jump buffering, a fall-speed cap, smooth facing that preserves camera world yaw, and placeholder mesh bob/lean/pitch. The headless regression test and CI integration are the current in-progress task. Boss-specific work remains paused.
