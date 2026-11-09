@@ -374,6 +374,9 @@ func (r *AccountRepository) AttackEnemyForAccount(ctx context.Context,accountID 
 	}
 	if err!=nil{return game.Player{},game.CombatResult{},fmt.Errorf("update enemy state: %w",err)}
 	if err:=recordEncounterContribution(ctx,tx,encounterID,enemyID,accountID,player.ID,result.SkillID,result.DamageDealt,result.DamageReceived,now);err!=nil{return game.Player{},game.CombatResult{},err}
+	if result.EnemyDefeated {
+		if err:=settleEncounterRewards(ctx,tx,spawnDefinition,encounterID,now);err!=nil{return game.Player{},game.CombatResult{},err}
+	}
 	if err:=updateOwnedPlayer(ctx,tx,accountID,player);err!=nil{return game.Player{},game.CombatResult{},err}
 	if err:=tx.Commit();err!=nil{return game.Player{},game.CombatResult{},fmt.Errorf("commit combat action: %w",err)}
 	return player,result,nil
