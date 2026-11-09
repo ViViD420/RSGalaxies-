@@ -27,6 +27,15 @@ func _run_movement_smoke_test() -> void:
 		_fail("Procedural terrain mesh has no renderable surfaces.")
 		return
 
+	var trail_visual := terrain.get_node_or_null("TrailSurface") as MeshInstance3D
+	if trail_visual == null or trail_visual.mesh == null or trail_visual.mesh.get_surface_count() == 0:
+		_fail("Terrain-conforming frontier trail mesh did not generate.")
+		return
+	var trail_bounds := trail_visual.mesh.get_aabb()
+	if trail_bounds.position.x < -120.0 or trail_bounds.position.z < -120.0 or trail_bounds.end.x > 120.0 or trail_bounds.end.z > 120.0:
+		_fail("Generated trail network extends outside the authoritative zone bounds.")
+		return
+
 	var terrain_body := terrain.get_node_or_null("TerrainCollision") as StaticBody3D
 	var terrain_collision := terrain.get_node_or_null("TerrainCollision/TerrainShape") as CollisionShape3D
 	if terrain_body == null or terrain_collision == null or terrain_collision.shape == null:
