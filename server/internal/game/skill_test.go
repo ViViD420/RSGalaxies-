@@ -107,7 +107,7 @@ func TestEnsureSkillProgressBackfillsWithoutResettingExistingProgress(t *testing
 	if got["magic"] != (SkillProgress{Level: 1}) || got["pistols"] != (SkillProgress{Level: 1}) || got["rifles"] != (SkillProgress{Level: 1}) || got["melee"] != (SkillProgress{Level: 1}) || got["ranged"] != (SkillProgress{Level: 1}) {
 		t.Fatalf("new skills were not initialized at level 1: magic=%+v pistols=%+v rifles=%+v", got["magic"], got["pistols"], got["rifles"])
 	}
-	if len(got) != len(SkillDefinitions())+2 { t.Fatalf("got %d entries including two preserved legacy keys, want %d", len(got), len(SkillDefinitions())+2) }
+	if len(got) != len(SkillDefinitions())+1 { t.Fatalf("got %d entries including one preserved legacy key, want %d", len(got), len(SkillDefinitions())+1) }
 }
 
 func TestAwardExperience(t *testing.T) {
