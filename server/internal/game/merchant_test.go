@@ -40,10 +40,10 @@ func TestMerchantSaleRejectsCurrencyOverflowWithoutConsumingItems(t *testing.T) 
  if player.Coins!=math.MaxInt64||player.Inventory["softwood_log"]!=2{t.Fatalf("overflow sale mutated player: coins=%d inventory=%v",player.Coins,player.Inventory)}
 }
 
-func TestRareLootMaterialsCannotBePurchasedFromStarterMerchant(t *testing.T) {
+func TestRareLootAndCraftedGearCannotBePurchasedFromStarterMerchant(t *testing.T) {
 	player, err := NewPlayer("rare-material-merchant", "RareMaterialWayfarer", time.Now())
 	if err != nil { t.Fatal(err) }
-	for _, itemID := range []string{"rat_tooth", "boar_tusk"} {
+	for _, itemID := range []string{"rat_tooth", "boar_tusk", "rat_tooth_blade"} {
 		if _, err := player.BuyItem(itemID, 1); !errors.Is(err, ErrUnknownMerchantItem) {
 			t.Fatalf("buy %s error=%v, want ErrUnknownMerchantItem", itemID, err)
 		}
