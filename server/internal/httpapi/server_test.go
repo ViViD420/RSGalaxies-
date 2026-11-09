@@ -255,7 +255,7 @@ func (s *testAccountStore) AuthenticateSession(_ context.Context,token string,_ 
 func (s *testAccountStore) RevokeSession(_ context.Context,token string,_ time.Time)error{s.revoked[token]=true;return nil}
 
 type testCharacterStore struct { players map[string]map[game.PlayerID]game.Player; enemies map[string]game.EnemyState; messages []game.ChatMessage; lastChat map[game.PlayerID]time.Time; nextChatID int64; presence map[game.PlayerID]game.RemotePlayer; trades map[string]game.TradeSnapshot; activeTrades map[game.PlayerID]string; nextTradeID int; rewardClaims map[game.PlayerID][]game.EncounterRewardClaim }
-func newTestCharacterStore()*testCharacterStore{return &testCharacterStore{players:map[string]map[game.PlayerID]game.Player{},enemies:map[string]game.EnemyState{},lastChat:map[game.PlayerID]time.Time{},presence:map[game.PlayerID]game.RemotePlayer{},trades:map[string]game.TradeSnapshot{},activeTrades:map[game.PlayerID]string{}}}
+func newTestCharacterStore()*testCharacterStore{return &testCharacterStore{players:map[string]map[game.PlayerID]game.Player{},enemies:map[string]game.EnemyState{},lastChat:map[game.PlayerID]time.Time{},presence:map[game.PlayerID]game.RemotePlayer{},trades:map[string]game.TradeSnapshot{},activeTrades:map[game.PlayerID]string{},rewardClaims:map[game.PlayerID][]game.EncounterRewardClaim{}}}
 func (s *testCharacterStore) CreateCharacter(_ context.Context,accountID string,player game.Player)error{
 	if s.players[accountID]==nil{s.players[accountID]=map[game.PlayerID]game.Player{}}
 	if _,ok:=s.players[accountID][player.ID];ok{return game.ErrPlayerAlreadyExists}
