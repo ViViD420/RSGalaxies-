@@ -575,9 +575,9 @@ func TestMarketCatalogIsPublicAndContainsServerPrices(t *testing.T) {
  if response.Code!=http.StatusOK{t.Fatalf("market catalog status=%d",response.Code)}
  var payload struct{Items []game.ItemDefinition `json:"items"`;StartingCoins int64 `json:"startingCoins"`}
  if err:=json.Unmarshal(response.Body.Bytes(),&payload);err!=nil{t.Fatal(err)}
- if len(payload.Items)!=19||payload.StartingCoins!=game.StartingCoins{t.Fatalf("unexpected market catalog: %+v",payload)}
+ if len(payload.Items)!=22||payload.StartingCoins!=game.StartingCoins{t.Fatalf("unexpected market catalog: %+v",payload)}
  if payload.Items[0].BuyPrice<=payload.Items[0].SellPrice{t.Fatal("merchant catalog should expose a grounded buy/sell spread")}
-	rareMaterials := map[string]bool{"rat_tooth":false,"boar_tusk":false}
+	rareMaterials := map[string]bool{"rat_tooth":false,"boar_tusk":false,"stoneback_scale":false,"stoneback_plate":false,"stoneback_core":false}
 	for _, item := range payload.Items {
 		if _, ok := rareMaterials[item.ID]; ok {
 			rareMaterials[item.ID] = item.BuyPrice == 0 && item.SellPrice > 0
@@ -773,7 +773,7 @@ func TestWorldCatalogBundlesAllPublicDefinitions(t *testing.T) {
 		StartingCoins int64 `json:"startingCoins"`
 	}
 	if err:=json.Unmarshal(response.Body.Bytes(),&payload);err!=nil{t.Fatal(err)}
-	if len(payload.Skills)!=18||len(payload.Zones)!=1||len(payload.Nodes)!=4||len(payload.Items)!=19||len(payload.Enemies)!=2||len(payload.Recipes)!=7||len(payload.Stations)!=2||payload.StartingCoins!=game.StartingCoins {
+	if len(payload.Skills)!=18||len(payload.Zones)!=1||len(payload.Nodes)!=4||len(payload.Items)!=22||len(payload.Enemies)!=2||len(payload.Recipes)!=7||len(payload.Stations)!=2||payload.StartingCoins!=game.StartingCoins {
 		t.Fatalf("incomplete world catalog skills=%d zones=%d nodes=%d items=%d enemies=%d recipes=%d stations=%d coins=%d",len(payload.Skills),len(payload.Zones),len(payload.Nodes),len(payload.Items),len(payload.Enemies),len(payload.Recipes),len(payload.Stations),payload.StartingCoins)
 	}
 }
