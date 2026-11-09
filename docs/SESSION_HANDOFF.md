@@ -1304,7 +1304,7 @@ The client can render terrain elevation, camera and visual animation, but the cu
 At the time of this handoff:
 - Repository: https://github.com/ViViD420/RSGalaxies-
 - Branch: main
-- Last inspected HEAD before this handoff update: 5badddd18de1838c8362aabaa9a13bf38a468236 (terrain biome palette pending validation was the latest docs commit).
+- Latest source-code validation checkpoint: client code/test commit 477fec24d8a570dd9d84c2d4c9d0ae220fb3d34f. Documentation packaging commits after that are 769b1e08d8a1ca3c9126ea90feaa6948cec743d0 (architecture), 3ae1a006ef629fc7095d6a0b072cb92e9e3a107e (roadmap) and 248de4402b0feb4fe31dc1410fce7e88683a5eb8 (new-project source guide). The handoff is being updated again after these commits; always fetch main HEAD before resuming.
 - Latest code changes before that docs commit:
   - 9744dc2ed029551db277f0ce98c019d28172e56c: deterministic moisture noise and biome surface palette in client/scripts/world_terrain.gd.
   - 477fec24d8a570dd9d84c2d4c9d0ae220fb3d34f: regression tests for deterministic biome color sampling and multiple surface palettes.
@@ -1393,3 +1393,16 @@ ABSOLUTE RULE: never hide an error. If any error, failed test, warning affecting
 The user wants broad skill progression without arbitrary skill caps; specialization comes from profession-specific equipment/tools/recipes/materials/stations and meaningful economic interdependence. The game vision combines SWG sandbox professions/economy/social world, OSRS readable progression and gathering/crafting loops, and RS3-informed modern UI/ability feedback, all implemented as an original science-fiction MMO.
 
 Boss development is explicitly paused. Focus heavily on core game mechanics, player movement, terrain/world generation, environmental visuals, animation states, abilities and combat feedback, UI/UX, mobile controls, gathering/crafting/progression and the moment-to-moment game loop. Improve existing code wherever possible; do not restart or duplicate systems. Continue autonomously, make reviewable commits, and always update docs/SESSION_HANDOFF.md, docs/ARCHITECTURE.md and docs/ROADMAP.md. Verify CI and all errors after every meaningful change. Start by completing the reference-game synthesis and auditing movement/world/client architecture, then implement the highest-value core improvements.
+
+
+## Handoff packaging completion and current checkpoint (2026-11-09)
+
+- Added docs/NEW_PROJECT_SOURCE_REFERENCE_GUIDE.md in commit 248de4402b0feb4fe31dc1410fce7e88683a5eb8. It gives the next project/chat a detailed process for discovering, validating, reading and synthesizing the user's three JSON reference summaries, plus design matrices, source attribution, originalization boundaries, core priorities and error policy.
+- Expanded this SESSION_HANDOFF.md with the new-project transition instructions, the absolute never-hide-errors rule, known user design decisions, current server/client baseline, CI evidence, boss pause, core-first priorities, required document update routine and a ready-to-copy opening prompt.
+- Updated docs/ARCHITECTURE.md in commit 769b1e08d8a1ca3c9126ea90feaa6948cec743d0 with the verified biome terrain and core-first focus.
+- Updated docs/ROADMAP.md in commit 3ae1a006ef629fc7095d6a0b072cb92e9e3a107e with the validated terrain palette, trails, responsive HUD, movement/camera/attack slice and remaining core priorities.
+- Latest client code/test commit remains 477fec24d8a570dd9d84c2d4c9d0ae220fb3d34f. Client Actions #182 and #183 both passed; latest run #183 is 42604378304. The documentation commits do not alter runtime code.
+- Last server validation known at this checkpoint remains Server Action #602 / run 42598330356, race-enabled PostgreSQL integration tests and go vet passing. No server code was changed in this core client milestone. A new chat must inspect the latest server workflow rather than assume this remains current.
+- No client workflow is pending from the current biome code: #182 and #183 are completed success. No new runtime code is introduced by the handoff/architecture/roadmap/guide commits. The only explicit manual QA still open is physical desktop/mobile visual and touch testing; movement server-height authority remains a design decision, not a completed feature.
+- Source JSON files have not yet been supplied in this chat. Their exact names, locations, structure and content are unknown. The next chat must discover and read the real files; the example paths/schema in the guide are suggestions only.
+- Current implementation repo remains ViViD420/RSGalaxies- on main. The user intends to create a new ChatGPT project called RS Galaxies with source folders containing the three JSON summaries. The next chat must distinguish that ChatGPT project from a GitHub repository and must not migrate, overwrite or redirect code without checking the user's intended repository.
