@@ -1,6 +1,6 @@
 # RS Galaxies — Session Handoff
 
-Last updated: 2026-11-09 (Stoneback transactional vertical slice verified; player-facing HUD defeat feedback improved; new client CI pending)
+Last updated: 2026-11-09 (core terrain biome palette, responsive HUD, movement/camera/attack animation smoke checks passing; boss work intentionally paused; new-project source-reference handoff added)
 
 ## Project identity
 
@@ -1141,3 +1141,255 @@ Core game focus only. The player controller now has smooth ground acceleration/d
 - Terrain vertex colors now distinguish lush moss/grass, drier scrub and elevated rocky soil while preserving the existing elevation palette and integrated dirt trails. No extra render mesh or collision surface is introduced.
 - Expanded the headless test in commit 477fec2 to sample biome colors repeatedly at the same coordinates, require deterministic output, and confirm at least three distinct surface palettes across the zone.
 - Client Actions for commits 9744dc2/477fec2 are pending. Validate color array, import, Web export and all prior terrain/movement/camera/attack assertions. Fix any failure before further world dressing.
+
+
+# NEW CHAT / NEW PROJECT TRANSFER — READ THIS FIRST (2026-11-09)
+
+This section is a high-priority continuation instruction for the next ChatGPT project/chat. It supplements the older detailed implementation history above; it does not erase or supersede it. The full historical record is deliberately retained, including failed CI runs and the fixes that followed.
+
+## 1. Absolute engineering rule: errors are never hidden or bypassed
+
+The user explicitly requires this rule to be followed at all times:
+
+1. Every error, warning that affects correctness, failing test, parser issue, compile issue, runtime exception, CI failure, data-integrity problem, or unexplained behavior discovered during development must be recorded honestly.
+2. Stop moving on to unrelated features when a real defect has been found. Reproduce it, inspect the complete relevant logs and code, identify the actual cause (or clearly label a hypothesis as unconfirmed), fix it, add or improve a regression test, and rerun the relevant checks.
+3. Never silence errors by filtering logs, weakening assertions, skipping tests, disabling checks, masking exit codes, or changing CI to accept a broken state. Do not remove a test simply because it fails.
+4. Do not describe a failure as harmless or fixed without evidence. If a first attempted fix fails, record that too, revise the diagnosis, and continue until the error is fixed or transparently identify a concrete blocker and leave it at the top of the handoff.
+5. Keep the original failing run/commit in the history. Append the failure, root cause, correction commit and successful verification run; never rewrite history to make the project appear cleaner.
+6. A run that merely imports scripts is not equivalent to a runtime test; a runtime test is not equivalent to device visual QA; a passing unit test is not equivalent to production readiness.
+7. Before every handoff, list all currently unresolved failures, pending Actions, unverified assumptions and manual QA gates explicitly. If there are none, say so only after checking.
+
+This is a non-negotiable user requirement, not a suggestion.
+
+## 2. New project / reference-source plan
+
+The user is going to create a new ChatGPT project named RS Galaxies and place detailed Markdown-formatted summaries of three reference games into separate JSON files in the new project's source folders:
+
+- Star Wars Galaxies (SWG)
+- Old School RuneScape (OSRS)
+- RuneScape 3 (RS3)
+
+The exact new project file paths have not yet been supplied. Do not invent paths, assume files are already present, or claim they have been read. At the beginning of the new project chat:
+
+1. Inspect the available project files/source folders and enumerate the actual file paths.
+2. Find the three JSON reference files by their contents and filenames. Read each complete JSON file. Validate that each is parseable JSON; if any is malformed, report the exact issue and fix or ask for the corrected file rather than silently skipping it.
+3. Extract every embedded Markdown field as source material and read it fully. Do not stop at JSON keys, metadata, abstracts or partial snippets if the full summaries are available.
+4. Keep the three source games separate during initial analysis. Build a structured comparison only after reading all three.
+5. Do not assume every described mechanic should be copied. Extract design patterns, player motivations, loops, strengths, trade-offs and player expectations. Record source attribution (SWG / OSRS / RS3) for each extracted idea.
+6. Synthesize a coherent original RS Galaxies design: select what to adopt, adapt, combine or reject, and explain why. Keep an explicit decision log so the game does not become a contradictory collection of copied systems.
+7. Do not copy proprietary code, assets, models, animations, maps, dialogue, quest text, interface artwork, music, sound or distinctive protected expression. Use the source JSONs as research/design references, not as implementation code or permission to reproduce copyrighted material. Create original names, lore, assets, UI, progression tuning and implementations.
+8. The existing repository at https://github.com/ViViD420/RSGalaxies- is the current implementation/history baseline. If the user creates a separate code repository or project workspace, first inspect its actual files and ask/confirm before migrating code or changing remotes. Do not accidentally overwrite the existing repo or confuse a ChatGPT Project with a GitHub repository.
+9. Read this complete SESSION_HANDOFF.md and docs/NEW_PROJECT_SOURCE_REFERENCE_GUIDE.md before coding. Also read docs/ARCHITECTURE.md, docs/ROADMAP.md, docs/SKILL_ROSTER.md and relevant subsystem documents. The latest repository state must always override stale chat summaries.
+
+### Recommended source JSON organization (proposal only; actual paths must be discovered)
+
+A clean structure, if the user has not already chosen one, is:
+
+- source/references/star_wars_galaxies.json
+- source/references/old_school_runescape.json
+- source/references/runescape_3.json
+
+Each file can contain structured metadata plus Markdown summary content. For example:
+
+{
+  "source_game": "Star Wars Galaxies",
+  "short_name": "SWG",
+  "summary_version": 1,
+  "last_reviewed": "YYYY-MM-DD",
+  "sections": [
+    {
+      "id": "professions_and_skills",
+      "title": "Professions and Skills",
+      "markdown": "Full Markdown notes go here...",
+      "topics": ["professions", "skills", "specialization"],
+      "design_signals": ["player identity", "economic interdependence"]
+    }
+  ],
+  "references": [
+    {
+      "title": "Source title",
+      "url": "https://...",
+      "note": "What this source supports"
+    }
+  ]
+}
+
+This is an optional schema suggestion only. If the user has already created a different valid schema, adapt to it; do not force a rewrite. Markdown may be stored in fields named markdown, content, summary, notes or similar. Discover the real schema before parsing. If files are large, read them in complete sections and track which sections have been processed so nothing is omitted.
+
+### How to use the three game summaries
+
+Create a synthesis matrix with at least these domains (expand it to cover what the source files actually contain):
+
+- World structure, zones, exploration, travel, world scale, terrain, landmarks and environmental storytelling.
+- Player identity, character creation, broad progression, skill leveling, profession identity, class restrictions and respecialization.
+- Gathering, resource nodes, resource quality, depletion/respawn, tool requirements and resource circulation.
+- Crafting, recipes, stations, experimentation, quality, schematics, component chains and crafting professions.
+- Combat, target selection, weapon families, accuracy, damage, defense, abilities, cooldowns, status effects, animations, telegraphs, enemy AI and group encounters.
+- Loot, drops, item rarity, reward fairness, contribution, economy sinks/sources and reward presentation.
+- Equipment, attributes, armor, durability, item identity, mods, requirements and class/profession compatibility.
+- Economy, vendors, player trading, markets, currency, scarcity, taxation and anti-exploit controls.
+- Social play, chat, groups, guilds, parties, mentoring, events and community systems.
+- Housing, player cities, settlements, resource structures, ownership, permissions and decoration.
+- Quests, missions, narrative, exploration incentives and repeatable activities.
+- UI/UX, inventory, bank/storage, skill panels, maps, action bars, tooltips, accessibility and mobile ergonomics.
+- Progression pacing, XP curves, level caps, prestige/mastery, endgame and retention loops.
+- Technical/game-feel observations: movement responsiveness, camera, animation timing, hit feedback, sound cues, visual readability, network authority and performance.
+
+For each design concept, record:
+- Reference source and section.
+- What the source game does (neutral summary).
+- What player need/motivation it serves.
+- What works well and what trade-offs/weaknesses exist.
+- Proposed RS Galaxies adaptation.
+- What must be original or changed to avoid copying distinctive expression.
+- Dependencies and affected systems.
+- Acceptance criteria / test strategy.
+- Status: candidate, accepted, rejected, deferred, implemented, or needs user decision.
+
+Do not make the three source games equal authorities on every topic. Use SWG as a reference for sandbox professions, player economy, social world, crafting depth and player-driven settlements; use OSRS as a reference for readable long-term skill progression, resource loops, item utility and clear progression goals; use RS3 as a reference for modern interface affordances, action/ability feedback, accessibility and contemporary quality-of-life patterns. These are initial research lenses, not a mandate to copy any particular feature. Let the actual source JSON evidence and user preferences decide.
+
+## 3. Core game direction and design pillars
+
+The game is an original sandbox MMORPG intended to combine:
+- SWG-like open-ended world, professions, player economy, social systems, crafting depth, housing and settlements.
+- OSRS-like readable, broad, long-term skill progression, gathering/crafting loops, item utility and meaningful unlocks.
+- RS3-informed modern usability, responsive UI, ability feedback, animation clarity and quality-of-life improvements.
+- An original science-fiction setting, original lore, names, characters, assets, animations, music, sound and progression balance.
+
+The user's explicit progression preference is broad progression: characters may train many/all skills. Do not impose arbitrary class-locked skill caps. Identity and specialization should come from profession paths, equipment/tool requirements, recipe knowledge, resource access, stations, economic interdependence and player choices. Equipment remains profession/class-specific where appropriate, so mastery and gearing create meaningful specialization without preventing broad skill development.
+
+Long-term features include a meaningful player economy, crafting chains, player trade, loot, housing, settlements, group play and bosses. However, the user has now explicitly asked to pause boss-focused work and concentrate heavily on the core game. Do not resume boss expansion unless the user asks or the core milestone is genuinely complete and the user approves the shift.
+
+## 4. Existing implementation baseline — preserve it, do not restart
+
+Current implementation is in ViViD420/RSGalaxies-, branch main. This is an existing full-stack prototype, not an empty project. Preserve working code and architecture. Do not recreate the project, discard working systems, or replace the stack without a demonstrated need.
+
+### Backend / server baseline
+- Go authoritative HTTP game server with PostgreSQL persistence and transactional repository patterns.
+- Account authentication and account-owned character operations; bearer sessions stored as digests, bounded session lifecycle and security controls.
+- Character CRUD, 18-skill catalog and XP progression.
+- Server-time movement validation, starter zone and world bounds.
+- Gathering resources: trees, stone, copper and wild herbs; range/charges/respawn and atomic inventory/XP rewards.
+- Crafting stations, recipes, inventory/bank, coins, equipment, merchants, healing and consumables.
+- Local zone chat and leased multiplayer presence with remote avatar snapshots.
+- Escrow-backed player-to-player trading with invitation/acceptance, offers, two-sided confirmation, cancellation, expiry and recovery; production trade route is feature-gated.
+- Persistent enemy AI/spawn state, sticky single-target identity, encounter cycles and contribution ledger.
+- Durable multi-item reward settlement/claims and Stoneback boss server/client vertical slice. The boss work exists; it is intentionally not the immediate focus.
+- PostgreSQL migrations and integration tests; transactions/row locks protect critical state changes.
+
+### Skill roster and progression
+There are 18 active skills:
+- Parent combat skills: Melee, Ranged.
+- Combat specializations: Blades, Polearms, Unarmed, Pistols, Rifles, Magic.
+- Co-skills: Defense, Strength.
+- Noncombat: Farming, Foraging, Mining, Scavenging, Cooking, Crafting, Smithing, Woodcutting.
+Combat is a gameplay system, not itself a skill. Tactics is deferred. Broad progression is allowed. Six combat specializations are only future Jedi mastery candidates; no Jedi unlock system is currently implemented. Existing docs (docs/SKILL_ROSTER.md, docs/COMBAT_PROGRESSION.md, docs/JEDI_PROGRESSION_DESIGN.md) explain details.
+
+### Godot client baseline
+- Godot 4.3 third-person 3D client with keyboard, mouse, touch movement, jump, camera rotation and bounded camera zoom.
+- Account login/registration, multi-character selection and creation.
+- Server-driven world catalog, gathering node visuals, crafting stations, enemies, inventory/bank, merchant, equipment, skills, chat, presence and player trade UI.
+- Responsive HUD action toolbar with Skills, Bag, Rest, Gear, Chars and Sign out controls; viewport-aware width and wrapping labels.
+- Procedural deterministic terrain with generated mesh and collision.
+- Terrain palette now includes broad elevation plus deterministic moisture-driven grass/moss, dry scrub and rocky surface variation; four starter-zone trails are integrated into the same terrain mesh through smooth vertex-color blending, not separate coplanar meshes.
+- Player movement controller has ground/air acceleration/deceleration, jump buffering, coyote time, turn smoothing, third-person camera and bounded zoom.
+- Initial melee attack swing is a deterministic allocation-free sine arc applied to presentation mesh only after successful server-confirmed attack. It does not alter the collision body.
+- The client is still a prototype with placeholder low-poly visuals; no claim of final art, polished animations or complete mobile usability.
+
+### Important authority boundary
+The client can render terrain elevation, camera and visual animation, but the current server movement contract primarily validates X/Z movement, speed, bounds and time. Do not imply that client terrain height or client-only animation is server-authoritative. Any future vertical movement/terrain collision authority must be designed explicitly and tested server-side before being relied upon for gameplay.
+
+## 5. Latest verified repository / CI checkpoint
+
+At the time of this handoff:
+- Repository: https://github.com/ViViD420/RSGalaxies-
+- Branch: main
+- Last inspected HEAD before this handoff update: 5badddd18de1838c8362aabaa9a13bf38a468236 (terrain biome palette pending validation was the latest docs commit).
+- Latest code changes before that docs commit:
+  - 9744dc2ed029551db277f0ce98c019d28172e56c: deterministic moisture noise and biome surface palette in client/scripts/world_terrain.gd.
+  - 477fec24d8a570dd9d84c2d4c9d0ae220fb3d34f: regression tests for deterministic biome color sampling and multiple surface palettes.
+- Client Action #182, run 42604361140, commit 9744dc2...: SUCCESS. Godot 4.3 install, editor import/script validation, runtime movement/terrain/camera/attack smoke test and Web export all passed. The PASS line was present; no Godot SCRIPT ERROR or engine ERROR lines were present. https://github.com/ViViD420/RSGalaxies-/actions/runs/42604361140
+- Client Action #183, run 42604378304, commit 477fec24...: SUCCESS. The updated biome palette determinism/multiple-surface test and full client validation passed; PASS line present; no Godot SCRIPT ERROR or engine ERROR lines. https://github.com/ViViD420/RSGalaxies-/actions/runs/42604378304
+- Client #181, run 42604113289, commit dd32e8a...: SUCCESS; responsive toolbar sizing refinement passed.
+- Client #180, run 42604040649, commit 3d46875...: SUCCESS; Godot 4.3 parser/API correction and Web export passed.
+- Server #602, run 42598330356, commit 96e67caa...: SUCCESS; race-enabled PostgreSQL integration tests and go vet passed. No server code has changed in the current terrain/HUD work since this checkpoint; verify latest server Actions on every new resume.
+- Historical failures remain recorded in earlier sections. In particular:
+  - #178/#179 caught unsupported get_viewport_rect() use and related type inference in Godot 4.3; fixed in 3d46875, verified #180.
+  - #173/#174 renderer errors and #176 stale test expectation led to removal of separate trail mesh and integration into terrain vertex colors; final #177 passed.
+  - #166–#171 attack animation timing/resource issues led to allocation-free sine swing; #172 passed.
+- Strict client CI scans runtime logs for Godot SCRIPT ERROR and ERROR: lines. Preserve this gate.
+- Visual QA on physical desktop/mobile devices has NOT been performed by CI. Responsive layout code is syntax/runtime-smoke validated, not visually signed off.
+
+## 6. Immediate next-chat procedure
+
+Before coding in the new project/chat:
+1. Read the entire latest docs/SESSION_HANDOFF.md (including this section), not just the top or a snippet.
+2. Read docs/NEW_PROJECT_SOURCE_REFERENCE_GUIDE.md completely.
+3. Inspect the actual new project's source tree and read all three source JSON summaries fully. Report discovered paths and schemas.
+4. Read docs/ARCHITECTURE.md, docs/ROADMAP.md, docs/SKILL_ROSTER.md, docs/COMBAT_PROGRESSION.md, docs/COMBAT.md, docs/PLAYER_TRADE_DESIGN.md, and relevant subsystem docs before making architectural changes.
+5. Verify current GitHub main HEAD, recent commits, open PRs if any, latest server/client workflow runs, and job-level logs. The values above are a checkpoint, not a substitute for fresh inspection.
+6. If using a different project repository, establish which repository is authoritative with the user before pushing changes. Preserve the existing repository and its history.
+7. Summarize the three reference games in a comparison matrix, create a prioritized RS Galaxies design synthesis/decision log, and map each accepted idea to current systems, gaps, dependencies and tests.
+8. Then resume implementation in small, reviewable commits. Focus on the core game, not bosses.
+
+## 7. Core development priorities — bosses paused
+
+Suggested priority sequence; re-evaluate after reading the source JSONs and current code:
+
+### P0 — correctness, movement and world foundation
+- Audit movement end-to-end: client input, acceleration/deceleration, jump buffering/coyote time, server movement validation, speed/time/bounds checks, presence updates, respawn/rest and movement under latency.
+- Define movement acceptance criteria: no speed exploits, no teleporting, no stuck states, no jitter, correct grounded/air transitions, camera remains controllable, touch controls are usable.
+- Explicitly decide whether server should remain X/Z-only for this prototype or adopt authoritative height/terrain collision. Do not bolt on Y-axis validation without a complete model for slopes, jumps, gravity, latency and collision.
+- Improve terrain generation with deterministic biomes, elevation, material transitions, trails, natural landmarks, resource placement, vegetation/rocks/props and zone-specific identity. Keep collision generation performant and consistent with visuals.
+- Add terrain generation performance/bounds tests and stable seed reproducibility.
+
+### P1 — moment-to-moment game feel
+- Build a coherent player state/presentation system: idle, walk, run, start/stop, turn, jump, fall, land, attack, gather, craft, use item, hit reaction, death/respawn.
+- Keep animation/presentation separate from collision/authoritative state. Trigger attacks only after server acceptance; no client-side damage prediction unless designed with reconciliation.
+- Add weapon-family attack presentation and readable ability feedback; use original animations/VFX/audio and no borrowed game assets.
+- Improve target selection, target feedback, interaction prompts, gather progress, damage numbers, hit reactions, cooldown/ability state, resource depletion and respawn feedback.
+- Add explicit tests for animation transitions and cancellation; keep headless renderer lifecycle clean.
+
+### P2 — UI/UX and mobile
+- Audit every existing panel, HUD layout and callback for responsive sizing, focus behavior, input capture, modal stacking, request cancellation and state refresh.
+- Improve inventory, bank, equipment, skills, crafting, market, chat and trade UI consistency. Add tooltips, item details, category filters and clear error/success states.
+- Design a mobile-friendly interaction layer: virtual movement stick, camera-look region, action/interact buttons, safe-area margins and scalable HUD. Do not just shrink desktop controls.
+- Add UI smoke tests and physical-device visual/touch testing. Headless CI is not enough.
+
+### P3 — world activities and progression
+- Deepen gathering/resource loops, resource identity/quality and respawn logic; tie them to profession tools and skill requirements.
+- Expand crafting chains and meaningful recipes; preserve transactional net-stack validation and server-side authority.
+- Build Farming and other broad skills into the actual world loops; ensure XP, unlocks, items and stations all agree with the skill roster.
+- Add original quests, exploration incentives, social systems and economy sinks/sources based on the reference synthesis.
+
+### P4 — later, after core quality
+- Revisit group combat, bosses, advanced AI/threat, endgame and deeper settlement/housing systems only after the core game has a stable, enjoyable loop. The Stoneback boss exists; do not keep extending it while the user has asked to pause boss work.
+
+## 8. Definition of done for every change
+
+For every feature or refactor:
+- Inspect the current implementation and reuse/upgrade it rather than duplicate it.
+- Define behavior and edge cases before coding.
+- Add focused regression tests; include server integration tests for persistence/concurrency and client smoke tests for Godot behavior.
+- Run formatter/static analysis/unit tests/integration tests/import/export/runtime smoke tests as applicable.
+- Inspect the complete logs, not only the green badge. Look for warnings/errors and confirm the actual PASS lines.
+- Fix every discovered error before starting unrelated work.
+- Commit code and tests together where practical; update SESSION_HANDOFF, ARCHITECTURE and ROADMAP after meaningful progress.
+- State exactly what passed, what failed, what remains unverified and what must be tested manually.
+- Never call a feature finished solely because the code compiles.
+
+## 9. Handoff command for the next chat
+
+Copy the following as the first message in the new RS Galaxies project chat (adjust repository only if the user has explicitly chosen a different code repository):
+
+RS GALAXIES — CONTINUE DEVELOPMENT FROM THE COMPLETE SOURCE-DRIVEN HANDOFF.
+
+You are continuing an existing original MMORPG project, not starting over. First read the entire docs/SESSION_HANDOFF.md and docs/NEW_PROJECT_SOURCE_REFERENCE_GUIDE.md in the current implementation repository. Then inspect the new RS Galaxies project's source folders and read the complete Star Wars Galaxies, OSRS and RS3 reference JSON files, including every embedded Markdown section. Validate the JSON and report actual paths/schema; do not guess file names or skip content. Use them as attributed design research to create an original design synthesis and decision log; do not copy proprietary code, assets, maps, dialogue, UI artwork, animations, music or distinctive expression.
+
+Inspect the current repository main HEAD, recent commits, latest server/client GitHub Actions and job logs before coding. Existing implementation baseline is ViViD420/RSGalaxies- on main; preserve its working systems and history, and do not touch the separate GalaxyMMO project. If this new project is intended to use a different repository, confirm that repository before modifying/pushing anything.
+
+ABSOLUTE RULE: never hide an error. If any error, failed test, warning affecting correctness, runtime issue or CI failure is found, stop unrelated work, reproduce it, inspect logs, identify and fix the cause, add regression coverage and rerun checks before moving on. Never weaken tests, filter errors or claim success without full evidence. Record failures and fixes in the handoff.
+
+The user wants broad skill progression without arbitrary skill caps; specialization comes from profession-specific equipment/tools/recipes/materials/stations and meaningful economic interdependence. The game vision combines SWG sandbox professions/economy/social world, OSRS readable progression and gathering/crafting loops, and RS3-informed modern UI/ability feedback, all implemented as an original science-fiction MMO.
+
+Boss development is explicitly paused. Focus heavily on core game mechanics, player movement, terrain/world generation, environmental visuals, animation states, abilities and combat feedback, UI/UX, mobile controls, gathering/crafting/progression and the moment-to-moment game loop. Improve existing code wherever possible; do not restart or duplicate systems. Continue autonomously, make reviewable commits, and always update docs/SESSION_HANDOFF.md, docs/ARCHITECTURE.md and docs/ROADMAP.md. Verify CI and all errors after every meaningful change. Start by completing the reference-game synthesis and auditing movement/world/client architecture, then implement the highest-value core improvements.
