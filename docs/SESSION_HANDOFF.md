@@ -24,7 +24,7 @@ An original sandbox MMORPG combining long-form skill progression and item gamepl
 
 - Go authoritative world API, domain model and PostgreSQL persistence.
 - The active skill catalog now contains 18 skills with private parent/co-skill metadata. New characters receive all 18 at level 1; PostgreSQL loading backfills missing entries for older characters. Legacy `combat` and `tactics` XP keys remain preserved in existing records but are inactive, omitted from the client skill panel and cannot receive new XP. The starter sword selects Blades; unarmed attacks select Unarmed. Enemy defeat awards specialization XP and one-quarter parent XP; successful hits award Strength XP; taking damage awards Defense XP. Strength contributes to melee damage, Defense to mitigation and item-defined armor requirements. The six specializations alone are marked as future Jedi mastery candidates. Accuracy remains a derived outcome. See docs/SKILL_ROSTER.md and docs/COMBAT_PROGRESSION.md.
-- Hidden Jedi progression remains a documented future feature in docs/JEDI_PROGRESSION_DESIGN.md. All 12 combat skills, including broad Combat, are privately marked mastery-eligible; Accuracy is not a skill. The hidden challenge, entitlement and Jedi character archetype are still not implemented or exposed.
+- Hidden Jedi progression remains a documented future feature in docs/JEDI_PROGRESSION_DESIGN.md. The six combat specializations—Blades, Polearms, Unarmed, Pistols, Rifles and Magic—are the only future mastery candidates; parent skills, Defense and Strength do not count. See docs/JEDI_PROGRESSION_DESIGN.md. The hidden challenge, entitlement and Jedi character archetype are still not implemented or exposed.
 - Defensive in-memory repository copies and concurrency-safe experience awards.
 - Starter zone, spawn point, server-time movement validation and world bounds.
 - Tree, stone, copper and wild-herb gathering nodes with range checks, charges, respawn and atomic inventory/XP rewards. The Foraging skill feeds a new herbal-bundle workbench recipe. Godot chooses the nearest target and builds resource props from the server node catalog rather than hardcoded node IDs.
@@ -53,7 +53,7 @@ An original sandbox MMORPG combining long-form skill progression and item gamepl
 - Client sends a presence heartbeat every five seconds, polls the current zone every three seconds and renders remote character avatars/nameplates with smoothed position updates; stale characters are removed.
 - Player-trade panel supports inviting nearby players, accepting invitations, staging up to 20 item types plus coins, editing/removing staged stacks, updating offers, confirming/cancelling, polling active trades after reconnect and refreshing inventory whenever assets enter or leave escrow.
 - All Godot API HTTPRequests use bounded timeouts and disable automatic redirects to prevent bearer-token forwarding to redirected hosts.
-- Live authenticated skills panel with all 20 ordinary skills, per-skill XP progress bars and next-level XP remaining (including the 200M XP cap display at level 99); requests are cancelled when characters change or sign out.
+- Live authenticated skills panel with all 18 active ordinary skills, per-skill XP progress bars and next-level XP remaining (including the 200M XP cap display at level 99); requests are cancelled when characters change or sign out.
 - Bearer-authenticated movement, gathering, crafting, bank transfers, merchant buy/sell panel, equipment panel and full inventory/bank contents panel with search, category filters, quantity sorting and selectable stack transfers.
 - Starter bank chest, merchant stall/NPC, copper vein, forge and enemy spawns in the test world; coin balance, health, attack/defense bonuses, bag and bank counts appear in the HUD. Equipped sword/armor pieces have simple client-side visuals.
 - Market panel loads item names and prices from the server catalog.
@@ -89,13 +89,14 @@ An original sandbox MMORPG combining long-form skill progression and item gamepl
 
 ## Next engineering tasks
 
-1. Verify server CI run #390 for the approved 18-skill roster, private mastery metadata, existing-character backfill and updated catalog tests.
-2. Add meaningful XP sources and server-authoritative abilities to combat disciplines in small vertical slices. Keep hit chance derived from governing skill, ability and equipment; do not add an Accuracy skill.
-3. Keep the server/client workflows green, then run trade abuse/load tests before enabling public production trade.
-4. Implement the hidden Jedi challenge and entitlement only after persistence, concurrency and anti-tampering tests are ready; follow docs/JEDI_PROGRESSION_DESIGN.md and keep all unlock metadata private.
-6. Test the multi-item Godot trade panel, invitation/confirmation feedback and remote-avatar movement on a real phone.
-7. Continue authoritative movement replication, reconnect recovery, enemy AI/movement and combat animations.
-8. Build the boss encounter framework after ordinary combat is stable, then a dedicated loot-table/reward framework and deeper crafting (tool/station/skill requirements, material properties and item quality). Unique item instances/durability are prerequisites for boss unique drops and correct dual-wield equipment. Defer advanced non-combat profession branches until the core loops are stable.
+1. Finish ordinary combat foundations: server-owned weapon/ability definitions, derived hit resolution, enemy aggro, movement, leash and behavior state. See docs/COMBAT.md and docs/COMBAT_PROGRESSION.md.
+2. Add durable encounter participation and reward settlement before implementing boss phases or group loot.
+3. Implement the reusable boss encounter state machine after ordinary enemy AI and combat are stable.
+4. Add dedicated loot tables, idempotent reward claims and explicit inventory-overflow handling before valuable boss drops.
+5. Expand crafting into tools, station and skill requirements, material properties, quality and production chains that consume boss materials.
+6. Keep server/client workflows green; run trade abuse/load tests before enabling public production trade.
+7. Defer hidden Jedi challenge implementation until progression persistence, concurrency and anti-tampering tests are ready; only the six active combat specializations are mastery candidates.
+8. Test the Godot trade panel, invitations/confirmations and remote-avatar movement on a real phone; continue authoritative movement replication and reconnect recovery.
 9. Complete production account safeguards: email verification, recovery, MFA, distributed rate limiting, admin account tools and security/load review.
 
 ## Continuation instruction
