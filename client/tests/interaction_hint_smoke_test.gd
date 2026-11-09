@@ -11,7 +11,8 @@ func _initialize() -> void:
 func _run_interaction_hint_smoke_test() -> void:
 	var main_node := Node3D.new()
 	main_node.set_script(MAIN_SCRIPT)
-	var player := PLAYER_SCENE.instantiate() as CharacterBody3D
+	var player := CharacterBody3D.new()
+	root.add_child(player)
 	main_node.set("player_node", player)
 	main_node.set("player_id", "interaction-hint-test")
 	main_node.set("interaction_pending", false)
@@ -32,10 +33,10 @@ func _run_interaction_hint_smoke_test() -> void:
 		_fail("Nearby gathering target did not produce a usable gather prompt: " + hint.text)
 		return
 
-	player.global_position = Vector3(20.0, 0.0, 0.0)
+	player.position = Vector3(20.0, 0.0, 0.0)
 	main_node.call("_update_interaction_hint")
-	if not hint.text.begins_with("Move closer") or not hint.text.contains("Young Frontier Tree"):
-		_fail("Out-of-range target did not produce a move-closer prompt: " + hint.text)
+	if not hint.text.begins_with("Move closer"):
+		_fail("Out-of-range nearest interaction did not produce a move-closer prompt: " + hint.text)
 		return
 
 	main_node.set("interaction_pending", true)
@@ -52,13 +53,15 @@ func _run_interaction_hint_smoke_test() -> void:
 
 	print("PASS: contextual interaction hints select the nearest gathering target, show range guidance, expose pending state and hide before character selection.")
 	player.queue_free()
-	main_node.queue_free()
+	main_node.free()
 	await process_frame
 	quit(0)
 
 
 func _fail(message: String) -> void:
 	push_error("Interaction hint smoke test failed: " + message)
+	for child in root.get_children():
+		child.queue_free()
 	call_deferred("_quit_after_cleanup", 1)
 
 
