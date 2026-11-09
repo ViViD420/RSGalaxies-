@@ -21,7 +21,7 @@ The unlock should feel like a discovery, not a visible checklist. Before it is e
 
 ### Combat roster dependency
 
-The core roster now contains 20 ordinary skills, including 12 combat skills: Combat, Melee, Defense, Strength, Tactics, Unarmed, Blades, Polearms, Ranged, Magic, Pistols and Rifles. All 12 combat skills are explicitly marked as mastery-eligible in server-internal metadata, including the broad Combat skill. Accuracy is not a skill and cannot count as a separate mastery. The random 2–5 requirement is supported by the expanded conceptual roster, but the unlock itself remains unimplemented until challenge persistence, transaction integration, concurrency tests and archetype gates are built. The eligibility flag and category are not serialized to public API responses. See SKILL_ROSTER.md and COMBAT_PROGRESSION.md.
+The approved core roster contains 18 active ordinary skills. Only the six combat specializations—Blades, Polearms, Unarmed, Pistols, Rifles and Magic—are eligible for Jedi mastery. Melee and Ranged parent skills, Defense and Strength co-skills, and all non-combat skills do not count. Retired Combat and Tactics progress keys are preserved only for compatibility and are not eligible. Accuracy is not a skill. The proposed random 2–5 requirement remains technically possible but should be rebalanced against a six-skill mastery pool before implementation; a 5-of-6 requirement may be excessively restrictive. The unlock itself remains unimplemented until challenge persistence, transaction integration, concurrency tests and archetype gates are built. The eligibility flag and category are not serialized to public API responses. See SKILL_ROSTER.md and COMBAT_PROGRESSION.md.
 
 ## Jedi character and progression
 
@@ -76,7 +76,7 @@ Tests must cover:
 - Migrations work on both a fresh database and an existing populated database.
 
 Rollout sequence:
-1. Maintain the expanded, internally categorized combat roster and complete combat ability/weapon loops in focused slices.
+1. Maintain the six explicitly eligible combat specializations and complete combat ability/weapon loops in focused slices.
 2. Implement and test the hidden challenge and account entitlement without exposing Jedi in the client.
 3. Add character archetypes and secure Jedi character creation.
 4. Add Jedi skills and Force ability definitions.
