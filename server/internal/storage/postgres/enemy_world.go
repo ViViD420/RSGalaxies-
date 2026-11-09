@@ -95,16 +95,24 @@ func readEnemyAIState(ctx context.Context, reader enemyStateReader, enemy game.E
 
 func (r *AccountRepository) activeEnemyCandidates(ctx context.Context, enemy game.EnemyDefinition, state game.EnemyAIState, now time.Time) ([]enemyTargetCandidate, error) {
 	config := enemyAIConfig(enemy)
-	rows, err := r.db.QueryContext(ctx, `SELECT account_id, character_id FROM zone_presence
-		WHERE zone_id=$1 AND last_seen_at>$2
-		AND position_x BETWEEN $3 AND $4 AND position_z BETWEEN $5 AND $6
-		ORDER BY CASE WHEN character_id=$9 THEN 0 ELSE 1 END,
-		POWER(position_x-$7,2)+POWER(position_z-$8,2), character_id
+	rows, err := r.db.QueryContext(ctx, `SELECT p.account_id, p.character_id FROM zone_presence p
+		LEFT JOIN enemy_spawn_state spawn ON spawn.enemy_id=$11
+		LEFT JOIN enemy_encounter_participants contribution
+			ON contribution.enemy_id=spawn.enemy_id
+			AND contribution.encounter_id=spawn.encounter_id
+			AND contribution.character_id=p.character_id
+		WHERE p.zone_id=$1 AND p.last_seen_at>$2
+		AND p.position_x BETWEEN $3 AND $4 AND p.position_z BETWEEN $5 AND $6
+		ORDER BY CASE WHEN p.character_id=$9 THEN 0 ELSE 1 END,
+			(COALESCE(contribution.damage_dealt,0)*2
+			 + COALESCE(contribution.damage_received,0)
+			 + COALESCE(contribution.action_count,0)) DESC,
+			POWER(p.position_x-$7,2)+POWER(p.position_z-$8,2), p.character_id
 		LIMIT $10`,
 		state.Position.ZoneID, now.UTC().Add(-game.PresenceLease),
 		state.Position.X-config.LeashRange, state.Position.X+config.LeashRange,
 		state.Position.Z-config.LeashRange, state.Position.Z+config.LeashRange,
-		state.Position.X, state.Position.Z, state.TargetCharacterID, game.MaxZonePresence)
+		state.Position.X, state.Position.Z, state.TargetCharacterID, game.MaxZonePresence, enemy.ID)
 	if err != nil { return nil, fmt.Errorf("select active enemy targets: %w", err) }
 	defer rows.Close()
 	candidates := make([]enemyTargetCandidate, 0, game.MaxZonePresence)
