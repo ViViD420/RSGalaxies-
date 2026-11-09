@@ -2,7 +2,6 @@ package postgres
 
 import (
 	"context"
-	"database/sql"
 	"errors"
 	"fmt"
 	"testing"
@@ -55,19 +54,32 @@ func TestPostgresEnemyDefeatCreatesOneDurableRewardClaim(t *testing.T) {
 	if settlements != 1 || claims != 1 { t.Fatalf("settlements=%d claims=%d, want one each", settlements, claims) }
 
 	var status, skillID, parentSkillID string
-	var xp, parentXP, lootQuantity int
-	var lootItemID sql.NullString
+	var xp, parentXP int
 	err = db.QueryRowContext(ctx, `SELECT status,experience_skill_id,experience_amount,
-		parent_skill_id,parent_experience_amount,loot_item_id,loot_quantity
+		parent_skill_id,parent_experience_amount
 		FROM enemy_encounter_reward_claims WHERE enemy_id=$1 AND character_id=$2`,
-		enemyID, string(playerID)).Scan(&status,&skillID,&xp,&parentSkillID,&parentXP,&lootItemID,&lootQuantity)
+		enemyID, string(playerID)).Scan(&status,&skillID,&xp,&parentSkillID,&parentXP)
 	if err != nil { t.Fatal(err) }
-	lootValid := !lootItemID.Valid && lootQuantity == 0 ||
-		lootItemID.Valid && (lootItemID.String == "rat_pelt" || lootItemID.String == "rat_tooth") && lootQuantity == 1
+	itemRows, err := db.QueryContext(ctx, `SELECT item_id,quantity
+		FROM enemy_encounter_reward_claim_items WHERE enemy_id=$1 AND character_id=$2 ORDER BY item_id`,
+		enemyID,string(playerID))
+	if err != nil { t.Fatal(err) }
+	loot := make([]game.ItemQuantity,0)
+	for itemRows.Next() {
+		var item game.ItemQuantity
+		if err := itemRows.Scan(&item.ItemID,&item.Quantity); err != nil { t.Fatal(err) }
+		loot = append(loot,item)
+	}
+	if err := itemRows.Err(); err != nil { t.Fatal(err) }
+	if err := itemRows.Close(); err != nil { t.Fatal(err) }
+	lootValid := len(loot) <= 1
+	if len(loot) == 1 {
+		lootValid = (loot[0].ItemID == "rat_pelt" || loot[0].ItemID == "rat_tooth") && loot[0].Quantity == 1
+	}
 	if status != "pending" || skillID != "unarmed" || xp != 25 ||
 		parentSkillID != "melee" || parentXP != 6 || !lootValid {
-		t.Fatalf("durable reward claim = status:%s skill:%s xp:%d parent:%s/%d loot:%v/%d",
-			status,skillID,xp,parentSkillID,parentXP,lootItemID,lootQuantity)
+		t.Fatalf("durable reward claim = status:%s skill:%s xp:%d parent:%s/%d loot:%+v",
+			status,skillID,xp,parentSkillID,parentXP,loot)
 	}
 	var playerSkills string
 	if err := db.QueryRowContext(ctx, "SELECT skills::text FROM players WHERE id=$1", string(playerID)).Scan(&playerSkills); err != nil { t.Fatal(err) }
@@ -85,6 +97,7 @@ func TestPostgresEncounterRewardClaimIsAtomicAndIdempotent(t *testing.T) {
 	player, err := game.NewPlayer(playerID, "ClaimWayfarer", now)
 	if err != nil { t.Fatal(err) }
 	player.Inventory["rat_pelt"] = 100
+	player.Inventory["rat_tooth"] = 100
 	if err := repo.CreateCharacter(ctx, account.ID, player); err != nil { t.Fatal(err) }
 
 	const enemyID = "reward-claim-flow-enemy"
@@ -94,8 +107,16 @@ func TestPostgresEncounterRewardClaimIsAtomicAndIdempotent(t *testing.T) {
 	if _, err := db.ExecContext(ctx, `INSERT INTO enemy_encounter_reward_claims(
 		enemy_id,encounter_id,account_id,character_id,experience_skill_id,experience_amount,
 		parent_skill_id,parent_experience_amount,loot_item_id,loot_quantity,status,created_at)
-		VALUES($1,$2,$3,$4,'blades',25,'melee',6,'rat_pelt',1,'pending',$5)`,
+		VALUES($1,$2,$3,$4,'blades',25,'melee',6,NULL,0,'pending',$5)`,
 		enemyID,encounterID,account.ID,string(playerID),now); err != nil { t.Fatal(err) }
+	for _, item := range []game.ItemQuantity{
+		{ItemID:"rat_pelt",Quantity:1},
+		{ItemID:"rat_tooth",Quantity:2},
+	} {
+		if _, err := db.ExecContext(ctx, `INSERT INTO enemy_encounter_reward_claim_items(
+			enemy_id,encounter_id,character_id,item_id,quantity) VALUES($1,$2,$3,$4,$5)`,
+			enemyID,encounterID,string(playerID),item.ItemID,item.Quantity); err != nil { t.Fatal(err) }
+	}
 	t.Cleanup(func() {
 		_, _ = db.ExecContext(context.Background(), "DELETE FROM enemy_encounter_reward_claims WHERE enemy_id=$1", enemyID)
 		_, _ = db.ExecContext(context.Background(), "DELETE FROM enemy_encounter_settlements WHERE enemy_id=$1", enemyID)
@@ -104,7 +125,7 @@ func TestPostgresEncounterRewardClaimIsAtomicAndIdempotent(t *testing.T) {
 	})
 
 	listed, err := repo.ListEncounterRewardClaimsForAccount(ctx, account.ID, playerID)
-	if err != nil || len(listed) != 1 || listed[0].Status != "pending" {
+	if err != nil || len(listed) != 1 || listed[0].Status != "pending" || len(listed[0].LootItems) != 2 {
 		t.Fatalf("list owned pending reward claims = %+v err=%v", listed, err)
 	}
 	if _, err := repo.ListEncounterRewardClaimsForAccount(ctx, "another-account", playerID); !errors.Is(err, game.ErrPlayerNotFound) {
@@ -131,12 +152,14 @@ func TestPostgresEncounterRewardClaimIsAtomicAndIdempotent(t *testing.T) {
 	locked, err := repo.lockOwnedPlayer(ctx,tx,account.ID,playerID)
 	if err != nil { t.Fatal(err) }
 	locked.Inventory["rat_pelt"] = 99
+	locked.Inventory["rat_tooth"] = 98
 	if err := updateOwnedPlayer(ctx,tx,account.ID,locked); err != nil { t.Fatal(err) }
 	if err := tx.Commit(); err != nil { t.Fatal(err) }
 
 	claimedPlayer, claim, err := repo.ClaimEncounterRewardForAccount(ctx,account.ID,playerID,enemyID,encounterID,now.Add(time.Second))
 	if err != nil { t.Fatalf("claim after freeing stack space: %v",err) }
-	if claim.Status != "claimed" || claimedPlayer.Inventory["rat_pelt"] != 100 ||
+	if claim.Status != "claimed" || len(claim.LootItems) != 2 ||
+		claimedPlayer.Inventory["rat_pelt"] != 100 || claimedPlayer.Inventory["rat_tooth"] != 100 ||
 		claimedPlayer.Skills["blades"].Experience != 25 || claimedPlayer.Skills["melee"].Experience != 6 {
 		t.Fatalf("claimed reward state: claim=%+v inventory=%d blades=%d melee=%d",
 			claim,claimedPlayer.Inventory["rat_pelt"],claimedPlayer.Skills["blades"].Experience,claimedPlayer.Skills["melee"].Experience)
@@ -144,6 +167,7 @@ func TestPostgresEncounterRewardClaimIsAtomicAndIdempotent(t *testing.T) {
 	replayedPlayer, replayedClaim, err := repo.ClaimEncounterRewardForAccount(ctx,account.ID,playerID,enemyID,encounterID,now.Add(2*time.Second))
 	if err != nil { t.Fatalf("idempotent claim retry: %v",err) }
 	if replayedClaim.Status != "claimed" || replayedPlayer.Inventory["rat_pelt"] != 100 ||
+		replayedPlayer.Inventory["rat_tooth"] != 100 ||
 		replayedPlayer.Skills["blades"].Experience != 25 || replayedPlayer.Skills["melee"].Experience != 6 {
 		t.Fatalf("claim retry duplicated reward: claim=%+v inventory=%d blades=%d melee=%d",
 			replayedClaim,replayedPlayer.Inventory["rat_pelt"],replayedPlayer.Skills["blades"].Experience,replayedPlayer.Skills["melee"].Experience)
