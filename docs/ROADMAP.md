@@ -40,9 +40,12 @@
 - [x] Persisted sticky enemy target identity: maintain a valid active target between ticks and select the nearest eligible character when that target is lost.
 - [x] Unique encounter-cycle IDs per enemy spawn life and durable per-character damage/action contribution ledger; autonomous incoming damage updates existing participants.
 - [x] Threat scoring for enemy target selection (active sticky target first; otherwise current-cycle contribution score, then distance); PostgreSQL integration test passed in server Actions #472.
-- [ ] Party membership and support-action contribution rules; initial damage-based anti-leech policy and atomic ordinary-enemy settlement are implemented, but need CI verification and group-policy expansion.
+- [x] Initial server-side anti-leech policy and atomic ordinary-enemy settlement: 10% enemy-max-health damage threshold, two-minute active-damage window, contribution-weighted XP and one deterministic loot recipient; server Actions #497 passed.
+- [ ] Party membership, healing/support contribution types and group/boss reward distribution.
 - [x] Migration 0013: durable per-encounter settlement keys and per-character pending/claimed reward-claim records with uniqueness, ownership, quantity and state constraints; migration/registration/model/integration Actions #473–#476 passed.
-- [ ] Verify CI for migration 0014 specialization attribution, damage-based anti-leech policy, atomic enemy-defeat settlement, authenticated claim APIs and full-inventory/idempotent claim integration tests. API/client claim UX still needs integration.
+- [x] Migration 0014 persists each participant's combat specialization for XP attribution; Actions #479–#481 passed.
+- [x] Authenticated reward-claim API, account-scoped listing, idempotent redemption and full-stack pending behavior; settlement/claim integration suite passed in #497.
+- [ ] Final HTTP API ownership/success-path tests (#498–#503) and Godot Rewards panel follow-up CI (#129–#132); client panel is implemented.
 - [ ] Bounded pathfinding, party aggro, combat animations, enemy abilities, weapon-family expansion and server-derived hit/miss outcomes (see docs/COMBAT_PROGRESSION.md).
 - [ ] Boss encounter framework: multi-phase bosses, encounter state, group contribution/eligibility, telegraphs, persistence and reward integration. Build after ordinary enemy/combat foundations.
 - [ ] Dedicated loot framework: server-owned weighted drop tables, guaranteed/conditional rewards, unique drops, contribution rules, anti-duplication and economy safeguards.
