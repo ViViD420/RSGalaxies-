@@ -317,6 +317,7 @@ func (r *AccountRepository) UnequipItemForAccount(ctx context.Context,accountID 
 func (r *AccountRepository) AttackEnemyForAccount(ctx context.Context,accountID string,id game.PlayerID,enemyID string,now time.Time)(game.Player,game.CombatResult,error){
 	tx,err:=r.db.BeginTx(ctx,nil);if err!=nil{return game.Player{},game.CombatResult{},err};defer tx.Rollback()
 	player,err:=r.lockOwnedPlayer(ctx,tx,accountID,id);if err!=nil{return game.Player{},game.CombatResult{},err}
+	if err:=player.CanAct();err!=nil{return player,game.CombatResult{},err}
 	enemy,ok:=game.FindEnemy(enemyID);if !ok{return player,game.CombatResult{},game.ErrUnknownEnemy}
 	spawnDefinition := enemy
 	if _,err:=tx.ExecContext(ctx,`INSERT INTO enemy_spawn_state(enemy_id,health,initialized) VALUES($1,0,FALSE) ON CONFLICT(enemy_id) DO NOTHING`,enemyID);err!=nil{return game.Player{},game.CombatResult{},fmt.Errorf("initialize enemy state: %w",err)}
