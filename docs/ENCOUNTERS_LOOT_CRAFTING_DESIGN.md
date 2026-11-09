@@ -144,7 +144,7 @@ The current implementation is a first ordinary-enemy policy, not the final party
 - This policy is intentionally limited: no party membership, support/healing contribution types, multi-drop weighted loot tables, unique item instances, loot rolls or boss-specific distribution rules. Do not treat it as the final group-boss policy.
 
 
-## Multi-drop reward pipeline (implementation integrated; CI verification pending)
+## Multi-drop reward pipeline (implementation integrated; CI-verified)
 
 The versioned domain catalog supports guaranteed drops and multiple independent weighted bonus rolls. Each bonus roll has its own 10,000-point range; a total weight below 10,000 creates an explicit no-drop interval. Quantity ranges are independently resolved for each guaranteed or selected bonus result, and duplicate item results are aggregated with stack-cap validation. Existing one-roll tables remain supported through the same resolver.
 
@@ -152,7 +152,7 @@ Migration 0015 adds `enemy_encounter_reward_claim_items`, keyed by encounter cla
 
 The authenticated claim DTO exposes `lootItems` while retaining the first-item legacy fields for older clients. Listing aggregates all item rows; redemption locks the claim and every item row, validates every inventory stack before changing any stack or XP, and commits all item/XP changes plus the claimed state in one transaction. If any item stack is full, the complete claim remains pending and retryable. The Godot Rewards panel renders every item line and still accepts legacy one-item payloads.
 
-The resolver's first CI attempts (#529–#532) exposed an order-dependent test panic; run #533 passed after the test was corrected to locate definitions by ID. Migration, persistence, API, and client integration runs are being checked separately. Do not treat this milestone as CI-green until the latest server and client Actions runs complete successfully.
+The resolver's first CI attempts (#529–#532) exposed an order-dependent test panic; run #533 passed after the test was corrected to locate definitions by ID. Migration file/registration #534/#535, DTO #536, persistence #537, integration #538, HTTP #539, live enemy switch #540, updated settlement assertions #541 and migration backfill/idempotency #542 all passed. Client Rewards UI runs #133/#134 also passed. The multi-item pipeline is now CI-validated end to end.
 
 ## Initial weighted loot-table implementation (server Actions #518 passed)
 
