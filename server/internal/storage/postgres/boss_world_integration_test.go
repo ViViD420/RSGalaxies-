@@ -273,3 +273,112 @@ func TestPostgresBossWorldTickInterruptsAndResetsEncounterCycle(t *testing.T) {
 	}
 }
 
+func TestPostgresBossAbilityCanDefeatPlayerAndClearsTarget(t *testing.T) {
+	databaseURL := os.Getenv("RS_GALAXIES_TEST_DATABASE_URL")
+	if databaseURL == "" {
+		t.Skip("RS_GALAXIES_TEST_DATABASE_URL is not configured")
+	}
+	ctx, cancel := context.WithTimeout(context.Background(), 60*time.Second)
+	defer cancel()
+
+	db, err := sql.Open("pgx", databaseURL)
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer db.Close()
+	db.SetMaxOpenConns(8)
+	if err := db.PingContext(ctx); err != nil {
+		t.Fatal(err)
+	}
+	if err := Migrate(ctx, db); err != nil {
+		t.Fatal(err)
+	}
+
+	definition, ok := game.FindBossEncounterForEnemy("stoneback-colossus")
+	if !ok {
+		t.Fatal("Stoneback Colossus encounter definition missing")
+	}
+	enemy := game.EnemyDefinition{
+		ID: definition.EnemyID,
+		Name: "Stoneback Colossus",
+		MaxHealth: 100,
+		Position: game.WorldPosition{ZoneID: game.DefaultWorldZoneID, X: 20, Z: 0},
+		InteractionRange: 3,
+		RespawnSeconds: 120,
+	}
+	now := time.Now().UTC().Truncate(time.Microsecond)
+	accountRepo := NewAccountRepository(db)
+	account, _, err := accountRepo.Register(ctx,
+		fmt.Sprintf("boss-player-defeat-%d@example.test", now.UnixNano()),
+		"StrongTestPassword!2026", now)
+	if err != nil {
+		t.Fatal(err)
+	}
+	playerID := game.PlayerID(fmt.Sprintf("boss-player-defeat-%d", now.UnixNano()))
+	player, err := game.NewPlayer(playerID, "BossDefeatTester", now)
+	if err != nil {
+		t.Fatal(err)
+	}
+	player.Position = game.WorldPosition{ZoneID: game.DefaultWorldZoneID, X: 25, Z: 0}
+	player.Health = 5
+	if err := accountRepo.CreateCharacter(ctx, account.ID, player); err != nil {
+		t.Fatal(err)
+	}
+	const encounterID = "boss-player-defeat-cycle"
+	if _, err := db.ExecContext(ctx, "DELETE FROM enemy_spawn_state WHERE enemy_id=$1", enemy.ID); err != nil {
+		t.Fatal(err)
+	}
+	_, err = db.ExecContext(ctx, `INSERT INTO enemy_spawn_state(
+		enemy_id,health,initialized,behavior,position_zone_id,position_x,position_z,encounter_id)
+		VALUES($1,50,TRUE,'idle',$2,$3,$4,$5)`,
+		enemy.ID, enemy.Position.ZoneID, enemy.Position.X, enemy.Position.Z, encounterID)
+	if err != nil {
+		t.Fatalf("seed boss spawn cycle: %v", err)
+	}
+	t.Cleanup(func() {
+		_, _ = db.ExecContext(context.Background(), "DELETE FROM zone_presence WHERE character_id=$1", string(playerID))
+		_, _ = db.ExecContext(context.Background(), "DELETE FROM enemy_spawn_state WHERE enemy_id=$1", enemy.ID)
+		_, _ = db.ExecContext(context.Background(), "DELETE FROM players WHERE id=$1", string(playerID))
+		_, _ = db.ExecContext(context.Background(), "DELETE FROM accounts WHERE id=$1", account.ID)
+	})
+	if err := accountRepo.HeartbeatPresenceForAccount(ctx, account.ID, playerID, now); err != nil {
+		t.Fatal(err)
+	}
+
+	// At 50% health the Rampage phase enables Ground Shatter. The player is
+	// outside Stone Fist range but inside Ground Shatter's six-unit radius.
+	if err := accountRepo.tickEnemyAIForDefinition(ctx, enemy, now); err != nil {
+		t.Fatalf("start Ground Shatter telegraph: %v", err)
+	}
+	var activeAbility string
+	if err := db.QueryRowContext(ctx, "SELECT active_ability_id FROM boss_encounter_states WHERE enemy_id=$1 AND encounter_id=$2",
+		enemy.ID, encounterID).Scan(&activeAbility); err != nil {
+		t.Fatal(err)
+	}
+	if activeAbility != "ground-shatter" {
+		t.Fatalf("boss selected %q, want Ground Shatter", activeAbility)
+	}
+	if err := accountRepo.tickEnemyAIForDefinition(ctx, enemy, now.Add(2*time.Second)); err != nil {
+		t.Fatalf("resolve lethal Ground Shatter: %v", err)
+	}
+
+	updated, err := accountRepo.GetCharacter(ctx, account.ID, playerID)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if updated.Health != 0 || updated.Skills["defense"].Experience != 1 {
+		t.Fatalf("lethal boss ability result: health=%d Defense=%+v", updated.Health, updated.Skills["defense"])
+	}
+	var targetCharacter sql.NullString
+	var remainingAbility sql.NullString
+	if err := db.QueryRowContext(ctx, `SELECT s.target_character_id,b.active_ability_id
+		FROM enemy_spawn_state s
+		JOIN boss_encounter_states b ON b.enemy_id=s.enemy_id AND b.encounter_id=s.encounter_id
+		WHERE s.enemy_id=$1 AND s.encounter_id=$2`, enemy.ID, encounterID).Scan(&targetCharacter, &remainingAbility); err != nil {
+		t.Fatal(err)
+	}
+	if targetCharacter.Valid || remainingAbility.Valid {
+		t.Fatalf("lethal boss ability retained target or telegraph: target=%+v ability=%+v", targetCharacter, remainingAbility)
+	}
+}
+
