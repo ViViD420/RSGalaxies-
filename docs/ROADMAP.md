@@ -108,3 +108,5 @@ Each milestone is a tested, reviewable slice. A feature is not complete because 
 - [x] Add optional authoritative boss identity, phase, active ability and telegraph fields to enemy snapshots; query only the active encounter-cycle row.
 - [x] Preserve ordinary enemy JSON by omitting absent boss fields and add serialization regression tests.
 - [ ] Render boss phase and telegraph feedback in Godot after transactional boss state integration.
+
+- [x] Render authoritative boss health, phase and active ability warnings in the Godot enemy label and centered boss HUD (passive snapshot consumer; live boss integration remains incomplete).
