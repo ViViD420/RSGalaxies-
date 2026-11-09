@@ -72,6 +72,7 @@ func _run_movement_smoke_test() -> void:
 	jump_press.pressed = true
 	Input.parse_input_event(jump_press)
 	await physics_frame
+	await process_frame
 	var jump_speed := player.velocity.y
 	jump_press.pressed = false
 	Input.parse_input_event(jump_press)
