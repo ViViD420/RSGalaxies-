@@ -2,6 +2,8 @@ package postgres
 
 import (
 	"context"
+	"crypto/rand"
+	"encoding/hex"
 	"database/sql"
 	"errors"
 	"fmt"
@@ -9,6 +11,36 @@ import (
 
 	"github.com/ViViD420/RSGalaxies-/server/internal/game"
 )
+
+func newEncounterID() (string, error) {
+	var raw [16]byte
+	if _, err := rand.Read(raw[:]); err != nil { return "", fmt.Errorf("generate encounter id: %w", err) }
+	return hex.EncodeToString(raw[:]), nil
+}
+
+func recordEncounterContribution(ctx context.Context, tx *sql.Tx, encounterID, enemyID, accountID string, characterID game.PlayerID, damageDealt, damageReceived int, now time.Time) error {
+	_, err := tx.ExecContext(ctx, `INSERT INTO enemy_encounter_participants(
+		encounter_id,enemy_id,account_id,character_id,damage_dealt,damage_received,action_count,first_contribution_at,last_contribution_at)
+		VALUES($1,$2,$3,$4,$5,$6,1,$7,$7)
+		ON CONFLICT(encounter_id,character_id) DO UPDATE SET
+			damage_dealt=enemy_encounter_participants.damage_dealt+EXCLUDED.damage_dealt,
+			damage_received=enemy_encounter_participants.damage_received+EXCLUDED.damage_received,
+			action_count=enemy_encounter_participants.action_count+1,
+			last_contribution_at=EXCLUDED.last_contribution_at`,
+		encounterID,enemyID,accountID,string(characterID),damageDealt,damageReceived,now.UTC())
+	if err != nil { return fmt.Errorf("record encounter contribution: %w", err) }
+	return nil
+}
+
+func recordEncounterDamageReceived(ctx context.Context, tx *sql.Tx, encounterID, enemyID string, characterID game.PlayerID, damage int, now time.Time) error {
+	if damage <= 0 { return nil }
+	_, err := tx.ExecContext(ctx, `UPDATE enemy_encounter_participants SET
+		damage_received=damage_received+$4,action_count=action_count+1,last_contribution_at=$5
+		WHERE encounter_id=$1 AND enemy_id=$2 AND character_id=$3`,
+		encounterID,enemyID,string(characterID),damage,now.UTC())
+	if err != nil { return fmt.Errorf("record encounter damage received: %w", err) }
+	return nil
+}
 
 type enemyTargetCandidate struct {
 	accountID string
