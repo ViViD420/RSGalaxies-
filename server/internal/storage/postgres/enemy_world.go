@@ -132,7 +132,14 @@ func (r *AccountRepository) activeEnemyCandidates(ctx context.Context, enemy gam
 // completion, damage, health, Defense XP and AI state atomically.
 func (r *AccountRepository) TickEnemyAI(ctx context.Context, enemyID string, now time.Time) error {
 	enemy, ok := game.FindEnemy(enemyID)
-	if !ok { return game.ErrUnknownEnemy }
+	if !ok {
+		return game.ErrUnknownEnemy
+	}
+	return r.tickEnemyAIForDefinition(ctx, enemy, now)
+}
+
+func (r *AccountRepository) tickEnemyAIForDefinition(ctx context.Context, enemy game.EnemyDefinition, now time.Time) error {
+	enemyID := enemy.ID
 	now = now.UTC()
 	_, _, _, observedState, err := readEnemyAIState(ctx, r.db, enemy)
 	if err != nil { return err }
