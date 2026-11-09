@@ -111,16 +111,38 @@ func TestPostgresStonebackDefeatSettlesAndClaimsMultiItemRewards(t *testing.T) {
 		t.Fatalf("guaranteed Stoneback Scale quantity=%d, want 2..4; items=%+v", scaleQuantity, claims[0].LootItems)
 	}
 
-	claimedPlayer, claim, err := repo.ClaimEncounterRewardForAccount(ctx, account.ID, playerID, enemy.ID, encounterID, now.Add(3*time.Second))
-	if err != nil {
-		t.Fatalf("claim Stoneback multi-item reward: %v", err)
+	type claimOutcome struct {
+		player game.Player
+		claim game.EncounterRewardClaim
+		err error
 	}
-	if claim.Status != "claimed" || len(claim.LootItems) != len(claims[0].LootItems) ||
-		claimedPlayer.Inventory["stoneback_scale"] != scaleQuantity ||
-		claimedPlayer.Skills["blades"].Experience != 500 ||
-		claimedPlayer.Skills["melee"].Experience != 125 {
-		t.Fatalf("claimed Stoneback reward state: claim=%+v inventory=%v blades=%d melee=%d",
-			claim, claimedPlayer.Inventory, claimedPlayer.Skills["blades"].Experience, claimedPlayer.Skills["melee"].Experience)
+	startClaims := make(chan struct{})
+	claimResults := make(chan claimOutcome, 2)
+	for attempt := 0; attempt < 2; attempt++ {
+		go func() {
+			<-startClaims
+			claimedPlayer, claim, claimErr := repo.ClaimEncounterRewardForAccount(
+				ctx, account.ID, playerID, enemy.ID, encounterID, now.Add(3*time.Second))
+			claimResults <- claimOutcome{player: claimedPlayer, claim: claim, err: claimErr}
+		}()
+	}
+	close(startClaims)
+
+	var claimedPlayer game.Player
+	for attempt := 0; attempt < 2; attempt++ {
+		outcome := <-claimResults
+		if outcome.err != nil {
+			t.Fatalf("concurrent Stoneback reward claim: %v", outcome.err)
+		}
+		if outcome.claim.Status != "claimed" ||
+			len(outcome.claim.LootItems) != len(claims[0].LootItems) ||
+			outcome.player.Inventory["stoneback_scale"] != scaleQuantity ||
+			outcome.player.Skills["blades"].Experience != 500 ||
+			outcome.player.Skills["melee"].Experience != 125 {
+			t.Fatalf("concurrent claim duplicated or lost Stoneback rewards: claim=%+v inventory=%v blades=%d melee=%d",
+				outcome.claim, outcome.player.Inventory, outcome.player.Skills["blades"].Experience, outcome.player.Skills["melee"].Experience)
+		}
+		claimedPlayer = outcome.player
 	}
 
 	replayedPlayer, replayedClaim, err := repo.ClaimEncounterRewardForAccount(ctx, account.ID, playerID, enemy.ID, encounterID, now.Add(4*time.Second))
