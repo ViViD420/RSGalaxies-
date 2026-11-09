@@ -105,12 +105,18 @@ func _build_terrain() -> void:
 	terrain_body.name = "TerrainCollision"
 	var terrain_collision := CollisionShape3D.new()
 	terrain_collision.name = "TerrainShape"
-	terrain_collision.shape = terrain_mesh.create_trimesh_shape()
-	if terrain_collision.shape == null:
-		push_error("WorldTerrain could not create terrain collision.")
+	var collision_mesh := terrain_mesh.create_trimesh_shape() as ConcavePolygonShape3D
+	if collision_mesh == null or collision_mesh.get_faces().is_empty():
+		push_error("WorldTerrain could not create non-empty terrain collision faces.")
 		terrain_visual.queue_free()
 		terrain_body.queue_free()
 		return
+	# Double-sided collision protects grounding at triangle seams and keeps
+	# collision robust if a future terrain mesh winding change is introduced.
+	collision_mesh.backface_collision = true
+	terrain_collision.shape = collision_mesh
+	terrain_body.collision_layer = 1
+	terrain_body.collision_mask = 1
 	terrain_body.add_child(terrain_collision)
 	add_child(terrain_body)
 
