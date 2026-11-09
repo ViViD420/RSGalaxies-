@@ -1030,3 +1030,13 @@ Core game focus only. The player controller now has smooth ground acceleration/d
 - Action #162 failed because an attempted change to test shutdown cleanup caused two dummy-renderer null-mesh errors. This was an introduced regression in the test harness, not a production terrain defect. Restored the previously verified cleanup lifecycle in commit 71eafa2.
 - Action #163 (revert commit 71eafa2) is the required current validation. Do not claim the latest main HEAD passes until its workflow and job logs are confirmed.
 - The earlier #157–#160 failures and fixes remain recorded; they are intentionally not deleted or hidden.
+
+## Core client camera and combat presentation upgrade (2026-11-09)
+
+- Client Action #163 (run 42602331771, commit 71eafa2) passed after restoring the previously verified test cleanup. The complete headless terrain/movement smoke test printed PASS and contained no Godot script/engine errors. https://github.com/ViViD420/RSGalaxies-/actions/runs/42602331771
+- Added bounded third-person camera zoom in `client/scripts/player_controller.gd`: mouse wheel and keyboard +/- controls adjust SpringArm3D distance, clamped to configurable 2.5–9.0m defaults with 0.75m steps (commit df1a912).
+- Added a reusable short melee attack swing animation on the placeholder body mesh. It only animates presentation, never the CharacterBody3D or collision shape. It kills an in-flight swing tween before starting a new one and returns to a neutral pose.
+- Integrated the swing trigger into `client/scripts/main.gd` only after a successful authoritative combat response; client cooldown/validation errors do not trigger a false hit animation (commit 91535c4).
+- Expanded the headless player controller test to verify camera zoom step and min/max bounds, attack tween activation and return to neutral pose (commit 06f1693). The new tests are awaiting Client Action #164; do not claim this new feature/test addition is verified until that run passes and its full logs are clean.
+- Existing terrain runtime checks remain green in #161/#163. #157–#160 and #162 failures and their fixes remain documented above.
+- Next after #164: fix every surfaced failure before proceeding. Then improve combat impact feedback and weapon-specific animation hooks, refine camera collision/touch zoom, and expand terrain with traversable paths/biome details. Keep boss feature work paused.
