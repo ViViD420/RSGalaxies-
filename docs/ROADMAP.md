@@ -116,3 +116,8 @@ Each milestone is a tested, reviewable slice. A feature is not complete because 
 - [x] Persist terminal boss defeat in the player attack transaction, including first-hit kills before the first boss AI tick.
 - [x] Resolve boss definitions by enemy spawn identity.
 - [ ] Integrate the boss phase engine and damage resolver into the autonomous world tick.
+
+- [x] Integrate boss telegraph advancement and ability damage into the transactional enemy world tick; persist player, boss and AI changes atomically.
+- [x] Interrupt boss telegraphs when no eligible player is present.
+- [x] Add concurrent exactly-once boss ability damage PostgreSQL integration coverage (CI pending).
+- [ ] Verify latest server Actions #574–#579, then add interruption/player-death/respawn coverage before live registration.
