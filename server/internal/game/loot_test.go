@@ -44,7 +44,7 @@ func TestRollLootTableRejectsUnknownTablesAndOutOfRangeRolls(t *testing.T) {
 
 func TestLootTableCatalogIsValidAndDefensivelyCopied(t *testing.T) {
 	tables := LootTableDefinitions()
-	if len(tables) != 4 {
+	if len(tables) != 5 {
 		t.Fatalf("loot table count=%d, want 4", len(tables))
 	}
 	for _, table := range tables {
@@ -150,7 +150,7 @@ func TestRollLootTableDropsValidatesRollCountAndBounds(t *testing.T) {
 
 func TestLootTableCatalogCopiesNestedMultiDropSlices(t *testing.T) {
 	tables:=LootTableDefinitions()
-	if len(tables)!=4{t.Fatalf("loot table count=%d, want 4",len(tables))}
+	if len(tables)!=5{t.Fatalf("loot table count=%d, want 4",len(tables))}
 	for index := range tables {
 		if tables[index].ID == "frontier-rat-harvest" {
 			tables[index].GuaranteedDrops[0].ItemID = "corrupted"
@@ -164,3 +164,42 @@ func TestLootTableCatalogCopiesNestedMultiDropSlices(t *testing.T) {
 		t.Fatal("multi-drop loot catalog exposed mutable nested slices")
 	}
 }
+
+func TestStonebackColossusLootProducesMultipleCraftingMaterials(t *testing.T) {
+	drops, err := RollLootTableDrops("stoneback-colossus-harvest", []LootRollInput{
+		{DropRoll: 9999, QuantityRoll: 9999},
+		{DropRoll: 0, QuantityRoll: 0},
+		{DropRoll: 0, QuantityRoll: 9999},
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+	want := []ItemQuantity{
+		{ItemID: "stoneback_scale", Quantity: 4},
+		{ItemID: "stoneback_core", Quantity: 1},
+		{ItemID: "stoneback_plate", Quantity: 2},
+	}
+	if len(drops) != len(want) {
+		t.Fatalf("Stoneback loot drops=%+v, want %+v", drops, want)
+	}
+	for i := range want {
+		if drops[i] != want[i] {
+			t.Fatalf("Stoneback loot drop[%d]=%+v, want %+v", i, drops[i], want[i])
+		}
+	}
+}
+
+func TestStonebackLootTableSupportsGuaranteedOnlyOutcome(t *testing.T) {
+	drops, err := RollLootTableDrops("stoneback-colossus-harvest", []LootRollInput{
+		{DropRoll: 0, QuantityRoll: 0},
+		{DropRoll: 9999, QuantityRoll: 0},
+		{DropRoll: 9999, QuantityRoll: 0},
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(drops) != 1 || drops[0] != (ItemQuantity{ItemID: "stoneback_scale", Quantity: 2}) {
+		t.Fatalf("guaranteed Stoneback result=%+v", drops)
+	}
+}
+
