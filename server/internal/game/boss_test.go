@@ -216,3 +216,38 @@ func TestAdvanceBossEncounterDefeatIsTerminalForEncounterCycle(t *testing.T) {
 		t.Fatalf("defeated boss restarted in same cycle: %+v", replayed)
 	}
 }
+
+func TestAdvanceBossEncounterRejectsCorruptTelegraphState(t *testing.T) {
+	definition := stonebackDefinition(t)
+	now := time.Date(2026, 11, 9, 17, 0, 0, 0, time.UTC)
+	state := BossEncounterState{
+		EncounterID: "cycle-a",
+		DefinitionVersion: definition.Version,
+		PhaseID: "guarded",
+		PhaseStartedAt: now,
+		ActiveAbilityID: "stone-fist",
+	}
+	_, err := AdvanceBossEncounter(definition, state, bossInput("cycle-a", 100, now, 2))
+	if !errors.Is(err, ErrInvalidBossEncounterDefinition) {
+		t.Fatalf("corrupt telegraph error=%v, want ErrInvalidBossEncounterDefinition", err)
+	}
+}
+
+func TestAdvanceBossEncounterNormalizesNegativeAbilityCursor(t *testing.T) {
+	definition := stonebackDefinition(t)
+	now := time.Date(2026, 11, 9, 18, 0, 0, 0, time.UTC)
+	state := BossEncounterState{
+		EncounterID: "cycle-a",
+		DefinitionVersion: definition.Version,
+		PhaseID: "rampage",
+		PhaseStartedAt: now,
+		NextAbilityIndex: -1,
+	}
+	result, err := AdvanceBossEncounter(definition, state, bossInput("cycle-a", 50, now, 2))
+	if err != nil {
+		t.Fatal(err)
+	}
+	if !result.AbilityStarted || result.AbilityID != "stone-fist" {
+		t.Fatalf("negative ability cursor was not normalized: %+v", result)
+	}
+}
