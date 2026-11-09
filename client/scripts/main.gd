@@ -87,6 +87,9 @@ var boss_hud_phase_label: Label
 var boss_hud_health_bar: ProgressBar
 var boss_hud_ability_label: Label
 var boss_hud_status_label: Label
+var boss_last_phase_id := ""
+var boss_phase_feedback_text := ""
+var boss_phase_feedback_until_msec := 0
 var trade_button: Button
 var trade_panel: PanelContainer
 var trade_target_select: OptionButton
@@ -511,6 +514,10 @@ func _on_enemy_snapshots_completed(result: int, response_code: int, _headers: Pa
 		var boss_id := str(snapshot.get("bossId", ""))
 		var boss_phase := str(snapshot.get("bossPhaseId", ""))
 		var boss_ability := str(snapshot.get("bossActiveAbilityId", ""))
+		var boss_phase_changed := not boss_phase.is_empty() and not boss_last_phase_id.is_empty() and boss_phase != boss_last_phase_id
+		if boss_phase_changed and health > 0:
+			boss_phase_feedback_text = "PHASE SHIFT — " + boss_phase.replace("-", " ").to_upper()
+			boss_phase_feedback_until_msec = Time.get_ticks_msec() + 2500
 		if not boss_id.is_empty():
 			# Keep the encounter panel alive through defeat. The zero-health
 			# snapshot is authoritative and should not disappear before players
@@ -525,6 +532,9 @@ func _on_enemy_snapshots_completed(result: int, response_code: int, _headers: Pa
 					boss_hud_phase_label.text = "ENCOUNTER COMPLETE"
 					boss_hud_ability_label.text = "DEFEATED"
 					boss_hud_status_label.text = "Rewards are ready to claim from the Rewards panel."
+					boss_last_phase_id = ""
+					boss_phase_feedback_text = ""
+					boss_phase_feedback_until_msec = 0
 				elif not boss_ability.is_empty():
 					boss_hud_phase_label.text = boss_phase.replace("-", " ").to_upper() if not boss_phase.is_empty() else "ENCOUNTER"
 					boss_hud_ability_label.text = "⚠ " + boss_ability.replace("-", " ").to_upper() + " — MOVE NOW"
@@ -532,7 +542,11 @@ func _on_enemy_snapshots_completed(result: int, response_code: int, _headers: Pa
 				else:
 					boss_hud_phase_label.text = boss_phase.replace("-", " ").to_upper() if not boss_phase.is_empty() else "ENCOUNTER"
 					boss_hud_ability_label.text = "No attack telegraphed"
-					boss_hud_status_label.text = "Watch the boss for its next tell."
+					if Time.get_ticks_msec() < boss_phase_feedback_until_msec:
+						boss_hud_status_label.text = boss_phase_feedback_text
+					else:
+						boss_hud_status_label.text = "Watch the boss for its next tell."
+				boss_last_phase_id = boss_phase if health > 0 else ""
 		if health <= 0:
 			label.text = display_name + "\nRespawning..."
 		elif not boss_id.is_empty():
