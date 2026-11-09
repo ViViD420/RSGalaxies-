@@ -33,8 +33,8 @@ func TestLevelForExperienceBetweenThresholds(t *testing.T) {
 
 func TestSkillDefinitionsAreDefensiveAndStable(t *testing.T) {
 	definitions := SkillDefinitions()
-	if len(definitions) != 20 {
-		t.Fatalf("got %d skills, want exactly 20", len(definitions))
+	if len(definitions) != 18 {
+		t.Fatalf("got %d skills, want exactly 18", len(definitions))
 	}
 	definitions[0].ID = "corrupted"
 	if IsKnownSkill("corrupted") || !IsKnownSkill("woodcutting") {
@@ -42,40 +42,27 @@ func TestSkillDefinitionsAreDefensiveAndStable(t *testing.T) {
 	}
 }
 
-func TestSkillCategoriesAndCombatMasteryEligibility(t *testing.T) {
-	wantMastery := []string{
-		"blades", "combat", "defense", "magic", "melee", "pistols", "polearms",
-		"ranged", "rifles", "strength", "tactics", "unarmed",
-	}
+func TestCoreSkillHierarchyAndCombatMasteryEligibility(t *testing.T) {
+	wantMastery := []string{"blades", "magic", "pistols", "polearms", "rifles", "unarmed"}
 	for _, id := range wantMastery {
-		if !isCombatMasterySkill(id) {
-			t.Errorf("%q should be a combat mastery skill", id)
-		}
+		if !isCombatMasterySkill(id) { t.Errorf("%q should be a combat mastery skill", id) }
 	}
-	for _, id := range []string{"cooking", "crafting", "farming", "foraging", "mining", "scavenging", "smithing", "woodcutting", "unknown"} {
-		if isCombatMasterySkill(id) {
-			t.Errorf("%q must not count as combat mastery", id)
-		}
+	for _, id := range []string{"melee", "ranged", "defense", "strength", "cooking", "crafting", "farming", "foraging", "mining", "scavenging", "smithing", "woodcutting", "combat", "tactics", "unknown"} {
+		if isCombatMasterySkill(id) { t.Errorf("%q must not count as combat mastery", id) }
 	}
-
+	if IsKnownSkill("combat") || IsKnownSkill("tactics") { t.Fatal("retired Combat/Tactics skills must not be in the active catalog") }
+	for child, parent := range map[string]string{"blades":"melee", "polearms":"melee", "unarmed":"melee", "pistols":"ranged", "rifles":"ranged", "magic":"ranged"} {
+		if got := skillParentID(child); got != parent { t.Errorf("%s parent = %q, want %q", child, got, parent) }
+	}
 	seen := make(map[string]bool, len(skillDefinitions))
 	for _, definition := range SkillDefinitions() {
-		if definition.ID == "" || seen[definition.ID] {
-			t.Errorf("empty or duplicate skill ID %q", definition.ID)
-		}
+		if definition.ID == "" || seen[definition.ID] { t.Errorf("empty or duplicate skill ID %q", definition.ID) }
 		seen[definition.ID] = true
-		switch definition.Category {
-		case "combat", "gathering", "production":
-		default:
-			t.Errorf("skill %q has unsupported category %q", definition.ID, definition.Category)
-		}
-		if definition.combatMastery && definition.Category != "combat" {
-			t.Errorf("non-combat skill %q is marked for combat mastery", definition.ID)
-		}
+		switch definition.Category { case "combat", "gathering", "production": default: t.Errorf("skill %q has unsupported category %q", definition.ID, definition.Category) }
+		if definition.combatMastery && (definition.Category != "combat" || definition.ParentID == "") { t.Errorf("mastery skill %q must be a combat specialization", definition.ID) }
+		if definition.coSkill && definition.ParentID != "" { t.Errorf("co-skill %q must not branch from a parent", definition.ID) }
 	}
-	if len(wantMastery) != 12 {
-		t.Fatalf("test fixture expected 12 combat mastery skills, got %d", len(wantMastery))
-	}
+	if len(wantMastery) != 6 { t.Fatalf("test fixture expected 6 combat mastery skills, got %d", len(wantMastery)) }
 }
 
 func TestCombatMasteryEligibilityIsNotSerialized(t *testing.T) {
@@ -113,18 +100,14 @@ func TestEnsureSkillProgressBackfillsWithoutResettingExistingProgress(t *testing
 		"woodcutting": {Experience: 83, Level: 2},
 	}
 	got := EnsureSkillProgress(existing)
-	if got["combat"] != (SkillProgress{Experience: 1234, Level: 5}) {
-		t.Fatalf("existing combat progress was changed: %+v", got["combat"])
-	}
+	if got["combat"] != (SkillProgress{Experience: 1234, Level: 5}) { t.Fatalf("legacy combat XP must remain preserved but inactive: %+v", got["combat"]) }
 	if got["woodcutting"] != (SkillProgress{Experience: 83, Level: 2}) {
 		t.Fatalf("existing woodcutting progress was changed: %+v", got["woodcutting"])
 	}
-	if got["magic"] != (SkillProgress{Level: 1}) || got["pistols"] != (SkillProgress{Level: 1}) || got["rifles"] != (SkillProgress{Level: 1}) {
+	if got["magic"] != (SkillProgress{Level: 1}) || got["pistols"] != (SkillProgress{Level: 1}) || got["rifles"] != (SkillProgress{Level: 1}) || got["melee"] != (SkillProgress{Level: 1}) || got["ranged"] != (SkillProgress{Level: 1}) {
 		t.Fatalf("new skills were not initialized at level 1: magic=%+v pistols=%+v rifles=%+v", got["magic"], got["pistols"], got["rifles"])
 	}
-	if len(got) != len(SkillDefinitions()) {
-		t.Fatalf("got %d initialized skills, want %d", len(got), len(SkillDefinitions()))
-	}
+	if len(got) != len(SkillDefinitions())+2 { t.Fatalf("got %d entries including two preserved legacy keys, want %d", len(got), len(SkillDefinitions())+2) }
 }
 
 func TestAwardExperience(t *testing.T) {
