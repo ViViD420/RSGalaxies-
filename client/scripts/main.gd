@@ -5,6 +5,7 @@ const WORLD_TERRAIN_SCRIPT := preload("res://scripts/world_terrain.gd")
 const CORE_SKILL_IDS := ["blades", "cooking", "crafting", "defense", "farming", "foraging", "magic", "melee", "mining", "pistols", "polearms", "ranged", "rifles", "scavenging", "smithing", "strength", "unarmed", "woodcutting"]
 
 var status_label: Label
+var interaction_hint_label: Label
 var hud_info_panel: PanelContainer
 var action_toolbar: GridContainer
 var presence_label: Label
@@ -160,6 +161,7 @@ func _ready() -> void:
 func _process(delta: float) -> void:
 	_update_remote_player_visuals(delta)
 	_update_enemy_visuals(delta)
+	_update_interaction_hint()
 	if Input.is_action_just_pressed("interact") and not player_id.is_empty() and not interaction_pending:
 		_request_interaction()
 
@@ -758,6 +760,13 @@ func _build_hud() -> void:
 	status_label.text = "Server: connecting..."
 	status_label.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
 	column.add_child(status_label)
+	interaction_hint_label = Label.new()
+	interaction_hint_label.name = "InteractionHint"
+	interaction_hint_label.text = "Interact: sign in to begin"
+	interaction_hint_label.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+	interaction_hint_label.add_theme_font_size_override("font_size", 14)
+	interaction_hint_label.add_theme_color_override("font_color", Color(0.78, 0.90, 0.70))
+	column.add_child(interaction_hint_label)
 	presence_label = Label.new()
 	presence_label.text = "Nearby players: offline"
 	presence_label.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
@@ -1072,6 +1081,102 @@ func _start_gathering() -> void:
 	gather_request = HTTPRequest.new()
 	add_child(gather_request)
 	gather_request.request_completed.connect(_on_gather_completed)
+
+func _update_interaction_hint() -> void:
+	if interaction_hint_label == null:
+		return
+	if player_id.is_empty() or player_node == null or not is_instance_valid(player_node):
+		interaction_hint_label.visible = false
+		return
+
+	interaction_hint_label.visible = true
+	if interaction_pending:
+		interaction_hint_label.text = "Working on your interaction..."
+		return
+
+	var player_position: Vector3 = player_node.global_position
+	var best_distance := INF
+	var best_action := ""
+	var best_name := ""
+
+	# Keep the hint's candidate ordering aligned with the E/USE interaction
+	# resolver: trader, bank, station, enemy, then gathering node.
+	var merchant_distance := Vector2(player_position.x - 4.0, player_position.z).length()
+	if merchant_distance < best_distance:
+		best_distance = merchant_distance
+		best_action = "Trade with"
+		best_name = "Frontier Trader"
+
+	var bank_distance := Vector2(player_position.x, player_position.z + 4.0).length()
+	if bank_distance < best_distance:
+		best_distance = bank_distance
+		best_action = "Open"
+		best_name = "Frontier Bank"
+
+	for station in station_catalog:
+		if not station is Dictionary:
+			continue
+		var station_position: Variant = station.get("position", {})
+		if not station_position is Dictionary:
+			continue
+		var distance := Vector2(
+			player_position.x - float(station_position.get("x", 0.0)),
+			player_position.z - float(station_position.get("z", 0.0))
+		).length()
+		if distance < best_distance:
+			best_distance = distance
+			best_action = "Craft at"
+			best_name = str(station.get("name", "Crafting Station"))
+
+	for enemy in enemy_catalog:
+		if not enemy is Dictionary:
+			continue
+		var enemy_id := str(enemy.get("id", ""))
+		if not bool(enemy_available.get(enemy_id, true)):
+			continue
+		var enemy_position: Variant = enemy.get("position", {})
+		if not enemy_position is Dictionary:
+			continue
+		var fallback_position := Vector3(
+			float(enemy_position.get("x", 0.0)),
+			0.0,
+			float(enemy_position.get("z", 0.0))
+		)
+		var target_position: Vector3 = enemy_targets.get(enemy_id, fallback_position)
+		var enemy_distance := Vector2(
+			player_position.x - target_position.x,
+			player_position.z - target_position.z
+		).length()
+		if enemy_distance < best_distance:
+			best_distance = enemy_distance
+			best_action = "Attack"
+			best_name = str(enemy.get("name", "Creature"))
+
+	for node in gathering_catalog:
+		if not node is Dictionary:
+			continue
+		var node_position: Variant = node.get("position", {})
+		if not node_position is Dictionary:
+			continue
+		var node_distance := Vector2(
+			player_position.x - float(node_position.get("x", 0.0)),
+			player_position.z - float(node_position.get("z", 0.0))
+		).length()
+		if node_distance < best_distance:
+			best_distance = node_distance
+			best_action = "Gather"
+			best_name = str(node.get("name", "Resource"))
+
+	if best_action.is_empty():
+		interaction_hint_label.text = "Explore • no nearby interaction"
+		return
+
+	if best_distance <= 3.0:
+		var input_name := "USE" if DisplayServer.is_touchscreen_available() else "E"
+		interaction_hint_label.text = input_name + " • " + best_action + " " + best_name
+	else:
+		interaction_hint_label.text = "Move closer • " + best_name + " (" + str(snappedf(best_distance, 0.1)) + "m)"
+
 
 func _request_interaction() -> void:
 	var bank_distance := Vector2(player_node.global_position.x, player_node.global_position.z + 4.0).length()
