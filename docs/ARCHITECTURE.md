@@ -106,3 +106,7 @@ Migration 0016's initial server workflow exposed an existing migration-runner co
 ### Boss defeat transaction
 
 Player-initiated boss defeats now have a transaction-scoped terminal-state helper. It locks the active spawn cycle, validates the stored definition/version, clears pending telegraphs and persists the defeated flag in the same transaction as player combat and reward settlement. If the first attack defeats a boss before any AI tick, the helper creates a valid terminal state instead of leaving the cycle without a boss record. The helper is connected to the player attack path but remains dormant until a boss is registered as an enemy. Autonomous boss ability advancement is still outstanding.
+
+### Transactional boss world tick
+
+The account-owned world tick now has a boss-specific path. It retains the established player-then-enemy lock order, disables ordinary enemy attacks for boss definitions, advances the versioned boss phase/telegraph engine from server-owned state, and resolves completed abilities with the ability's own range and Defense mitigation. Player health/Defense XP, encounter contribution counters, boss state and enemy AI state are written in the same PostgreSQL transaction. Empty-target ticks interrupt active telegraphs. This code is awaiting its own Actions verification and is not live until the boss is registered in the enemy catalog and world tick loop.
