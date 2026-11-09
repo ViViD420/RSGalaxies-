@@ -1,6 +1,6 @@
 # RS Galaxies — Session Handoff
 
-Last updated: 2026-11-09 (Stoneback registered in public enemy catalog; CI pending)
+Last updated: 2026-11-09 (Stoneback transactional vertical slice verified; player-facing HUD defeat feedback improved; new client CI pending)
 
 ## Project identity
 
@@ -729,4 +729,42 @@ NEXT PRIORITIES:
 4. Improve boss encounter presentation and balance using the existing systems, then extend tests.
 5. Continue toward further bosses and group encounter mechanics only after the Stoneback path is robust.
 6. Keep every handoff current and leave a concise continuation command for the next chat.
+```
+
+## Player-facing Stoneback HUD lifecycle refinement (2026-11-09)
+
+- Live main was re-inspected before changes. The latest starting handoff commit was 179e041e459ff42ba784f31ea79cf14399bddcd9; latest code HEAD was 1deaff03e173c0583700061f9e66dfc3f7c5050b.
+- Server Actions #600 (run 42594784308) passed both jobs/steps: race-enabled PostgreSQL integration tests and go vet. Client Action #137 (run 42592975125) passed Godot 4.3 installation, project import and script validation.
+- Review found a player-facing lifecycle defect in the passive boss HUD: it only considered a boss present while health was positive, so the authoritative zero-health defeat snapshot immediately hid the centered boss panel. The enemy label showed "Respawning..." but the player lost the encounter-level completion and reward cue.
+- Updated client/scripts/main.gd in commit e38043cc10c87737f4c1b820de9f0a80fb05f7fd:
+  - Keep the boss HUD visible for any authoritative boss snapshot, including health zero.
+  - Show an explicit "ENCOUNTER COMPLETE" state and "DEFEATED" status with a direction to the existing Rewards panel.
+  - Make active boss ability warnings more actionable ("MOVE NOW") and explain that leaving the boss's attack range interrupts the telegraph.
+  - Add a compact secondary status line and adjust panel height for the extra feedback.
+  - Preserve server authority; no local ability selection, timing or damage simulation was added.
+- Updated docs/ROADMAP.md in commit 5d7af6ed82f5fe2c784ab24c68484f30acba0b0c to remove stale unchecked boss-integration milestones and accurately record the completed vertical slice plus remaining playtesting/polish.
+- Updated docs/ARCHITECTURE.md in commit 234efac7b43bb5e14801d457c285e767ce9ae860 to describe the live transactional world tick, snapshot contract, registered Stoneback, reward claim flow and client HUD boundary.
+- New client workflow for e38043c must be inspected before claiming the HUD refinement is validated. The documentation pushes may also trigger a new server run; inspect latest Actions and individual jobs rather than assuming.
+- No changes were made to migration 0016, boss damage authority, the 18-skill roster, professions, crafting, ordinary enemy progression or multi-item rewards.
+
+### Immediate next actions
+
+1. Inspect current main HEAD and the newest server/client workflow runs after the above commits; inspect every job and the Test/Vet/Godot validation steps.
+2. Review the Godot HUD at desktop and mobile viewport sizes. Confirm defeat feedback remains visible until the next authoritative respawn snapshot and the Rewards panel can be opened normally.
+3. Extend the client snapshot handling with clear, bounded feedback for phase transitions and telegraph interruption if the current server snapshot contract supports it without inventing client-side authority.
+4. Review player target loss/reacquisition, telegraph cancellation, respawn reset, mitigation and duplicate reward claims for further edge cases; add focused regression tests for any defects found.
+5. Keep docs/SESSION_HANDOFF.md, docs/ROADMAP.md and docs/ARCHITECTURE.md current after meaningful changes. Continue only in ViViD420/RSGalaxies- on main; never modify GalaxyMMO or reuse proprietary code.
+
+### Ready-to-copy continuation prompt
+
+```text
+RS GALAXIES — RESUME DEVELOPMENT FROM THE LATEST REPOSITORY HANDOFF.
+
+Work only in ViViD420/RSGalaxies- on branch main. First read docs/SESSION_HANDOFF.md completely, inspect current main HEAD/recent commits and latest server/client Actions including individual jobs. Never touch GalaxyMMO or reuse proprietary code.
+
+Stoneback Colossus is registered in the public enemy catalog and its full server vertical slice is implemented: migration 0016 cycle-scoped persistence, transactional world-tick ability resolution, Defense/armor mitigation, interruption, terminal defeat, respawn reset, authenticated snapshots, Godot boss HUD/model and multi-item reward claim settlement/idempotency. Server #599/#600 passed race-enabled PostgreSQL tests and Vet; client #137 passed Godot import/script validation before the latest HUD change.
+
+Latest client refinement commit: e38043cc10c87737f4c1b820de9f0a80fb05f7fd. It keeps the boss HUD visible for zero-health defeat snapshots, displays encounter completion and Rewards-panel guidance, and makes active ability warnings actionable. Roadmap and architecture were refreshed in commits 5d7af6ed82f5fe2c784ab24c68484f30acba0b0c and 234efac7b43bb5e14801d457c285e767ce9ae860. Verify the new client workflow and any newer server workflows before claiming validation.
+
+Continue deep player-facing Stoneback review: phase transition and telegraph interruption feedback, target lifecycle, defeat/respawn presentation, mitigation, settlement and reward idempotency. Preserve all 18 skills, professions/equipment restrictions, crafting, ordinary enemies and the existing multi-item reward pipeline. Enhance existing code, commit meaningful progress, and always update the handoff, roadmap and architecture. Do not restart or recreate the project.
 ```
