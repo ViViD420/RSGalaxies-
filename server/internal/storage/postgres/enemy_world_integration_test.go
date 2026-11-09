@@ -135,4 +135,15 @@ func TestPostgresEnemyWorldTickCommitsAttackExactlyOnce(t *testing.T) {
 	var behavior string
 	if err := db.QueryRowContext(ctx, "SELECT behavior FROM enemy_spawn_state WHERE enemy_id=$1", enemyID).Scan(&behavior); err != nil { t.Fatal(err) }
 	if behavior != string(game.EnemyReturning) { t.Fatalf("enemy behavior with defeated target = %q, want returning", behavior) }
+
+	// A fresh presence in another zone is not a valid target for this spawn.
+	if _, err := db.ExecContext(ctx, "UPDATE players SET health=100,zone_id='another-zone' WHERE id=$1", string(playerID)); err != nil { t.Fatal(err) }
+	if _, err := db.ExecContext(ctx, "UPDATE zone_presence SET zone_id='another-zone',last_seen_at=$2 WHERE character_id=$1", string(playerID), now.Add(32*time.Second)); err != nil { t.Fatal(err) }
+	if err := accountRepo.TickEnemyAI(ctx, enemyID, now.Add(33*time.Second)); err != nil {
+		t.Fatalf("tick after target changes zone: %v", err)
+	}
+	if err := db.QueryRowContext(ctx, "SELECT health FROM players WHERE id=$1", string(playerID)).Scan(&defeatedHealth); err != nil { t.Fatal(err) }
+	if defeatedHealth != 100 { t.Fatalf("cross-zone target took damage: health=%d", defeatedHealth) }
+	if err := db.QueryRowContext(ctx, "SELECT behavior FROM enemy_spawn_state WHERE enemy_id=$1", enemyID).Scan(&behavior); err != nil { t.Fatal(err) }
+	if behavior != string(game.EnemyIdle) { t.Fatalf("enemy behavior after zone change = %q, want idle", behavior) }
 }
