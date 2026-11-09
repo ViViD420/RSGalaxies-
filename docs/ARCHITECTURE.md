@@ -100,3 +100,5 @@ Enemy snapshots now have optional boss identity/version, phase, active ability a
 ### Godot boss HUD boundary
 
 The client now has a passive boss encounter panel that renders health, phase and active ability from the optional authoritative enemy snapshot fields. It does not simulate telegraph timing or select abilities. The panel is hidden when no active boss snapshot is present. This UI is not a playable encounter until the PostgreSQL world tick and player defeat paths persist the boss state atomically.
+
+Migration 0016's initial server workflow exposed an existing migration-runner constraint: migration source is split on semicolons, including delimiters inside comments. The comment was corrected so only SQL statement terminators contain semicolons. The corrective commit is awaiting a fresh server Actions run; do not consider the migration validated until that run succeeds.
