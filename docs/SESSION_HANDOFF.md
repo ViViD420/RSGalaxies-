@@ -128,21 +128,28 @@ An original sandbox MMORPG combining long-form skill progression and item gamepl
 - Equipment requirements remain server-owned: the starter sword requires Blades 1 and leather armor requires Defense 1.
 
 
-## Encounter threat-based target selection (new implementation; CI pending)
+## Encounter threat-based target selection (implemented; CI passed)
 
 - #470 is confirmed successful: GitHub Actions run `42554765267` on commit `7847f47` completed with race-enabled Go/PostgreSQL integration tests and `go vet` all green.
 - `9351fca` updates `AccountRepository.activeEnemyCandidates`: preserve the valid sticky target first; otherwise rank candidates by current encounter contribution score (2× damage dealt + damage received + action count), then squared distance and character ID for deterministic tie-breaking. The score is server-derived from the current encounter ID and participant ledger; no client values are trusted.
 - `5cdc3be` adds `TestPostgresEnemyTargetSelectionPrefersEncounterThreat`, using an isolated synthetic zone and two characters to prove a farther high-threat participant outranks a nearer bystander when the enemy has no sticky target.
 - `8920372` documents the target-selection score and explicitly distinguishes AI aggro scoring from reward eligibility. `b801932` updates the roadmap.
-- These commits were pushed directly to `main`. Server Actions #471 (`42556821479`, code commit `9351fca`) and #472 (`42556832552`, test commit `5cdc3be`) are both in progress; at last inspection their jobs were still initializing/setup, with the test and vet steps pending. Do not call this milestone CI-passed until one of these runs completes successfully on the relevant code.
-- Important boundary: this is target-selection threat scoring only. Party identity, reward eligibility windows, anti-leech thresholds, threat decay/taunt rules and reward settlement are not implemented. Next exact task: verify CI, then implement party-independent contribution eligibility and idempotent reward settlement using a durable encounter settlement record. Keep loot tables and boss phases behind that foundation.
+- These commits were pushed directly to `main`. Server Actions #471 (`42556821479`, commit `9351fca`) and #472 (`42556832552`, commit `5cdc3be`) both completed successfully. The threat-scoring query and PostgreSQL integration test are CI-validated.
+- Important boundary: this is target-selection threat scoring only. Party identity, reward eligibility windows, anti-leech thresholds, threat decay/taunt rules and reward settlement execution are not implemented.
+
+## Durable encounter reward-claim schema (new milestone; CI pending)
+
+- `814ad3a` adds migration 0013 with `enemy_encounter_settlements`, uniquely keyed by `(enemy_id, encounter_id)`, and `enemy_encounter_reward_claims`, uniquely keyed by `(enemy_id, encounter_id, character_id)`. Claims snapshot character/account ownership, specialization and parent XP, optional item/quantity, pending/claimed state and timestamps. Foreign keys, nonnegative checks, item/quantity consistency and claimed-at consistency are database-enforced. Pending claims survive full inventories by design; claim execution is separate and not implemented yet.
+- `bc8c74f` registers migration 0013 in the transactional migrator. `902eedb` adds the domain claim DTO. `c34476a` adds PostgreSQL integration coverage for pending-state defaults, settlement replay idempotency, duplicate-claim rejection and invalid claimed-state rejection.
+- CI runs #473 (`42557048970`, migration), #474 (`42557058117`, migration registration), #475 (`42557061949`, model) and #476 (`42557079359`, integration test) were queued/in progress at last inspection. Do not call migration 0013 or its test CI-passed until Actions confirms the relevant commit.
+- This is schema only: no defeat-path settlement, eligibility policy, reward claim endpoint or claim transaction is wired. Next exact task: verify #473–#476; then implement server-side eligibility from the durable participant ledger, insert settlement+claims atomically with enemy defeat, and implement idempotent claim execution that leaves claims pending when inventory capacity is insufficient.
 
 ## Next engineering tasks
 
-1. Verify CI for the new threat-scoring commits `9351fca`, `5cdc3be`, `8920372` and `b801932`. #470 is confirmed passed (run `42554765267`). The new PostgreSQL integration test verifies that a higher-threat participant is selected over a nearer bystander when no sticky target exists. Then proceed to party eligibility, anti-leech rules and idempotent reward settlement. Sticky-target selection is complete and CI-validated by #457/#458.
-2. Add threat scoring, target-switch rules and bounded pathfinding; sticky single-target persistence is already implemented. Do this before party aggro or multi-enemy encounters.
+1. Verify CI runs #473–#476 for migration 0013 and its integration test. Threat-scoring Actions #471 and #472 passed; #470 and #469 also passed. Then implement eligibility/anti-leech policy and transactional settlement/claim execution. Sticky-target selection is complete and CI-validated by #457/#458.
+2. Add bounded pathfinding and party aggro; sticky targeting and current-cycle threat ordering are already implemented.
 3. Add server-owned enemy abilities and combat telegraph types, then combat animations/feedback in Godot.
-4. Add party contribution rules, eligibility/anti-leech thresholds and idempotent reward settlement on top of the existing per-character ledger before boss phases or group loot.
+4. Add party contribution rules, eligibility/anti-leech thresholds, settlement creation on enemy defeat and an idempotent reward-claim endpoint on top of migration 0013 before boss phases or group loot.
 5. Implement reusable boss encounter phases after ordinary enemy behavior and reward settlement are reliable.
 6. Add dedicated loot tables, idempotent reward claims and explicit inventory-overflow handling before valuable boss drops.
 7. Expand crafting into tools, station and skill requirements, material properties, quality and production chains that consume boss materials.
