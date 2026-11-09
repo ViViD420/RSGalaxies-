@@ -15,3 +15,22 @@ type EncounterParticipant struct {
 	FirstContributionAt time.Time
 	LastContributionAt time.Time
 }
+
+ 
+// EncounterRewardClaim is a durable, character-owned reward entitlement.
+// Pending claims survive disconnects and full inventories; claiming is a
+// separate transaction and is idempotent by enemy/encounter/character.
+type EncounterRewardClaim struct {
+	EnemyID string `json:"enemyId"`
+	EncounterID string `json:"encounterId"`
+	CharacterID PlayerID `json:"characterId"`
+	ExperienceSkillID string `json:"experienceSkillId"`
+	ExperienceAmount int `json:"experienceAmount"`
+	ParentSkillID string `json:"parentSkillId,omitempty"`
+	ParentExperienceAmount int `json:"parentExperienceAmount,omitempty"`
+	LootItemID string `json:"lootItemId,omitempty"`
+	LootQuantity int `json:"lootQuantity,omitempty"`
+	Status string `json:"status"`
+	CreatedAt time.Time `json:"createdAt"`
+	ClaimedAt time.Time `json:"claimedAt,omitempty"`
+}
