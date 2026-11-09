@@ -72,9 +72,11 @@ func TestPostgresEnemyDefeatCreatesOneDurableRewardClaim(t *testing.T) {
 	}
 	if err := itemRows.Err(); err != nil { t.Fatal(err) }
 	if err := itemRows.Close(); err != nil { t.Fatal(err) }
-	lootValid := len(loot) <= 1
-	if len(loot) == 1 {
-		lootValid = (loot[0].ItemID == "rat_pelt" || loot[0].ItemID == "rat_tooth") && loot[0].Quantity == 1
+	lootValid := len(loot) >= 1 && len(loot) <= 2 &&
+		loot[0].ItemID == "rat_pelt" && loot[0].Quantity == 1
+	if len(loot) == 2 {
+		lootValid = lootValid && loot[1].ItemID == "rat_tooth" &&
+			loot[1].Quantity >= 1 && loot[1].Quantity <= 2
 	}
 	if status != "pending" || skillID != "unarmed" || xp != 25 ||
 		parentSkillID != "melee" || parentXP != 6 || !lootValid {
