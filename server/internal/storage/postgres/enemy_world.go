@@ -47,12 +47,12 @@ func recordEncounterContribution(ctx context.Context, tx *sql.Tx, encounterID, e
 	return nil
 }
 
-func recordEncounterDamageReceived(ctx context.Context, tx *sql.Tx, encounterID, enemyID string, characterID game.PlayerID, damage int, now time.Time) error {
+func recordEncounterDamageReceived(ctx context.Context, tx *sql.Tx, encounterID, enemyID string, characterID game.PlayerID, damage int, _ time.Time) error {
 	if damage <= 0 { return nil }
 	_, err := tx.ExecContext(ctx, `UPDATE enemy_encounter_participants SET
-		damage_received=damage_received+$4,action_count=action_count+1,last_contribution_at=$5
+		damage_received=damage_received+$4,action_count=action_count+1
 		WHERE encounter_id=$1 AND enemy_id=$2 AND character_id=$3`,
-		encounterID,enemyID,string(characterID),damage,now.UTC())
+		encounterID,enemyID,string(characterID),damage)
 	if err != nil { return fmt.Errorf("record encounter damage received: %w", err) }
 	return nil
 }
