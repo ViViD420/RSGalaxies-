@@ -81,20 +81,23 @@ An original sandbox MMORPG combining long-form skill progression and item gamepl
 
 ## Latest verified repository state
 
-- Server CI runs #413–#418 all passed: migration 0010, migration registration, persisted AI tick primitive, PostgreSQL restart recovery, enemy damage resolution and damage unit tests.
-- The next world-AI milestone triggered server runs #419–#426: #419 validates the first transactional coordinator commit and passed; #420–#425 validate snapshot model/repository, authenticated route, worker, PostgreSQL concurrency integration test and HTTP tests; #426 validates stale-presence leash-return coverage. At the time of this handoff, #420–#426 were still running/queued. Do not claim those commits are green until Actions reports success.
-- Current client baseline: run #124 passed at commit `a856a481`.
-- Documentation updates `d5b2074` and `ad6b6e5` describe the transactional enemy world tick and snapshot API.
+- Server CI runs #413–#421 all passed, including migration 0010, restart recovery, enemy damage, transactional tick coordinator and snapshot model/repository.
+- Server runs #422–#424 failed because the HTTP test double had not yet implemented the newly extended enemy-snapshot interface. This was a test-adapter compile failure, not a production-code failure; commit `97c5d41` added the fake implementation and run #425 passed. Run #426 passed the stale-presence leash-return integration test; #427 passed dynamic live-position combat. Runs #428 (combined concurrency/moving-target integration), #429 (snapshot health assertion), #430 (monotonic simulation clock) and #431 (clock regression test) were still in progress at the latest check. Verify Actions before claiming them green.
+- Client runs #125–#127 all passed. They validate snapshot polling/interpolation code and the respawn-label/type-cast refinements.
+- Latest documentation update `28c86c8` records Godot enemy visualization and live-position combat. API docs update `ad6b6e5` documents the authenticated snapshot endpoint and server tick.
 
-## Enemy AI foundation and transactional world integration (current milestone)
+## Enemy AI foundation, transactional world and Godot integration (current milestone)
 
-- Domain commits: `b805b26` added `server/internal/game/enemy_ai.go`; `b8bdd94` added behavior tests; `cf2540c` and `1621e3f` refined bounded return-path tests. Server runs #411 and #412 passed; intermediate #410 failed and was corrected.
-- Persistence commits: `a5432cb` adds migration 0010; `9db87ff` registers it; `5c52656` adds the row-locked persistence primitive; `1a3e8b3` adds restart-recovery integration coverage. `df989e2` adds `Player.ReceiveEnemyAttack`; `cd54f78` tests its range, mitigation, Defense XP and lethal-hit behavior. Runs #413–#418 all passed.
-- World integration commits: `8f633bd` adds `AccountRepository.TickEnemyAI`, selecting fresh same-zone presence and locking player then enemy before atomically committing AI state and telegraphed damage; `f9eee97` adds the read-only enemy snapshot model; `ba02b5f` adds account-scoped snapshot retrieval; `a01f2d7` adds the authenticated endpoint; `71ec8ec` starts the PostgreSQL-backed 250 ms world worker; `632c6d1` adds concurrent tick integration coverage; `97c5d41` tests authenticated snapshot authorization; `3308ed9` adds stale-presence/leash-return coverage. `d5b2074` updates combat documentation; `ad6b6e5` documents the API.
-- The world tick queries fresh presence within the enemy leash, revalidates presence after locking the authoritative character row, then locks the enemy spawn. Completed telegraphs call `ReceiveEnemyAttack` and persist player health/Defense XP and enemy state in the same transaction. This preserves the player-then-enemy lock order used by click-to-attack combat. Multiple workers serialize on PostgreSQL rows and the persisted attack cooldown prevents duplicate hits at the same telegraph deadline.
-- The world worker runs only with PostgreSQL-backed account storage and advances catalogued enemy spawns every 250 ms. No-player ticks cause pursuing enemies to return to spawn. Enemy snapshots are authenticated and limited to the requesting character's current zone.
-- CI status at handoff: run #419 passed; #420–#426 were pending. Check Actions before treating the new coordinator, HTTP route or integration tests as validated. Do not claim Godot integration: client still needs to poll the snapshot endpoint, render live positions/health/behavior and interpolate between server updates.
-- Remaining AI limitations: nearest-active-target selection is intentionally simple and not yet sticky; no threat table, pathfinding, party aggro, enemy abilities or boss phases. Do not expose client-authoritative AI ticks or damage.
+- Domain commits: `b805b26` added `server/internal/game/enemy_ai.go`; `b8bdd94` added behavior tests; `cf2540c` and `1621e3f` refined bounded return-path tests. Runs #411/#412 passed; intermediate #410 failed and was corrected.
+- Persistence commits: `a5432cb` adds migration 0010; `9db87ff` registers it; `5c52656` adds row-locked persistence; `1a3e8b3` adds restart recovery. `df989e2` adds `Player.ReceiveEnemyAttack`; `cd54f78` tests range, mitigation, Defense XP and lethal hits. Runs #413–#418 passed.
+- World integration commits: `8f633bd` adds `AccountRepository.TickEnemyAI`, selecting fresh same-zone presence and locking player then enemy before atomically committing AI state and telegraphed damage; `f9eee97` adds the snapshot model; `ba02b5f` adds account-scoped snapshot retrieval; `a01f2d7` adds the authenticated endpoint; `71ec8ec` starts the PostgreSQL-backed 250 ms world worker; `632c6d1` adds concurrency integration coverage; `97c5d41` tests authenticated snapshot authorization; `3308ed9` adds stale-presence leash-return coverage. `ad6b6e5` documents the API.
+- CI corrections: #422–#424 failed because the HTTP test double did not yet implement the new snapshot method; `97c5d41` fixes the test adapter and #425 passes. #426 passes stale-presence/leash-return coverage. #427 passes the live-position attack repository change. #428/#429 are validating the extended integration test, including a player attacking a moving enemy and checking the snapshot health. #430/#431 validate monotonic timestamps across server clock skew; pending at the latest check.
+- The world tick queries fresh presence within the enemy leash, revalidates presence after locking the authoritative character row, then locks the enemy spawn. Completed telegraphs call `ReceiveEnemyAttack` and persist player health/Defense XP and enemy state in the same transaction. This preserves player-then-enemy lock order. Multiple workers serialize on PostgreSQL rows and the persisted cooldown prevents duplicate hits at one telegraph deadline.
+- The world worker runs only with PostgreSQL-backed account storage and advances catalogued spawns every 250 ms. No-player ticks cause pursuing enemies to return to spawn. Enemy snapshots are authenticated and limited to the requesting character's current zone.
+- Godot commits: `401e1e5` adds 0.5-second authenticated snapshot polling, health/behavior labels, telegraph warnings and interpolation; `424415e` keeps the respawn label visible when the creature mesh is hidden; `816147a` uses safe typed mesh casts. Client runs #125–#127 passed.
+- PostgreSQL player-initiated attacks now read the persisted enemy position (`a13b0b9`), so the client can attack a moving enemy rather than the static catalog spawn. `6f4369c` adds integration coverage; `4e403d9` updates expected snapshot health.
+- Monotonic simulation time: `0a0cbe2` prevents a delayed tick from moving persisted simulation time backwards across server replicas; `9a64f8d` tests clock regression.
+- Remaining AI limitations: nearest-active-target selection is simple and not sticky; no threat table, pathfinding, party aggro, enemy abilities or boss phases. No client-authoritative AI ticks or damage are permitted.
 
 
 
@@ -108,11 +111,11 @@ An original sandbox MMORPG combining long-form skill progression and item gamepl
 
 ## Next engineering tasks
 
-1. Finish CI verification for runs #420–#426 and fix any failures; verify the transactional enemy tick concurrency, stale-presence return and authenticated snapshot tests.
-2. Update Godot to poll `GET /api/v1/account/characters/{id}/world/enemies`, render server positions/health/behavior, interpolate movement using server timestamps, and show telegraph warnings without inventing client-side attacks.
-3. Add zone-change, defeated-target, enemy-death/respawn and multiple-active-player selection tests. Consider sticky target/threat state before party aggro.
-4. Add durable encounter participation and reward settlement before boss phases or group loot.
-5. Implement reusable ordinary enemy abilities and a boss encounter state machine after client AI visualization is stable.
+1. Finish CI verification for runs #428–#431 and correct any integration or clock-regression failures. Add explicit zone-change and defeated-target coverage.
+2. Improve enemy target stickiness/threat selection and add bounded pathfinding; do this before party aggro or multi-enemy encounters.
+3. Add server-owned enemy abilities and combat telegraph types, then combat animations/feedback in Godot.
+4. Add durable encounter participation, contribution tracking and reward settlement before boss phases or group loot.
+5. Implement reusable boss encounter phases after ordinary enemy behavior and reward settlement are reliable.
 6. Add dedicated loot tables, idempotent reward claims and explicit inventory-overflow handling before valuable boss drops.
 7. Expand crafting into tools, station and skill requirements, material properties, quality and production chains that consume boss materials.
 8. Keep server/client workflows green; run trade abuse/load tests before enabling public production trade.
@@ -122,3 +125,12 @@ An original sandbox MMORPG combining long-form skill progression and item gamepl
 ## Continuation instruction
 
 Always inspect this file, current repository HEAD and recent CI first. Work only in ViViD420/RSGalaxies-. Update this handoff after meaningful milestones. Never assume GalaxyMMO code or decisions apply here.
+
+
+## Copy/paste continuation prompt
+
+```text
+RS GALAXIES — RESUME DEVELOPMENT. Continue work in ViViD420/RSGalaxies- on main. Read docs/SESSION_HANDOFF.md first, inspect latest HEAD and GitHub Actions statuses, and resume the exact unfinished task. Work autonomously with minimal questions. Improve existing code, commit each meaningful change, and update docs/SESSION_HANDOFF.md after every milestone. Never claim CI passed unless Actions confirms it. Current focus: finish enemy AI world-tick integration CI (#428–#431), add zone-change/defeated-target tests, then improve target threat/pathfinding and progress toward bosses, loot and crafting. Godot now polls authenticated enemy snapshots and interpolates positions. Preserve the 18-skill broad-progression design and profession-specific equipment. Never modify GalaxyMMO or reuse its proprietary code.
+```
+
+Before the chat ends, refresh this handoff with the newest commit and CI statuses and provide the continuation prompt again. Give the user an early warning when a conversation handoff is approaching; do not wait until the final message.
