@@ -267,3 +267,8 @@ The interaction response callback now uses JSON.new().parse(), checks the return
 ### Checked-parser patch targeting correction
 
 Client #192 exposed that the checked-parser edit had matched the earlier enemy snapshot parser instead of the shared interaction completion callback. The enemy snapshot edit was reverted; the checked JSON parser is now applied specifically to _on_gather_completed. Client Action #193 is pending verification. The two failed runs remain documented separately.
+
+
+### Interaction response error hardening verification
+
+Client Action #193 passed the malformed-response and request-start error-feedback tests, contextual hint tests, terrain/movement smoke, editor import and Web export. The malformed JSON path produced no parser ERROR output, and the full job log contained no Godot errors or RID/resource leak diagnostics. The #191/#192 failures and corrections remain preserved in the handoff. Physical-device review remains outstanding.

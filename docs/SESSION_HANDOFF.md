@@ -1696,3 +1696,17 @@ The procedural placement algorithm is deterministic by design and now has direct
 - Commit 912081d8cf0a3d1da5c35d641987ea0970a0ffaf now applies JSON.new().parse() only inside _on_gather_completed, with explicit Error and Dictionary checks.
 - Client Action #193 / run 42620773070 is the required validation run. Do not mark malformed-response handling verified until the focused test, full existing client smoke, import and Web export pass without engine errors.
 - Preserve #191 and #192 as separate historical failures: #191 demonstrated the static parser diagnostic; #192 demonstrated the patch was applied to the wrong callback.
+
+
+## Interaction response error hardening verification — 2026-11-09
+
+- Client Action #193 / run 42620773070 passed on code commit 912081d8cf0a3d1da5c35d641987ea0970a0ffaf.
+- Focused interaction smoke passed: nearest gathering prompt, move-closer guidance, pending state, unauthenticated hide, malformed successful payload feedback and request-start failure feedback.
+- The malformed JSON regression now passes without Godot parser ERROR output using JSON.new().parse() and explicit Error/data validation.
+- Existing terrain/movement smoke passed.
+- Godot editor import passed.
+- Godot Web export passed.
+- Full logs inspected: no SCRIPT ERROR, ERROR, CanvasItem/TextServer RID leak, ObjectDB leak or resource-in-use diagnostics.
+- Client #191 and #192 remain historical failures with root causes and corrections documented. #193 validates the corrected target-specific parser and all accumulated interaction hint/error-feedback code.
+- No client code changed after the #193 validated code commit; this update is documentation-only.
+- Physical desktop/mobile visual and touch QA remains outstanding.
