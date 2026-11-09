@@ -138,6 +138,43 @@ func (p *Player) AttackEnemy(enemy EnemyDefinition,state EnemyState,now time.Tim
 	return result,state,nil
 }
 
+// EnemyAttackResult contains server-calculated damage from one completed enemy
+// telegraph. The persistence layer must commit this with the enemy AI state.
+type EnemyAttackResult struct {
+	DamageReceived int
+	PlayerDefeated bool
+}
+
+// ReceiveEnemyAttack resolves a completed enemy telegraph using the player's
+// current equipment and Defense level. enemyPosition is the persisted live
+// enemy position, not the static spawn definition.
+func (p *Player) ReceiveEnemyAttack(enemy EnemyDefinition, enemyPosition WorldPosition, now time.Time) (EnemyAttackResult, error) {
+	if err := p.CanAct(); err != nil {
+		return EnemyAttackResult{}, err
+	}
+	if p.Position.ZoneID != enemyPosition.ZoneID ||
+		math.Hypot(p.Position.X-enemyPosition.X, p.Position.Z-enemyPosition.Z) > enemy.InteractionRange {
+		return EnemyAttackResult{}, ErrEnemyOutOfRange
+	}
+	_, defenseBonus := p.EquipmentBonuses()
+	defenseLevel := p.Skills["defense"].Level
+	incoming := enemy.Attack - defenseBonus - (defenseLevel-1)/10
+	if incoming < 0 {
+		incoming = 0
+	}
+	if incoming > p.Health {
+		incoming = p.Health
+	}
+	if incoming > 0 {
+		if _, err := p.AwardExperience("defense", 1); err != nil && !errors.Is(err, ErrExperienceOverflow) {
+			return EnemyAttackResult{}, err
+		}
+	}
+	p.Health -= incoming
+	p.LastCombatAt = now.UTC()
+	return EnemyAttackResult{DamageReceived: incoming, PlayerDefeated: p.Health == 0}, nil
+}
+
 func (p *Player) Rest() error {
 	zone,ok:=FindWorldZone(p.Position.ZoneID);if !ok{return ErrUnknownWorldZone}
 	if p.Health>0&&math.Hypot(p.Position.X-zone.Spawn.X,p.Position.Z-zone.Spawn.Z)>4{return ErrRestOutOfRange}
