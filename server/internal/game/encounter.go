@@ -37,6 +37,9 @@ type EncounterRewardClaim struct {
 	ExperienceAmount int `json:"experienceAmount"`
 	ParentSkillID string `json:"parentSkillId,omitempty"`
 	ParentExperienceAmount int `json:"parentExperienceAmount,omitempty"`
+	// LootItems is the authoritative multi-stack reward payload. The legacy
+	// first-item fields remain populated for older clients during migration.
+	LootItems []ItemQuantity `json:"lootItems,omitempty"`
 	LootItemID string `json:"lootItemId,omitempty"`
 	LootQuantity int `json:"lootQuantity,omitempty"`
 	Status string `json:"status"`
