@@ -1,6 +1,6 @@
 # RS Galaxies — Session Handoff
 
-Last updated: 2026-11-09 (lethal boss ability test added; CI pending)
+Last updated: 2026-11-09 (Stoneback materials and multi-item loot table added; CI pending)
 
 ## Project identity
 
@@ -525,3 +525,23 @@ Next add boss interruption/player death/respawn-cycle integration coverage, veri
 3. Verify the public catalog and authenticated snapshots include the boss, and the client HUD renders the live server values.
 4. Ensure the existing multi-item reward settlement is configured for the boss and that the current damage-only eligibility policy is preserved.
 5. Do not call the boss playable until server/client CI validates the entire vertical slice.
+
+## Stoneback reward and crafting-material preparation (2026-11-09)
+
+- Added three boss-specific material items:
+  - stoneback_scale — common guaranteed material for advanced armor crafting.
+  - stoneback_plate — less common durable armor component.
+  - stoneback_core — rare crafting component.
+- Added the versioned stoneback-colossus-harvest loot table. It guarantees 2–4 Stoneback Scales and has two independent bonus rolls: a 3% Stoneback Core chance and a 15% Stoneback Plate chance. All outcomes use the existing server-side cryptographic roll and multi-item claim pipeline.
+- Added deterministic loot tests for the full three-item outcome and guaranteed-only outcome; updated catalog count assertions.
+- Commits:
+  - 39375d0f8e6369ec2f9ee9b432ad57db024ebb8f — add Stoneback materials.
+  - 7cee565932d1869f462184198b4a1b130e66075c — add boss harvest table.
+  - 60983cfbc888be90318c7dd7b0945c032083f954 — test multi-item boss loot.
+- The boss loot table is prepared but not yet assigned to a live enemy definition. The existing encounter settlement gives the rolled multi-item bundle to the top eligible damage contributor and splits XP by damage, preserving current reward policy. No changes to that policy have been made.
+- CI: #579 passed race-enabled PostgreSQL tests and Vet for the exactly-once boss tick integration. #578, #579 completed successfully. #580 and #581 were still in progress at the last check; #581 includes the lethal ability test. The new loot changes should trigger a later server run and must be checked.
+
+### Next
+1. Verify Actions #580/#581 and the new loot-table run.
+2. Add explicit reward-settlement integration coverage for the Stoneback multi-item claim path if needed.
+3. Register the boss in the enemy catalog only after all world-tick, defeat, respawn, snapshot and reward tests pass.
