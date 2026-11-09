@@ -114,3 +114,7 @@ The account-owned world tick now has a boss-specific path. It retains the establ
 The boss world-tick integration test suite now covers exactly-once concurrent ability resolution, telegraph interruption after the target leaves the ability range, and encounter-cycle reset after the respawn deadline. The tests exercise the transaction coordinator with an injected test definition without adding Stoneback Colossus to the public enemy catalog. Their Actions verification is still pending.
 
 A further PostgreSQL integration case covers a lethal Ground Shatter resolution: player health and Defense XP are updated once, the enemy's sticky target is cleared, and the boss's active telegraph is removed in the same transaction. The new case is awaiting Actions verification.
+
+### Stoneback reward preparation
+
+Three Stoneback crafting materials and a versioned harvest table have been added to the existing item/loot catalogs. The table guarantees 2–4 scales and independently rolls a rare core and an armor plate. It uses the same cryptographic server rolls and multi-item encounter reward claims as existing enemies. The table is not assigned to a live enemy until the boss world tick and full reward settlement are verified.
