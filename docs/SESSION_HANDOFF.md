@@ -165,7 +165,7 @@ An original sandbox MMORPG combining long-form skill progression and item gamepl
 
 
  
-## Initial weighted enemy loot tables (CI pending)
+## Initial weighted enemy loot tables (server Actions #518 passed)
 
 - `game/loot.go` and `game/loot_test.go` (`e0a9ec0`, `620d1ad`, `53aa063`, `038e4f5`, `24e38e9`) add deterministic weighted resolution over a 10,000-point roll range, table validation, defensive copies, and no-drop outcomes. Frontier Rat: 70% rat pelt / 20% rat tooth / 10% no drop. Wild Boar: 75% boar hide / 15% boar tusk / 10% no drop.
 - Item definitions add rat tooth and boar tusk (`fb6e933`); enemy definitions point to the new tables (`b9c14f1`). `enemy_rewards.go` generates cryptographically secure drop and quantity rolls during the atomic settlement (`0553107`).
@@ -174,24 +174,33 @@ An original sandbox MMORPG combining long-form skill progression and item gamepl
 
 
  
-## Rare-material crafting sink (CI pending)
+## Rare-material crafting sink (implementation committed; Actions verification pending)
 
 - `rat_tooth_blade` item (`b1fa944`) is a non-purchasable main-hand weapon requiring Blades level 2 and granting +3 attack.
 - `rat-tooth-blade` recipe (`39e08bb`) consumes 2 Rat Teeth, 2 Copper Bars and 1 Wooden Plank at the Frontier Forge, requires Smithing level 2 and grants 90 Smithing XP.
 - Game test `7ca109a` verifies material consumption, output creation, Smithing gate and Blades equip gate. HTTP catalog expectations were updated to 18 items and 6 recipes (`1d8d482`). Actions #520–#523 for these updates were in progress/queued at last inspection; verify the latest run before marking the loop green.
 
+## Boar-Tusk profession equipment loop (implementation committed; CI verification pending)
+
+- Added the non-purchasable `boar_tusk_spear` main-hand weapon. It requires Polearms level 2 and grants +4 attack.
+- Added the `boar-tusk-spear` Frontier Forge recipe: 2 Boar Tusks + 2 Copper Bars + 1 Wooden Plank, Smithing level 3, 120 Smithing XP.
+- Added a game test covering material consumption, output creation, the Polearms level-2 equip gate and the resulting attack bonus. The merchant regression test confirms Boar Tusks and both rare-material crafted weapons remain unavailable for purchase.
+- Public market/world catalog expectations now reflect 19 items and 7 recipes.
+- Code commits: `03acda9` (item), `212bb81` (recipe), `6d01d66` (crafting test), `cbd8193` (merchant restriction), `8b373c7` (HTTP catalog counts). Design and roadmap commits: `16cbe55`, `41a9bdb`.
+- Latest main HEAD after the milestone: `41a9bdb5e0b73b1632636303f5dbf6dee7087c25`.
+- CI status: **not verified**. The combined commit-status query returned no check records for the latest HEAD, and the available workflow-run lookup only exposes pull-request-triggered runs, not the required push runs. Therefore Actions #520–#523 remain unconfirmed here. No local test execution is available in this workflow; do not claim the new tests passed until GitHub Actions confirms them.
+
 ## Next engineering tasks
 
-1. Verify the latest server Actions #519–#523 and later runs for the Rat-Tooth Blade crafting loop and catalog counts. Loot-table Actions #518 passed; ordinary settlement/claims passed in #497; HTTP/API ownership checks passed in #498 and #500–#503; Godot Rewards client checks #129–#132 passed.
-2. Add a Boar Tusk crafting sink and broaden profession-specific equipment recipes, preserving the distinction between crafting-skill gates and equipment-combat-skill gates.
-3. Expand loot tables to support multiple drops per encounter, guaranteed plus rare drops, quantity bands, boss-exclusive materials, and table/policy version audit. Keep each settlement idempotent and every item claim atomic.
-4. Add bounded pathfinding and party aggro; sticky targeting and current-cycle threat ordering are already implemented.
-5. Implement server-owned boss phases and abilities, including persisted phase transitions, telegraphs, cooldowns, and clear Godot combat feedback. Reuse the durable settlement/claim system for boss rewards.
-6. Add party contribution rules and explicit support/healing contribution types; current anti-leech policy remains damage-only (10% max-health threshold, two-minute active-damage window).
-7. Expand crafting into tools, station and skill requirements, material properties, quality, and production chains that consume rare and boss materials.
-8. Keep server/client workflows green; run trade abuse/load tests before enabling public production trade.
-9. Defer hidden Jedi challenge implementation until progression persistence, concurrency and anti-tampering tests are ready; only the six active combat specializations are mastery candidates.
-10. Complete production account safeguards: email verification, recovery, MFA, distributed rate limiting, admin account tools and security/load review.
+1. Verify server Actions #520–#523 for the Rat-Tooth Blade loop and the new Boar-Tusk Spear item/recipe/catalog/test changes. Do not mark these crafting loops CI-green until the push-triggered Actions runs are confirmed. Loot-table Actions #518 passed; settlement/claims passed in #497; HTTP/API ownership checks passed in #498 and #500–#503; Godot Rewards client checks #129–#132 passed.
+2. Expand loot tables to support multiple drops per encounter, guaranteed plus rare drops, quantity bands, boss-exclusive materials and table/policy version audit. Keep each settlement idempotent and every item claim atomic.
+3. Build the reusable server-owned boss encounter framework: persisted phase transitions, telegraphs, cooldowns, counterplay and clear Godot combat feedback. Reuse durable settlement/claim infrastructure for boss rewards.
+4. Expand party contribution rules and explicit support/healing contribution types; current anti-leech policy remains damage-only (10% max-health threshold, two-minute active-damage window).
+5. Add bounded pathfinding and party aggro; sticky targeting and current-cycle threat ordering are already implemented.
+6. Expand crafting into tools, station and skill requirements, material properties, quality and production chains that consume rare and boss materials.
+7. Keep server/client workflows green; run trade abuse/load tests before enabling public production trade.
+8. Defer hidden Jedi challenge implementation until progression persistence, concurrency and anti-tampering tests are ready; only the six active combat specializations are mastery candidates.
+9. Complete production account safeguards: email verification, recovery, MFA, distributed rate limiting, admin account tools and security/load review.
 
 ## Continuation instruction
 
@@ -201,7 +210,7 @@ Always inspect this file, current repository HEAD and recent CI first. Work only
 ## Copy/paste continuation prompt
 
 ```text
-RS GALAXIES — RESUME DEVELOPMENT. Continue only in ViViD420/RSGalaxies- on main. Read docs/SESSION_HANDOFF.md completely, inspect latest HEAD and GitHub Actions, then resume the exact unfinished task. Work autonomously, improve existing code, commit meaningful milestones, and update this handoff after every milestone. Never claim tests passed unless GitHub Actions confirms it. Threat scoring Actions #471/#472 passed. Migration 0013 and its model/integration tests passed in #473–#476. Migration 0014 contribution-skill attribution passed in #479–#481. Damage-based anti-leech policy (#477/#478) requires 10% enemy max-health damage and a damage action within two minutes. Atomic enemy-defeat settlement and durable claims passed server CI #497; HTTP reward API/account-ownership checks passed #498 and #500–#503. Godot Rewards panel passed client CI #129–#132. Weighted loot tables with secure rolls/no-drop outcomes passed #518. The Rat-Tooth Blade crafting loop and 18-item/6-recipe catalog updates are committed through #522; #519 failed on stale catalog counts before the #522 correction. Verify #522/#523 and newest main HEAD before claiming that loop green. Next add Boar Tusk crafting, multi-drop/rarity tables, then boss phases/abilities and party support contribution rules. Preserve broad 18-skill progression and profession-specific equipment. Never modify GalaxyMMO or reuse its proprietary code.
+RS GALAXIES — RESUME DEVELOPMENT. Continue only in ViViD420/RSGalaxies- on main. Read docs/SESSION_HANDOFF.md completely, inspect latest HEAD and GitHub Actions, then resume the exact unfinished task. Work autonomously, improve existing code, commit meaningful milestones, and update this handoff after every milestone. Never claim tests passed unless GitHub Actions confirms it. Threat scoring Actions #471/#472 passed. Migration 0013 and its model/integration tests passed in #473–#476. Migration 0014 contribution-skill attribution passed in #479–#481. Damage-based anti-leech policy requires 10% enemy max-health damage and a damage action within two minutes. Atomic enemy-defeat settlement and durable claims passed server CI #497; HTTP reward API/account-ownership checks passed #498 and #500–#503. Godot Rewards panel passed client CI #129–#132. Weighted loot tables with secure rolls/no-drop outcomes passed #518. Rat-Tooth Blade and Boar-Tusk Spear crafting loops are implemented, including Smithing-vs-combat-specialization gates and catalog/merchant tests, but Actions #520–#523 are not verified in the current handoff; confirm them before marking either loop CI-green. Latest main HEAD at this handoff: 41a9bdb5e0b73b1632636303f5dbf6dee7087c25. Next expand multi-drop/rarity loot tables, then implement server-owned boss phases/abilities and party support contribution rules. Preserve broad 18-skill progression and profession-specific equipment. Never modify GalaxyMMO or reuse its proprietary code.
 ```
 
 Before the chat ends, refresh this handoff with the newest commit and CI statuses and provide the continuation prompt again. Give the user an early warning when a conversation handoff is approaching; do not wait until the final message.
