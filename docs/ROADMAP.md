@@ -135,3 +135,6 @@ Each milestone is a tested, reviewable slice. A feature is not complete because 
 - [x] Correct deterministic Ground Shatter test positioning and refresh item/loot catalog count assertions after adding Stoneback content (server CI pending).
 
 - [x] Cover no-target boss telegraph interruption after presence lease expiry, without damage or Defense XP (CI pending).
+
+- [x] Register Stoneback Colossus in the public enemy catalog and world tick loop with the prepared multi-item reward table (latest server CI pending).
+- [ ] Verify public TickEnemyAI/RunEnemyAITick, authenticated snapshots and end-to-end reward claim flow.
