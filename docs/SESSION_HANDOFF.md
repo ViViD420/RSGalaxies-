@@ -1097,3 +1097,9 @@ Core game focus only. The player controller now has smooth ground acceleration/d
 - Action #176 (run 42603653793, commit b5b418a) failed because it ran after the terrain script redesign but before the matching test rewrite; its old assertion still expected a separate TrailSurface node, which the new design intentionally removed. Matching test commit 6d1e970 corrected the stale assertion; #177 is the passing run.
 - The vertex-color trail implementation is now verified: the existing terrain mesh contains the configured dirt path color, the settlement centerline distance samples to zero, and a distant point remains outside the trail. The terrain collision remains generated from the same base terrain mesh.
 - Earlier #173/#174 failures for separate-mesh shutdown errors remain documented. #175 happened to pass that earlier design, but the final design removes the additional mesh and is verified by #177.
+
+## Responsive core HUD layout (2026-11-09)
+
+- Replaced six individually positioned top-right action buttons with a named two-column GridContainer toolbar in commit 7125b0f. Skills, Bag, Rest, Gear, Characters and Sign out remain the same controls/callbacks and preserve their authenticated visibility rules.
+- Added viewport-size-aware layout sizing in commit 10d36dd: the status panel width scales down on narrow viewports, the toolbar stays right-aligned with a bounded width, and status/instruction labels wrap rather than overflowing. The toolbar uses compact 34px rows and 12px labels.
+- This is a layout refactor only; gameplay actions and existing panel callbacks are unchanged. Strict client Action for commits 7125b0f/10d36dd is pending. Visual device testing is still required, especially on narrow mobile aspect ratios.
