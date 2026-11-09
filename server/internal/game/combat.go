@@ -107,22 +107,10 @@ func (p *Player) AttackEnemy(enemy EnemyDefinition,state EnemyState,now time.Tim
 	if state.Health==0{
 		state.RespawnAt=now.Add(time.Duration(enemy.RespawnSeconds)*time.Second)
 		result.EnemyDefeated=true
-		result.Experience=enemy.Experience
-		if _, err := p.AwardExperience(styleSkillID, enemy.Experience); err != nil { if errors.Is(err, ErrExperienceOverflow) { result.Experience = 0 } else { return CombatResult{}, state, err } }
-		if parentSkillID != "" {
-			parentXP := enemy.Experience / 4
-			if parentXP < 1 { parentXP = 1 }
-			if _, err := p.AwardExperience(parentSkillID, parentXP); err != nil { if errors.Is(err, ErrExperienceOverflow) { result.ParentExperience = 0 } else { return CombatResult{}, state, err } } else { result.ParentExperience = parentXP }
-		}
-		if enemy.LootItemID!=""&&enemy.LootQuantity>0{
-			item,ok:=FindItem(enemy.LootItemID)
-			if ok&&p.Inventory[enemy.LootItemID]<=item.MaxStack-enemy.LootQuantity{
-				if p.Inventory==nil{p.Inventory=make(map[string]int)}
-				p.Inventory[enemy.LootItemID]+=enemy.LootQuantity
-				result.LootItemID=enemy.LootItemID
-				result.LootQuantity=enemy.LootQuantity
-			}
-		}
+		// Kill rewards are settled by the PostgreSQL encounter transaction.
+		// The domain combat calculation must never grant them directly to the
+		// final attacker, or group rewards could be duplicated or bypass claims.
+
 	}else{
 		_,defenseBonus:=p.EquipmentBonuses()
 		incoming:=enemy.Attack-defenseBonus-(defenseLevel-1)/10
