@@ -32,8 +32,8 @@
 - [x] Godot builds and selects workbench/forge stations from the server crafting-station catalog.
 - [x] Workbench plank, herbal-bundle and herbal-tea recipes plus forge copper smelting/training-sword recipes.
 - [x] Cooking profession progression through crafting a server-defined healing tea consumable.
-- [x] First rare enemy material sink: Rat Tooth + Copper Bars + Plank → Smithing level 2 Rat-Tooth Blade, equippable only at Blades level 2 (implementation and tests committed; latest Actions verification pending).
-- [x] Second rare enemy material sink: Boar Tusks + Copper Bars + Plank → Smithing level 3 Boar-Tusk Spear, equippable only at Polearms level 2 (implementation and tests committed; GitHub Actions verification pending).
+- [x] First rare enemy material sink: Rat Tooth + Copper Bars + Plank → Smithing level 2 Rat-Tooth Blade, equippable only at Blades level 2 (final combined crafting/catalog server Actions #528 passed).
+- [x] Second rare enemy material sink: Boar Tusks + Copper Bars + Plank → Smithing level 3 Boar-Tusk Spear, equippable only at Polearms level 2 (final combined crafting/catalog server Actions #528 passed).
 - [x] Transactional crafting with ingredient consumption, output capacity and skill XP.
 - [x] Basic PvE enemy definitions, server-calculated damage, cooldowns, retaliation, specialization/parent/co-skill XP, starter loot and respawns.
 - [x] Player health, defeated-state action restrictions and safe-spawn recovery.
@@ -47,10 +47,10 @@
 - [x] Migration 0013: durable per-encounter settlement keys and per-character pending/claimed reward-claim records with uniqueness, ownership, quantity and state constraints; migration/registration/model/integration Actions #473–#476 passed.
 - [x] Migration 0014 persists each participant's combat specialization for XP attribution; Actions #479–#481 passed.
 - [x] Authenticated reward-claim API, account-scoped listing, idempotent redemption and full-stack pending behavior; settlement/claim integration suite passed in #497.
-- [ ] Final HTTP API ownership/success-path tests (#498–#503) and Godot Rewards panel follow-up CI (#129–#132); client panel is implemented.
+- [x] Authenticated HTTP API ownership/success-path tests (#498–#503) and Godot Rewards panel follow-up CI (#129–#132).
 - [ ] Bounded pathfinding, party aggro, combat animations, enemy abilities, weapon-family expansion and server-derived hit/miss outcomes (see docs/COMBAT_PROGRESSION.md).
-- [ ] Boss encounter framework: multi-phase bosses, encounter state, group contribution/eligibility, telegraphs, persistence and reward integration. Build after ordinary enemy/combat foundations.
-- [x] Initial server-owned weighted ordinary-enemy loot tables with cryptographically secure rolls, weighted common materials and no-drop outcomes; settlement assigns one result to the top eligible contributor (server Actions #518 passed).
+- [x] Reusable versioned boss phase/ability domain engine with validated definitions, threshold transitions, telegraphs, cooldowns, range interruption, encounter-cycle reset and deterministic damage intents (domain-only; server Actions verification pending).
+- [x] Initial server-owned weighted ordinary-enemy loot tables with cryptographically secure rolls and no-drop outcomes (server Actions #518 passed; later superseded in live enemy definitions by the multi-drop pipeline).
 - [x] Versioned multi-drop loot-table domain model with guaranteed drops, independent weighted bonus rolls, no-drop intervals, quantity bands and aggregated stack validation.
 - [x] Durable multi-item reward claims: migration/backfill, account-scoped listing, atomic all-item redemption, full-inventory retry, idempotency, API DTO and Godot Rewards panel.
 - [x] Activate guaranteed-plus-rare-bonus loot tables for Frontier Rat and Wild Boar.
