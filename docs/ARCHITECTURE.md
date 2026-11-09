@@ -110,4 +110,4 @@ Boss-specific feature work and roster expansion are paused while the core game e
 
 ### Engineering quality invariant
 
-Never hide or silently bypass an error. Stop, reproduce, diagnose and fix it before moving to unrelated work; add regression coverage, inspect actual CI jobs/logs and document the failure and correction. See docs/DEVELOPMENT_RULES.md.
+Never hide or silently bypass an error. Stop, reproduce, diagnose and fix it before moving to unrelated work; add regression coverage, inspect actual CI jobs/logs and document the failure and correction. See docs/DEVELOPMENT_RULES.md. The client CI explicitly scans Godot import and Web-export logs for `SCRIPT ERROR:` and `ERROR:` because Godot 4.3 can emit GDScript parse errors while returning a successful process exit code.
