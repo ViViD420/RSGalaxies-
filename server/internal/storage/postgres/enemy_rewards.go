@@ -116,3 +116,107 @@ func settleEncounterRewards(ctx context.Context, tx *sql.Tx, enemy game.EnemyDef
 	}
 	return nil
 }
+
+
+// ListEncounterRewardClaimsForAccount returns only claims owned by the
+// authenticated account and selected character.
+func (r *AccountRepository) ListEncounterRewardClaimsForAccount(ctx context.Context, accountID string, characterID game.PlayerID) ([]game.EncounterRewardClaim, error) {
+	rows, err := r.db.QueryContext(ctx, `SELECT enemy_id,encounter_id,character_id,
+		experience_skill_id,experience_amount,parent_skill_id,parent_experience_amount,
+		loot_item_id,loot_quantity,status,created_at,claimed_at
+		FROM enemy_encounter_reward_claims
+		WHERE account_id=$1 AND character_id=$2
+		ORDER BY created_at DESC,enemy_id,encounter_id
+		LIMIT 100`, accountID, string(characterID))
+	if err != nil { return nil, fmt.Errorf("list owned encounter reward claims: %w", err) }
+	defer rows.Close()
+	claims := make([]game.EncounterRewardClaim, 0)
+	for rows.Next() {
+		var claim game.EncounterRewardClaim
+		var parentSkillID, lootItemID sql.NullString
+		var claimedAt sql.NullTime
+		if err := rows.Scan(&claim.EnemyID,&claim.EncounterID,&claim.CharacterID,
+			&claim.ExperienceSkillID,&claim.ExperienceAmount,&parentSkillID,
+			&claim.ParentExperienceAmount,&lootItemID,&claim.LootQuantity,
+			&claim.Status,&claim.CreatedAt,&claimedAt); err != nil {
+			return nil, fmt.Errorf("scan owned encounter reward claim: %w", err)
+		}
+		if parentSkillID.Valid { claim.ParentSkillID = parentSkillID.String }
+		if lootItemID.Valid { claim.LootItemID = lootItemID.String }
+		if claimedAt.Valid { claim.ClaimedAt = claimedAt.Time.UTC() }
+		claim.CreatedAt = claim.CreatedAt.UTC()
+		claims = append(claims, claim)
+	}
+	if err := rows.Err(); err != nil { return nil, fmt.Errorf("iterate owned encounter reward claims: %w", err) }
+	return claims, nil
+}
+
+// ClaimEncounterRewardForAccount applies XP and loot once, under the character
+// and claim row locks. A full item stack aborts the transaction, preserving
+// both the pending claim and its XP for a later retry.
+func (r *AccountRepository) ClaimEncounterRewardForAccount(ctx context.Context, accountID string, characterID game.PlayerID, enemyID, encounterID string, now time.Time) (game.Player, game.EncounterRewardClaim, error) {
+	tx, err := r.db.BeginTx(ctx, nil)
+	if err != nil { return game.Player{}, game.EncounterRewardClaim{}, fmt.Errorf("begin encounter reward claim: %w", err) }
+	defer tx.Rollback()
+	player, err := r.lockOwnedPlayer(ctx, tx, accountID, characterID)
+	if err != nil { return game.Player{}, game.EncounterRewardClaim{}, err }
+
+	var claim game.EncounterRewardClaim
+	var parentSkillID, lootItemID sql.NullString
+	var claimedAt sql.NullTime
+	err = tx.QueryRowContext(ctx, `SELECT enemy_id,encounter_id,character_id,
+		experience_skill_id,experience_amount,parent_skill_id,parent_experience_amount,
+		loot_item_id,loot_quantity,status,created_at,claimed_at
+		FROM enemy_encounter_reward_claims
+		WHERE account_id=$1 AND character_id=$2 AND enemy_id=$3 AND encounter_id=$4
+		FOR UPDATE`, accountID,string(characterID),enemyID,encounterID).Scan(
+		&claim.EnemyID,&claim.EncounterID,&claim.CharacterID,
+		&claim.ExperienceSkillID,&claim.ExperienceAmount,&parentSkillID,
+		&claim.ParentExperienceAmount,&lootItemID,&claim.LootQuantity,
+		&claim.Status,&claim.CreatedAt,&claimedAt)
+	if errors.Is(err, sql.ErrNoRows) { return game.Player{}, game.EncounterRewardClaim{}, game.ErrRewardClaimNotFound }
+	if err != nil { return game.Player{}, game.EncounterRewardClaim{}, fmt.Errorf("lock owned encounter reward claim: %w", err) }
+	if parentSkillID.Valid { claim.ParentSkillID = parentSkillID.String }
+	if lootItemID.Valid { claim.LootItemID = lootItemID.String }
+	if claimedAt.Valid { claim.ClaimedAt = claimedAt.Time.UTC() }
+	if claim.Status == "claimed" {
+		if err := tx.Commit(); err != nil { return game.Player{}, game.EncounterRewardClaim{}, fmt.Errorf("commit idempotent reward claim: %w", err) }
+		return player, claim, nil
+	}
+
+	award := func(skillID string, amount int) {
+		if amount <= 0 || !game.IsKnownSkill(skillID) { return }
+		player.Skills = game.EnsureSkillProgress(player.Skills)
+		progress := player.Skills[skillID]
+		if progress.Experience > game.MaxSkillExperience-amount { return }
+		nextXP := progress.Experience + amount
+		player.Skills[skillID] = game.SkillProgress{Experience:nextXP,Level:game.LevelForExperience(nextXP)}
+	}
+	award(claim.ExperienceSkillID, claim.ExperienceAmount)
+	award(claim.ParentSkillID, claim.ParentExperienceAmount)
+
+	if claim.LootItemID != "" && claim.LootQuantity > 0 {
+		item, ok := game.FindItem(claim.LootItemID)
+		if !ok || claim.LootQuantity > item.MaxStack || player.Inventory[claim.LootItemID] > item.MaxStack-claim.LootQuantity {
+			return game.Player{}, game.EncounterRewardClaim{}, game.ErrRewardInventoryFull
+		}
+		if player.Inventory == nil { player.Inventory = make(map[string]int) }
+		player.Inventory[claim.LootItemID] += claim.LootQuantity
+	}
+	if err := updateOwnedPlayer(ctx, tx, accountID, player); err != nil {
+		return game.Player{}, game.EncounterRewardClaim{}, err
+	}
+	claimedAtValue := now.UTC()
+	result, err := tx.ExecContext(ctx, `UPDATE enemy_encounter_reward_claims
+		SET status='claimed',claimed_at=$5
+		WHERE account_id=$1 AND character_id=$2 AND enemy_id=$3 AND encounter_id=$4 AND status='pending'`,
+		accountID,string(characterID),enemyID,encounterID,claimedAtValue)
+	if err != nil { return game.Player{}, game.EncounterRewardClaim{}, fmt.Errorf("mark encounter reward claimed: %w", err) }
+	affected, err := result.RowsAffected()
+	if err != nil { return game.Player{}, game.EncounterRewardClaim{}, fmt.Errorf("inspect claimed reward update: %w", err) }
+	if affected != 1 { return game.Player{}, game.EncounterRewardClaim{}, fmt.Errorf("claim state changed while locked") }
+	claim.Status = "claimed"
+	claim.ClaimedAt = claimedAtValue
+	if err := tx.Commit(); err != nil { return game.Player{}, game.EncounterRewardClaim{}, fmt.Errorf("commit encounter reward claim: %w", err) }
+	return player, claim, nil
+}
