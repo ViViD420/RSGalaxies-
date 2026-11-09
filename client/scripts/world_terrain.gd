@@ -119,6 +119,79 @@ func _build_terrain() -> void:
 	terrain_body.collision_mask = 1
 	terrain_body.add_child(terrain_collision)
 	add_child(terrain_body)
+	_build_trails()
+
+
+func _build_trails() -> void:
+	var trail_paths: Array[PackedVector2Array] = [
+		PackedVector2Array([
+			Vector2(0.0, -4.0), Vector2(0.0, -18.0), Vector2(-4.0, -34.0),
+			Vector2(-15.0, -52.0), Vector2(-32.0, -72.0), Vector2(-48.0, -110.0)
+		]),
+		PackedVector2Array([
+			Vector2(4.0, 0.0), Vector2(18.0, 0.0), Vector2(36.0, -5.0),
+			Vector2(55.0, -17.0), Vector2(78.0, -28.0), Vector2(110.0, -38.0)
+		]),
+		PackedVector2Array([
+			Vector2(0.0, 0.0), Vector2(-16.0, 5.0), Vector2(-34.0, 14.0),
+			Vector2(-52.0, 29.0), Vector2(-78.0, 48.0), Vector2(-110.0, 65.0)
+		]),
+		PackedVector2Array([
+			Vector2(0.0, 6.0), Vector2(4.0, 24.0), Vector2(18.0, 42.0),
+			Vector2(38.0, 61.0), Vector2(62.0, 82.0), Vector2(85.0, 110.0)
+		])
+	]
+	var trail_surface := SurfaceTool.new()
+	trail_surface.begin(Mesh.PRIMITIVE_TRIANGLES)
+	var trail_width := 2.6
+	for path in trail_paths:
+		for index in range(path.size() - 1):
+			_add_trail_segment(trail_surface, path[index], path[index + 1], trail_width)
+	trail_surface.index()
+	trail_surface.generate_normals()
+	var trail_mesh := trail_surface.commit()
+	if trail_mesh == null or trail_mesh.get_surface_count() == 0:
+		push_error("WorldTerrain could not generate trail mesh surfaces.")
+		return
+	var trail_material := StandardMaterial3D.new()
+	trail_material.vertex_color_use_as_albedo = true
+	trail_material.roughness = 1.0
+	trail_material.cull_mode = BaseMaterial3D.CULL_DISABLED
+	var trails := MeshInstance3D.new()
+	trails.name = "TrailSurface"
+	trails.mesh = trail_mesh
+	trails.material_override = trail_material
+	trails.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
+	add_child(trails)
+
+
+func _add_trail_segment(surface: SurfaceTool, start: Vector2, finish: Vector2, width: float) -> void:
+	var direction := (finish - start).normalized()
+	if direction.length_squared() <= 0.0001:
+		return
+	var side := Vector2(-direction.y, direction.x) * width * 0.5
+	var left_start := start + side
+	var right_start := start - side
+	var left_finish := finish + side
+	var right_finish := finish - side
+	var offset := 0.035
+	var v00 := Vector3(left_start.x, get_height_at(left_start.x, left_start.y) + offset, left_start.y)
+	var v01 := Vector3(left_finish.x, get_height_at(left_finish.x, left_finish.y) + offset, left_finish.y)
+	var v10 := Vector3(right_start.x, get_height_at(right_start.x, right_start.y) + offset, right_start.y)
+	var v11 := Vector3(right_finish.x, get_height_at(right_finish.x, right_finish.y) + offset, right_finish.y)
+	var path_color := Color(0.36, 0.29, 0.19)
+	surface.set_color(path_color)
+	surface.add_vertex(v00)
+	surface.set_color(path_color.lightened(0.06))
+	surface.add_vertex(v01)
+	surface.set_color(path_color.darkened(0.08))
+	surface.add_vertex(v10)
+	surface.set_color(path_color.darkened(0.08))
+	surface.add_vertex(v10)
+	surface.set_color(path_color.lightened(0.06))
+	surface.add_vertex(v01)
+	surface.set_color(path_color)
+	surface.add_vertex(v11)
 
 
 func _add_vertex(surface: SurfaceTool, position: Vector3, uv: Vector2) -> void:
