@@ -343,15 +343,25 @@ func (r *AccountRepository) AttackEnemyForAccount(ctx context.Context,accountID 
 	if err!=nil{return player,game.CombatResult{},err}
 	var respawnValue any
 	if !nextState.RespawnAt.IsZero(){respawnValue=nextState.RespawnAt}
-	if resetAI {
-		_,err=tx.ExecContext(ctx,`UPDATE enemy_spawn_state SET health=$2,respawn_at=$3,initialized=$4,
-			behavior='idle',position_zone_id=$5,position_x=$6,position_z=$7,
-			telegraph_until=NULL,next_attack_at=NULL,last_ai_updated_at=NULL WHERE enemy_id=$1`,
-			enemyID,nextState.Health,respawnValue,nextState.Initialized,spawnDefinition.Position.ZoneID,
-			spawnDefinition.Position.X,spawnDefinition.Position.Z)
+	if nextState.Health > 0 {
+		// The click-to-attack retaliation is itself an enemy attack. Cancel any
+		// pending telegraph and share the AI cooldown to avoid double strikes.
+		nextAttackAt := now.Add(enemyAIConfig(spawnDefinition).AttackCooldown)
+		if resetAI {
+			_,err=tx.ExecContext(ctx,`UPDATE enemy_spawn_state SET health=$2,respawn_at=$3,initialized=$4,
+				behavior='chasing',position_zone_id=$5,position_x=$6,position_z=$7,
+				telegraph_until=NULL,next_attack_at=$8,last_ai_updated_at=$9 WHERE enemy_id=$1`,
+				enemyID,nextState.Health,respawnValue,nextState.Initialized,spawnDefinition.Position.ZoneID,
+				spawnDefinition.Position.X,spawnDefinition.Position.Z,nextAttackAt,now.UTC())
+		} else {
+			_,err=tx.ExecContext(ctx,`UPDATE enemy_spawn_state SET health=$2,respawn_at=$3,initialized=$4,
+				behavior='chasing',telegraph_until=NULL,next_attack_at=$5,last_ai_updated_at=$6 WHERE enemy_id=$1`,
+				enemyID,nextState.Health,respawnValue,nextState.Initialized,nextAttackAt,now.UTC())
+		}
 	} else {
-		_,err=tx.ExecContext(ctx,`UPDATE enemy_spawn_state SET health=$2,respawn_at=$3,initialized=$4 WHERE enemy_id=$1`,
-			enemyID,nextState.Health,respawnValue,nextState.Initialized)
+		_,err=tx.ExecContext(ctx,`UPDATE enemy_spawn_state SET health=$2,respawn_at=$3,initialized=$4,
+			behavior='idle',telegraph_until=NULL,next_attack_at=NULL,last_ai_updated_at=$5 WHERE enemy_id=$1`,
+			enemyID,nextState.Health,respawnValue,nextState.Initialized,now.UTC())
 	}
 	if err!=nil{return game.Player{},game.CombatResult{},fmt.Errorf("update enemy state: %w",err)}
 	if err:=updateOwnedPlayer(ctx,tx,accountID,player);err!=nil{return game.Player{},game.CombatResult{},err}
