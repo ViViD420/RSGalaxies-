@@ -131,3 +131,10 @@ Never hide or silently bypass an error. Stop, reproduce, diagnose and fix it bef
 
 - WorldTerrain builds a separate terrain-conforming ribbon mesh for four starter-zone trails. Heights are sampled from the same deterministic function as terrain collision; the ribbon is visual-only and remains inside the server zone's ±120 X/Z bounds.
 - Runtime mesh existence and bounds assertions were added to the client smoke test; CI verification is pending.
+
+
+## Responsive HUD
+
+- The six primary account/gameplay actions now use a two-column GridContainer instead of six fixed-position buttons.
+- Status panel and toolbar widths adapt to viewport width; status and instruction labels wrap to avoid overflow. Mobile touch controls retain bottom-anchored placement.
+- Import/export CI is pending; interactive device layout testing remains outstanding.
