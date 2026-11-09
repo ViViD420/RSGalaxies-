@@ -125,3 +125,9 @@ Never hide or silently bypass an error. Stop, reproduce, diagnose and fix it bef
 - Client Action #172 passed terrain, movement, camera zoom and attack swing runtime smoke tests with no Godot script/engine errors.
 - Server Action #602 passed race-enabled PostgreSQL integration tests and go vet after removing an unused test variable exposed by #601.
 - Full failed-run history and fixes are maintained in docs/SESSION_HANDOFF.md.
+
+
+## Frontier trail presentation
+
+- WorldTerrain builds a separate terrain-conforming ribbon mesh for four starter-zone trails. Heights are sampled from the same deterministic function as terrain collision; the ribbon is visual-only and remains inside the server zone's ±120 X/Z bounds.
+- Runtime mesh existence and bounds assertions were added to the client smoke test; CI verification is pending.
