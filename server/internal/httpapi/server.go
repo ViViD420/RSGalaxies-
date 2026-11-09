@@ -49,6 +49,11 @@ type characterStore interface {
 	GetTradeForAccount(context.Context, string, string) (game.TradeSnapshot, error)
 }
 
+type encounterRewardStore interface {
+	ListEncounterRewardClaimsForAccount(context.Context, string, game.PlayerID) ([]game.EncounterRewardClaim, error)
+	ClaimEncounterRewardForAccount(context.Context, string, game.PlayerID, string, string, time.Time) (game.Player, game.EncounterRewardClaim, error)
+}
+
 const maxAuthRateKeys = 10000
 
 type authAttemptWindow struct { started time.Time; count int }
@@ -124,6 +129,10 @@ func (s *Server) Routes() http.Handler {
 		mux.HandleFunc("POST /api/v1/account/characters/{id}/presence/heartbeat", s.heartbeatOwnedPresence)
 		mux.HandleFunc("GET /api/v1/account/characters/{id}/presence", s.listOwnedPresence)
 		mux.HandleFunc("GET /api/v1/account/characters/{id}/world/enemies", s.listOwnedEnemySnapshots)
+		if rewardStore, ok := s.characters.(encounterRewardStore); ok {
+			mux.HandleFunc("GET /api/v1/account/characters/{id}/rewards", s.listOwnedRewardClaims(rewardStore))
+			mux.HandleFunc("POST /api/v1/account/characters/{id}/rewards/{enemyID}/{encounterID}/claim", s.claimOwnedReward(rewardStore))
+		}
 		if os.Getenv("RS_GALAXIES_ENV") != "production" || os.Getenv("RS_GALAXIES_ENABLE_TRADING") == "true" {
 			mux.HandleFunc("POST /api/v1/account/characters/{id}/trades/invite/{targetID}", s.createOwnedTradeInvite)
 			mux.HandleFunc("POST /api/v1/account/characters/{id}/trades/accept/{tradeID}", s.acceptOwnedTradeInvite)
@@ -739,6 +748,45 @@ func (s *Server) attackOwnedEnemy(w http.ResponseWriter,r *http.Request) {
 	}
 	attack,defense:=player.EquipmentBonuses()
 	writeJSON(w,200,map[string]any{"character":player,"combat":result,"bonuses":map[string]int{"attack":attack,"defense":defense}})
+}
+
+
+func (s *Server) listOwnedRewardClaims(store encounterRewardStore) http.HandlerFunc {
+	return func(w http.ResponseWriter, r *http.Request) {
+		account, _, ok := s.authenticatedAccount(w, r)
+		if !ok { return }
+		claims, err := store.ListEncounterRewardClaimsForAccount(r.Context(), account.ID, game.PlayerID(strings.TrimSpace(r.PathValue("id"))))
+		if err != nil {
+			if errors.Is(err, game.ErrPlayerNotFound) { writeError(w, http.StatusNotFound, "character_not_found") } else {
+				log.Printf("list encounter reward claims: %v", err)
+				writeError(w, http.StatusInternalServerError, "internal_error")
+			}
+			return
+		}
+		writeJSON(w, http.StatusOK, map[string]any{"claims": claims})
+	}
+}
+
+func (s *Server) claimOwnedReward(store encounterRewardStore) http.HandlerFunc {
+	return func(w http.ResponseWriter, r *http.Request) {
+		account, _, ok := s.authenticatedAccount(w, r)
+		if !ok { return }
+		player, claim, err := store.ClaimEncounterRewardForAccount(r.Context(), account.ID,
+			game.PlayerID(strings.TrimSpace(r.PathValue("id"))), r.PathValue("enemyID"),
+			r.PathValue("encounterID"), s.now())
+		if err != nil {
+			switch {
+			case errors.Is(err, game.ErrPlayerNotFound): writeError(w, http.StatusNotFound, "character_not_found")
+			case errors.Is(err, game.ErrRewardClaimNotFound): writeError(w, http.StatusNotFound, "reward_claim_not_found")
+			case errors.Is(err, game.ErrRewardInventoryFull): writeError(w, http.StatusConflict, "reward_inventory_full")
+			default:
+				log.Printf("claim encounter reward: %v", err)
+				writeError(w, http.StatusInternalServerError, "internal_error")
+			}
+			return
+		}
+		writeJSON(w, http.StatusOK, map[string]any{"character": player, "claim": claim})
+	}
 }
 
 func (s *Server) restOwnedCharacter(w http.ResponseWriter,r *http.Request) {
