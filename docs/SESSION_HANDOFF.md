@@ -86,12 +86,14 @@ An original sandbox MMORPG combining long-form skill progression and item gamepl
 - Current client baseline: run #124 passed at commit `a856a481`. The latest known fully green server baseline before this milestone is run #412.
 - Documentation consistency update `1bb8a9d` aligns `docs/COMBAT.md` with the active 18-skill hierarchy and actual combat behavior.
 
-## Enemy AI foundation (new)
+## Enemy AI foundation and persistence (current milestone)
 
-- Commits: `b805b26` added `server/internal/game/enemy_ai.go`; `b8bdd94` added behavior tests; `cf2540c` and `1621e3f` refined the bounded return-path test.
-- `AdvanceEnemyAI` is a pure deterministic domain transition: idle acquires a same-zone target within aggro range, chases at bounded server-tick speed, telegraphs before requesting an attack, interrupts telegraphs when the player leaves attack range, and returns to spawn when the target leaves the leash or zone. Long pauses cap movement catch-up at one second.
-- The function only emits an attack request; the future repository integration must atomically persist enemy state and apply server-calculated player damage. Do not expose a client-controlled enemy tick or trust client damage.
-- Current limitation: this is tested domain logic, not yet connected to PostgreSQL spawn rows, an encounter scheduler, or client-visible enemy movement.
+- Domain commits: `b805b26` added `server/internal/game/enemy_ai.go`; `b8bdd94` added behavior tests; `cf2540c` and `1621e3f` refined the bounded return-path test.
+- `AdvanceEnemyAI` is a pure deterministic transition: idle acquires a same-zone target within aggro range, chases at bounded server-tick speed, telegraphs before requesting an attack, interrupts telegraphs when the player leaves attack range, and returns to spawn when the target leaves the leash or zone. Long pauses cap movement catch-up at one second.
+- Persistence commits: `a5432cb` adds migration 0010 with per-spawn behavior, position, telegraph deadline, cooldown and last-update fields; `9db87ff` registers migration 10; `5c52656` adds `PlayerRepository.AdvanceEnemyAIForPlayer`, which locks the spawn row, restores state, advances the deterministic state machine with server-owned tuning, and commits the updated instance; `1a3e8b3` adds a PostgreSQL restart-recovery integration test.
+- The integration test advances a rat through aggro and telegraph, creates a new repository instance, verifies the telegraph deadline survives, and confirms the attack request occurs at the expected server timestamp.
+- Safety boundary: this is a persistence primitive, not a live world scheduler. Its player position argument must come from trusted server storage. `AttackRequested` is returned but player damage is not yet applied in the same transaction. Do not expose a client-controlled enemy tick or trust client damage. Before enabling autonomous attacks, combine enemy state transition and server-calculated damage/Defense XP/player defeat in one transaction with documented row-lock ordering.
+- Remaining integration: no server-owned tick coordinator yet, no authenticated enemy snapshot route/client interpolation, and no boss framework. Enemy attacks must remain disabled until the transactional coordinator exists.
 
 ## Latest skill-system implementation
 
