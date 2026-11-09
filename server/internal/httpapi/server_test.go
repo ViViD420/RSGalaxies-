@@ -268,6 +268,17 @@ func (s *testCharacterStore) ListCharacters(_ context.Context,accountID string)(
 	players:=make([]game.Player,0,len(s.players[accountID]));for _,player:=range s.players[accountID]{players=append(players,player)};return players,nil
 }
 
+func (s *testCharacterStore) ListEncounterRewardClaimsForAccount(_ context.Context, accountID string, characterID game.PlayerID) ([]game.EncounterRewardClaim, error) {
+	if _, ok := s.players[accountID][characterID]; !ok { return nil, game.ErrPlayerNotFound }
+	return []game.EncounterRewardClaim{}, nil
+}
+
+func (s *testCharacterStore) ClaimEncounterRewardForAccount(_ context.Context, accountID string, characterID game.PlayerID, _, _ string, _ time.Time) (game.Player, game.EncounterRewardClaim, error) {
+	player, ok := s.players[accountID][characterID]
+	if !ok { return game.Player{}, game.EncounterRewardClaim{}, game.ErrPlayerNotFound }
+	return player, game.EncounterRewardClaim{}, game.ErrRewardClaimNotFound
+}
+
 func TestAuthenticatedCharacterLifecycleAndOwnership(t *testing.T) {
 	t.Setenv("RS_GALAXIES_ENV","production")
 	t.Setenv("RS_GALAXIES_ENABLE_REGISTRATION","true")
@@ -304,6 +315,17 @@ func TestAuthenticatedCharacterLifecycleAndOwnership(t *testing.T) {
 	listChatRequest.Header.Set("Authorization","Bearer "+registration.AccessToken)
 	handler.ServeHTTP(listChat,listChatRequest)
 	if listChat.Code!=http.StatusOK||!strings.Contains(listChat.Body.String(),"Hello, frontier!"){t.Fatalf("list chat status=%d body=%s",listChat.Code,listChat.Body.String())}
+
+	listRewards:=httptest.NewRecorder()
+	listRewardsRequest:=httptest.NewRequest(http.MethodGet,"/api/v1/account/characters/"+string(player.ID)+"/rewards",nil)
+	listRewardsRequest.Header.Set("Authorization","Bearer "+registration.AccessToken)
+	handler.ServeHTTP(listRewards,listRewardsRequest)
+	if listRewards.Code!=http.StatusOK||!strings.Contains(listRewards.Body.String(),"\"claims\":[]"){t.Fatalf("list reward claims status=%d body=%s",listRewards.Code,listRewards.Body.String())}
+	claimMissing:=httptest.NewRecorder()
+	claimMissingRequest:=httptest.NewRequest(http.MethodPost,"/api/v1/account/characters/"+string(player.ID)+"/rewards/frontier-rat-001/encounter-test/claim",nil)
+	claimMissingRequest.Header.Set("Authorization","Bearer "+registration.AccessToken)
+	handler.ServeHTTP(claimMissing,claimMissingRequest)
+	if claimMissing.Code!=http.StatusNotFound||!strings.Contains(claimMissing.Body.String(),"reward_claim_not_found"){t.Fatalf("missing reward claim status=%d body=%s",claimMissing.Code,claimMissing.Body.String())}
 	cooldownChat:=httptest.NewRecorder()
 	cooldownChatRequest:=httptest.NewRequest(http.MethodPost,"/api/v1/account/characters/"+string(player.ID)+"/chat/local",bytes.NewBufferString(`{"message":"Too soon"}`))
 	cooldownChatRequest.Header.Set("Authorization","Bearer "+registration.AccessToken)
