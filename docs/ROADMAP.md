@@ -181,3 +181,11 @@ Client Action #183 (run 42604378304) passed; #182 (42604361140) passed. Client #
 
 - `docs/DESIGN_SYNTHESIS.md` — source-attributed comparison and original design direction.
 - `docs/DESIGN_DECISIONS.md` — decision log with explicit status and implementation boundaries.
+
+ 
+## Movement latency correction — verification pending
+
+- [x] Commit `df58725e8b22246203ebef653255bcacbabbda91` increases the bounded server movement calculation window from 250 ms to one second while retaining the 7 units/second speed limit, 0.15 tolerance, zone bounds and finite-coordinate checks.
+- [x] Add a regression for serialized client updates delayed to 400 ms.
+- [x] Add a regression proving a five-second idle interval remains capped to one second.
+- [ ] Server Action #603 / run `42606055274` must complete race-enabled PostgreSQL integration tests and `go vet ./...`; inspect full logs before marking the movement correction complete.
