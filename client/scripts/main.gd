@@ -781,9 +781,6 @@ func _build_hud() -> void:
 	rewards_button.visible = false
 	rewards_button.pressed.connect(_show_rewards_panel)
 	layer.add_child(rewards_button)
-	rewards_request = _new_api_request()
-	add_child(rewards_request)
-	rewards_request.request_completed.connect(_on_rewards_request_completed)
 
 	if DisplayServer.is_touchscreen_available():
 		_add_hold_button(layer, "▲", "move_forward", 95, -230, 165, -160)
@@ -1403,6 +1400,7 @@ func _logout() -> void:
 		status_label.text = "Sign out failed; try again."
 
 func _activate_character(character_data: Dictionary) -> void:
+	_cancel_rewards_request()
 	_stop_presence()
 	_stop_skills_request()
 	if movement_timer != null:
@@ -1470,6 +1468,7 @@ func _create_account_character(character_name: String) -> void:
 
 
 func _expire_session() -> void:
+	_cancel_rewards_request()
 	_stop_presence()
 	_stop_chat()
 	_stop_skills_request()
@@ -1499,6 +1498,7 @@ func _expire_session() -> void:
 	auth_status_label.text = "Your session expired. Please sign in again."
 
 func _show_character_selection(characters: Array) -> void:
+	_cancel_rewards_request()
 	_stop_chat()
 	_stop_skills_request()
 	if market_panel != null:
@@ -2641,7 +2641,29 @@ func _show_rewards_panel() -> void:
 	_request_reward_claims()
 
 
+func _ensure_rewards_request() -> void:
+	if rewards_request != null:
+		return
+	rewards_request = _new_api_request()
+	add_child(rewards_request)
+	rewards_request.request_completed.connect(_on_rewards_request_completed)
+
+
+func _cancel_rewards_request() -> void:
+	if rewards_request == null:
+		rewards_pending = false
+		return
+	if rewards_request.request_completed.is_connected(_on_rewards_request_completed):
+		rewards_request.request_completed.disconnect(_on_rewards_request_completed)
+	if rewards_request.get_http_client_status() != HTTPClient.STATUS_DISCONNECTED:
+		rewards_request.cancel_request()
+	rewards_request.queue_free()
+	rewards_request = null
+	rewards_pending = false
+
+
 func _request_reward_claims() -> void:
+	_ensure_rewards_request()
 	if player_id.is_empty() or auth_token.is_empty() or rewards_pending or rewards_request == null:
 		return
 	rewards_action = "list"
@@ -2656,6 +2678,7 @@ func _request_reward_claims() -> void:
 
 
 func _claim_encounter_reward(enemy_id: String, encounter_id: String) -> void:
+	_ensure_rewards_request()
 	if player_id.is_empty() or auth_token.is_empty() or rewards_pending or rewards_request == null:
 		return
 	rewards_action = "claim"
