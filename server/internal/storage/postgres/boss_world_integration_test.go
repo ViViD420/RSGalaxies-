@@ -237,11 +237,45 @@ func TestPostgresBossWorldTickInterruptsAndResetsEncounterCycle(t *testing.T) {
 		t.Fatalf("interrupted boss ability remained active: %+v", activeAbility)
 	}
 
-	respawnAt := now.Add(10 * time.Second)
+	// Re-enter range after Stone Fist's cooldown, start a fresh telegraph, then
+	// let presence expire. The no-target tick must interrupt without damage.
+	if _, err := db.ExecContext(ctx, "UPDATE players SET position_x=$2 WHERE id=$1", string(playerID), 22.0); err != nil {
+		t.Fatal(err)
+	}
+	if _, err := db.ExecContext(ctx, "UPDATE zone_presence SET position_x=$2,last_seen_at=$3 WHERE character_id=$1",
+		string(playerID), 22.0, now.Add(6*time.Second)); err != nil {
+		t.Fatal(err)
+	}
+	if err := accountRepo.tickEnemyAIForDefinition(ctx, enemy, now.Add(6*time.Second)); err != nil {
+		t.Fatalf("start second boss telegraph: %v", err)
+	}
+	if _, err := db.ExecContext(ctx, "UPDATE zone_presence SET last_seen_at=$2 WHERE character_id=$1",
+		string(playerID), now.Add(-30*time.Second)); err != nil {
+		t.Fatal(err)
+	}
+	if err := accountRepo.tickEnemyAIForDefinition(ctx, enemy, now.Add(7*time.Second)); err != nil {
+		t.Fatalf("interrupt boss telegraph without target: %v", err)
+	}
+	if err := db.QueryRowContext(ctx, "SELECT active_ability_id FROM boss_encounter_states WHERE enemy_id=$1 AND encounter_id=$2",
+		enemy.ID, firstCycle).Scan(&activeAbility); err != nil {
+		t.Fatal(err)
+	}
+	if activeAbility.Valid {
+		t.Fatalf("boss telegraph remained active without an eligible target: %+v", activeAbility)
+	}
+	updated, err = accountRepo.GetCharacter(ctx, account.ID, playerID)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if updated.Health != game.MaxPlayerHealth || updated.Skills["defense"].Experience != 0 {
+		t.Fatalf("no-target interruption dealt damage: health=%d Defense=%+v", updated.Health, updated.Skills["defense"])
+	}
+
+	respawnAt := now.Add(20 * time.Second)
 	if _, err := db.ExecContext(ctx, "UPDATE enemy_spawn_state SET health=0,respawn_at=$2 WHERE enemy_id=$1", enemy.ID, respawnAt); err != nil {
 		t.Fatal(err)
 	}
-	if err := accountRepo.tickEnemyAIForDefinition(ctx, enemy, now.Add(9*time.Second)); err != nil {
+	if err := accountRepo.tickEnemyAIForDefinition(ctx, enemy, now.Add(19*time.Second)); err != nil {
 		t.Fatalf("tick before boss respawn deadline: %v", err)
 	}
 	var beforeRespawnCycle string
@@ -252,7 +286,7 @@ func TestPostgresBossWorldTickInterruptsAndResetsEncounterCycle(t *testing.T) {
 		t.Fatalf("boss cycle changed before respawn deadline: %q -> %q", firstCycle, beforeRespawnCycle)
 	}
 
-	if err := accountRepo.tickEnemyAIForDefinition(ctx, enemy, now.Add(11*time.Second)); err != nil {
+	if err := accountRepo.tickEnemyAIForDefinition(ctx, enemy, now.Add(21*time.Second)); err != nil {
 		t.Fatalf("tick after boss respawn deadline: %v", err)
 	}
 	var secondCycle string
