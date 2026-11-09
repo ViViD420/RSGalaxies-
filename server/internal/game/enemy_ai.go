@@ -59,6 +59,10 @@ func AdvanceEnemyAI(definition EnemyDefinition, config EnemyAIConfig, state Enem
 	previous := state.Behavior
 	if state.LastUpdatedAt.IsZero() {
 		state.LastUpdatedAt = now
+	} else if now.Before(state.LastUpdatedAt) {
+		// Server clocks can differ slightly across replicas. Never move the
+		// persisted simulation clock backwards when a stale tick arrives.
+		now = state.LastUpdatedAt
 	}
 	delta := now.Sub(state.LastUpdatedAt).Seconds()
 	if delta < 0 { delta = 0 }
