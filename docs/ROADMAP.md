@@ -32,6 +32,7 @@
 - [x] Godot builds and selects workbench/forge stations from the server crafting-station catalog.
 - [x] Workbench plank, herbal-bundle and herbal-tea recipes plus forge copper smelting/training-sword recipes.
 - [x] Cooking profession progression through crafting a server-defined healing tea consumable.
+- [ ] First rare enemy material sink: Rat Tooth + Copper Bars + Plank → Smithing level 2 Rat-Tooth Blade, equippable only at Blades level 2 (CI pending).
 - [x] Transactional crafting with ingredient consumption, output capacity and skill XP.
 - [x] Basic PvE enemy definitions, server-calculated damage, cooldowns, retaliation, specialization/parent/co-skill XP, starter loot and respawns.
 - [x] Player health, defeated-state action restrictions and safe-spawn recovery.
