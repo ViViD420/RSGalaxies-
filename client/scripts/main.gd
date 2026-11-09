@@ -81,6 +81,11 @@ var enemy_available: Dictionary = {}
 var enemy_snapshot_request: HTTPRequest
 var enemy_snapshot_timer: Timer
 var enemy_snapshot_pending := false
+var boss_hud_panel: PanelContainer
+var boss_hud_name_label: Label
+var boss_hud_phase_label: Label
+var boss_hud_health_bar: ProgressBar
+var boss_hud_ability_label: Label
 var trade_button: Button
 var trade_panel: PanelContainer
 var trade_target_select: OptionButton
@@ -459,6 +464,7 @@ func _on_enemy_snapshots_completed(result: int, response_code: int, _headers: Pa
 	var snapshots: Variant = payload.get("enemies", [])
 	if not snapshots is Array:
 		return
+	var boss_seen := false
 	for snapshot in snapshots:
 		if not snapshot is Dictionary:
 			continue
@@ -484,6 +490,15 @@ func _on_enemy_snapshots_completed(result: int, response_code: int, _headers: Pa
 		var boss_id := str(snapshot.get("bossId", ""))
 		var boss_phase := str(snapshot.get("bossPhaseId", ""))
 		var boss_ability := str(snapshot.get("bossActiveAbilityId", ""))
+		if not boss_id.is_empty() and health > 0:
+			boss_seen = true
+			if boss_hud_panel != null:
+				boss_hud_panel.visible = true
+				boss_hud_name_label.text = display_name.to_upper()
+				boss_hud_health_bar.max_value = maxi(maximum, 1)
+				boss_hud_health_bar.value = clampi(health, 0, maxi(maximum, 1))
+				boss_hud_phase_label.text = boss_phase.replace("-", " ").to_upper() if not boss_phase.is_empty() else "ENCOUNTER"
+				boss_hud_ability_label.text = "⚠ " + boss_ability.replace("-", " ").to_upper() if not boss_ability.is_empty() else "Watching for an opening..."
 		if health <= 0:
 			label.text = display_name + "\nRespawning..."
 		elif not boss_id.is_empty():
@@ -497,6 +512,8 @@ func _on_enemy_snapshots_completed(result: int, response_code: int, _headers: Pa
 			label.text = display_name + "\n" + str(health) + "/" + str(maximum) + " • ⚠ ATTACK"
 		else:
 			label.text = display_name + "\n" + str(health) + "/" + str(maximum) + " • " + behavior.capitalize()
+	if not boss_seen and boss_hud_panel != null:
+		boss_hud_panel.visible = false
 
 func _update_enemy_visuals(delta: float) -> void:
 	var blend := 1.0 - exp(-delta * 10.0)
@@ -801,7 +818,36 @@ func _build_hud() -> void:
 		_add_hold_button(layer, "USE", "interact", -125, -230, -25, -130, true)
 		_add_hold_button(layer, "JUMP", "jump", -125, -120, -25, -25, true)
 
+	_build_boss_hud(layer)
 	add_child(layer)
+
+func _build_boss_hud(layer: CanvasLayer) -> void:
+	boss_hud_panel = PanelContainer.new()
+	boss_hud_panel.anchor_left = 0.5
+	boss_hud_panel.anchor_right = 0.5
+	boss_hud_panel.offset_left = -190
+	boss_hud_panel.offset_right = 190
+	boss_hud_panel.offset_top = 78
+	boss_hud_panel.offset_bottom = 174
+	boss_hud_panel.visible = false
+	var column := VBoxContainer.new()
+	boss_hud_panel.add_child(column)
+	boss_hud_name_label = Label.new()
+	boss_hud_name_label.text = "BOSS ENCOUNTER"
+	boss_hud_name_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	boss_hud_name_label.add_theme_font_size_override("font_size", 18)
+	column.add_child(boss_hud_name_label)
+	boss_hud_health_bar = ProgressBar.new()
+	boss_hud_health_bar.custom_minimum_size = Vector2(350, 18)
+	boss_hud_health_bar.show_percentage = false
+	column.add_child(boss_hud_health_bar)
+	boss_hud_phase_label = Label.new()
+	boss_hud_phase_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	column.add_child(boss_hud_phase_label)
+	boss_hud_ability_label = Label.new()
+	boss_hud_ability_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	column.add_child(boss_hud_ability_label)
+	layer.add_child(boss_hud_panel)
 
 func _add_hold_button(parent: Control, caption: String, action: String, left: float, top: float, right: float, bottom: float, anchor_right: bool = false) -> void:
 	var button := Button.new()
