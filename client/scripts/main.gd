@@ -462,7 +462,11 @@ func _on_enemy_snapshots_completed(result: int, response_code: int, _headers: Pa
 		var maximum := int(snapshot.get("maxHealth", 1))
 		var behavior := str(snapshot.get("behavior", "idle"))
 		var creature: Node3D = enemy_nodes[enemy_id]
-		creature.visible = health > 0
+		if creature.get_child_count() >= 2:
+			var body: MeshInstance3D = creature.get_child(0)
+			var head: MeshInstance3D = creature.get_child(1)
+			body.visible = health > 0
+			head.visible = health > 0
 		var label: Label3D = enemy_labels[enemy_id]
 		if health <= 0:
 			label.text = str(snapshot.get("name", enemy_id)) + "\nRespawning..."
