@@ -169,7 +169,7 @@ An original sandbox MMORPG combining long-form skill progression and item gamepl
 
 - `game/loot.go` and `game/loot_test.go` (`e0a9ec0`, `620d1ad`, `53aa063`, `038e4f5`, `24e38e9`) add deterministic weighted resolution over a 10,000-point roll range, table validation, defensive copies, and no-drop outcomes. Frontier Rat: 70% rat pelt / 20% rat tooth / 10% no drop. Wild Boar: 75% boar hide / 15% boar tusk / 10% no drop.
 - Item definitions add rat tooth and boar tusk (`fb6e933`); enemy definitions point to the new tables (`b9c14f1`). `enemy_rewards.go` generates cryptographically secure drop and quantity rolls during the atomic settlement (`0553107`).
-- Settlement integration tests now accept either valid weighted drop or the no-drop result (`1816ec2`, `8ebbcf8`, `1a6b368`, `aa26c06`). Actions #504–#515 for this slice were still running at last inspection; do not claim loot tables CI-passed until the latest run completes.
+- Settlement integration tests now accept either valid weighted drop or the no-drop result (`1816ec2`, `8ebbcf8`, `1a6b368`, `aa26c06`). Rare materials are sellable but not merchant-purchasable (`b42af63`, `53fdb00`); HTTP catalog tests now expect 17 items and assert the rare-material restriction (`2dd6867`). Intermediate Actions #505–#513 failed on incomplete table dependencies, no-drop assertions or stale catalog counts; later commits correct those issues. Actions #514–#518 were still running at last inspection; do not claim loot tables CI-passed until the latest run completes.
 - This is intentionally a first one-item-per-encounter table. Multi-drop tables, per-player rolls, guaranteed plus rare drops, quantity bands, boss materials and unique item instances remain future work.
 
 ## Next engineering tasks
