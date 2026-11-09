@@ -94,8 +94,8 @@ An original sandbox MMORPG combining long-form skill progression and item gamepl
 - `933cc94` adds the internal `game.EncounterParticipant` model. `f408aee` adds server-generated encounter IDs, upserted contribution records and incoming-damage updates. `0a7cfd` assigns/rotates encounter IDs in the world tick, persists them per spawn life and records AI damage received for existing participants. `2259f73` records player attack contributions and stores the encounter ID in all player combat update paths. `139b122` adds the missing encounter-ID read to player combat. `04eddd9` exposes a repository query for a cycle's participants.
 - `24c99c0` adds PostgreSQL coverage for unique encounter IDs across respawns and per-cycle contribution records. `d495d6f` asserts that autonomous AI damage updates an already-engaged participant's incoming-damage/action counters.
 - Contribution policy currently records a character when they perform a player attack. Subsequent AI damage updates that participant but does not make an unengaged bystander eligible. The ledger is groundwork only: no party membership, threat score, reward eligibility policy, loot roll or idempotent reward settlement exists yet.
-- Server CI runs #459–#463 and #465–#468 were in progress at latest check. #464 failed on an intermediate compile error (`encounterIDValue` was referenced before the SELECT/Scan was updated); commit `139b122` corrects the scan. Verify migration, repository, integration and contribution tests before treating this milestone as green.
-- Documentation: `07c50f5` updates the encounter/boss/loot design prerequisites; `5bd4638` updates combat documentation.
+- Server CI runs #459–#463 and #465–#466 were in progress at latest check. #464 failed on an intermediate compile error (`encounterIDValue` was referenced before the SELECT/Scan was updated); `139b122` corrects it. #467/#468 failed because the new contribution test omitted one return value from `AttackEnemyForAccount`; `4067119` fixes both assignments and #469 is validating it. Verify migration, repository, integration and contribution tests before treating this milestone as green.
+- Documentation: `07c50f5` updates the encounter/boss/loot design prerequisites; `5bd4638` updates combat documentation; `c9ba4ed` marks the ledger slice on the roadmap.
 
 ## Latest verified repository state
 
@@ -129,7 +129,7 @@ An original sandbox MMORPG combining long-form skill progression and item gamepl
 
 ## Next engineering tasks
 
-1. Begin encounter-cycle identity and contribution tracking as the next prerequisite for group/boss reward fairness. Sticky-target selection is complete and CI-validated by #457/#458. Defeated-target, cross-zone, stale-presence, leash-return, respawn-reset and shared-cooldown coverage is in the integration suite.
+1. Finish CI verification for #469 and earlier migration/ledger commits; correct any failures before proceeding to party eligibility and idempotent reward settlement. Sticky-target selection is complete and CI-validated by #457/#458. Defeated-target, cross-zone, stale-presence, leash-return, respawn-reset and shared-cooldown coverage is in the integration suite.
 2. Improve enemy target stickiness/threat selection and add bounded pathfinding; do this before party aggro or multi-enemy encounters.
 3. Add server-owned enemy abilities and combat telegraph types, then combat animations/feedback in Godot.
 4. Add durable encounter participation, contribution tracking and reward settlement before boss phases or group loot.
