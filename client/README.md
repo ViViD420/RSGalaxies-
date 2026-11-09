@@ -24,9 +24,9 @@ Open `client/` in Godot 4.3 or newer and run the main scene. Start the Go world 
 - Server-authoritative PvE attacks, enemy retaliation/respawn, Combat XP, loot and healing consumables.
 - Persistent local-zone chat with a bounded 100-line client display.
 - Leased zone-presence heartbeats and polling remote-player avatars/nameplates; inactive characters disappear after their presence lease expires.
-- Live skills panel with all ten skills, current level, XP totals, per-level progress bars and XP remaining to the next level.
+- Live skills panel with all eighteen active skills, current level, XP totals, per-level progress bars and XP remaining to the next level.
 
-The client loads the server-owned skills, zones, gathering nodes, items, enemies, recipes and crafting stations through one consolidated public catalog request instead of duplicating those definitions. Gameplay outcomes are committed by the Go server and PostgreSQL repository. API requests use bounded timeouts, and automatic redirects are disabled so bearer credentials are never forwarded to a redirected destination.
+The client loads the server-owned skills, zones, gathering nodes, items, enemies, recipes and crafting stations through one consolidated public catalog request instead of duplicating those definitions. The controller currently uses a capsule placeholder and direct local movement; acceleration, responsive locomotion animation, richer terrain and authoritative movement reconciliation are active core-game priorities. Gameplay outcomes are committed by the Go server and PostgreSQL repository. API requests use bounded timeouts, and automatic redirects are disabled so bearer credentials are never forwarded to a redirected destination.
 
 ## Server configuration
 
@@ -35,6 +35,10 @@ Account login requires PostgreSQL-backed account services. Use the provided GitH
 When running as a Codespaces Web build, the client derives the forwarded API origin automatically. For a native local run, start the Go API on port 8080 first; change `api_base_url` in `scripts/main.gd` if required.
 
 A Web export preset is included in `export_presets.cfg`. The Codespaces setup installs Godot 4.3 and its export templates, and CI imports the project and validates a Web export.
+
+## Engineering quality rule
+
+Never hide an error. Stop feature work, diagnose the root cause, fix it, add regression coverage where practical, inspect actual CI job results and record the failure and correction before moving on. See [DEVELOPMENT_RULES.md](../docs/DEVELOPMENT_RULES.md).
 
 ## Current limitations
 
