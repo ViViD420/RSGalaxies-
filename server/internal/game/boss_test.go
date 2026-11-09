@@ -275,3 +275,20 @@ func TestAdvanceBossEncounterCopiesCooldownMapBeforeMutation(t *testing.T) {
 		t.Fatalf("returned state did not record the new cooldown: %+v", result.State.AbilityCooldowns)
 	}
 }
+
+func TestFindBossEncounterForEnemyUsesSpawnIdentity(t *testing.T) {
+	definition := stonebackDefinition(t)
+	found, ok := FindBossEncounterForEnemy(definition.EnemyID)
+	if !ok || found.ID != definition.ID || found.EnemyID != definition.EnemyID {
+		t.Fatalf("boss lookup by enemy identity = %+v, found=%v", found, ok)
+	}
+	found.Phases[0].AbilityIDs[0] = "mutated"
+	again, ok := FindBossEncounterForEnemy(definition.EnemyID)
+	if !ok || again.Phases[0].AbilityIDs[0] != "stone-fist" {
+		t.Fatalf("enemy identity lookup exposed mutable catalog state: %+v", again)
+	}
+	if _, ok := FindBossEncounterForEnemy("not-a-boss"); ok {
+		t.Fatal("unknown enemy unexpectedly resolved to a boss definition")
+	}
+}
+
