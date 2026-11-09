@@ -266,7 +266,15 @@ func AdvanceBossEncounter(definition BossEncounterDefinition, state BossEncounte
 
 	if state.ActiveAbilityID != "" {
 		ability, ok := bossAbilityByID(definition, state.ActiveAbilityID)
-		if !ok {
+		validForPhase := false
+		for _, abilityID := range phase.AbilityIDs {
+			if abilityID == state.ActiveAbilityID {
+				validForPhase = true
+				break
+			}
+		}
+		if !ok || !validForPhase || state.TelegraphStartedAt.IsZero() ||
+			state.TelegraphUntil.IsZero() || state.TelegraphUntil.Before(state.TelegraphStartedAt) {
 			return BossEncounterResult{}, ErrInvalidBossEncounterDefinition
 		}
 		if !bossAbilityInRange(ability, input.BossPosition, input.TargetPosition) {
@@ -297,7 +305,11 @@ func AdvanceBossEncounter(definition BossEncounterDefinition, state BossEncounte
 	if len(phase.AbilityIDs) == 0 {
 		return BossEncounterResult{}, ErrInvalidBossEncounterDefinition
 	}
-	startIndex := state.NextAbilityIndex % len(phase.AbilityIDs)
+	startIndex := state.NextAbilityIndex
+	if startIndex < 0 {
+		startIndex = 0
+	}
+	startIndex %= len(phase.AbilityIDs)
 	for offset := 0; offset < len(phase.AbilityIDs); offset++ {
 		index := (startIndex + offset) % len(phase.AbilityIDs)
 		abilityID := phase.AbilityIDs[index]
