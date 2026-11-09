@@ -111,3 +111,10 @@ Boss-specific feature work and roster expansion are paused while the core game e
 ### Engineering quality invariant
 
 Never hide or silently bypass an error. Stop, reproduce, diagnose and fix it before moving to unrelated work; add regression coverage, inspect actual CI jobs/logs and document the failure and correction. See docs/DEVELOPMENT_RULES.md. The client CI explicitly scans Godot movement-smoke-test, editor-import and Web-export logs for `SCRIPT ERROR:` and `ERROR:` because Godot 4.3 can emit GDScript parse errors while returning a successful process exit code. A headless player-controller smoke test exercises acceleration, sustained movement, deceleration, jump impulse and collision/presentation separation.
+
+
+## Camera and combat presentation
+
+- Third-person camera zoom is controlled through the SpringArm3D with configurable min/max distance and wheel/keyboard input. Default bounds are 2.5–9.0m.
+- A reusable placeholder melee swing animates only the visual body mesh and is triggered only after a successful server-authoritative combat response. It does not alter collision geometry or predict damage.
+- Headless regression coverage for zoom bounds and attack tween completion is added; Client Action #164 validation is pending.
