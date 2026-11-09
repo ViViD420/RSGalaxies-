@@ -13,6 +13,7 @@ extends Node3D
 
 var _broad_noise: FastNoiseLite
 var _detail_noise: FastNoiseLite
+var _biome_noise: FastNoiseLite
 var _trail_paths: Array[PackedVector2Array] = []
 
 
@@ -49,6 +50,15 @@ func _configure_noise() -> void:
 	_detail_noise.fractal_octaves = 2
 	_detail_noise.fractal_gain = 0.42
 	_detail_noise.fractal_lacunarity = 2.0
+
+	_biome_noise = FastNoiseLite.new()
+	_biome_noise.seed = terrain_seed + 104729
+	_biome_noise.noise_type = FastNoiseLite.TYPE_SIMPLEX
+	_biome_noise.frequency = 0.019
+	_biome_noise.fractal_type = FastNoiseLite.FRACTAL_FBM
+	_biome_noise.fractal_octaves = 3
+	_biome_noise.fractal_gain = 0.55
+	_biome_noise.fractal_lacunarity = 2.0
 
 
 func _build_terrain() -> void:
@@ -163,7 +173,7 @@ func _distance_to_trails(point: Vector2) -> float:
 
 
 func _color_for_position(position: Vector3) -> Color:
-	var base_color := _base_color_for_height(position.y)
+	var base_color := _base_color_for_position(position)
 	var trail_distance := _distance_to_trails(Vector2(position.x, position.z))
 	var blend := clampf((2.4 - trail_distance) / 0.9, 0.0, 1.0)
 	blend = blend * blend * (3.0 - 2.0 * blend)
@@ -177,12 +187,16 @@ func _add_vertex(surface: SurfaceTool, position: Vector3, uv: Vector2) -> void:
 	surface.add_vertex(position)
 
 
-func _base_color_for_height(height: float) -> Color:
+func _base_color_for_position(position: Vector3) -> Color:
 	var grass := Color(0.17, 0.29, 0.16)
 	var moss := Color(0.25, 0.36, 0.20)
 	var dry_grass := Color(0.39, 0.37, 0.25)
-	if height < -0.55:
-		return grass.darkened(0.12)
-	if height > 0.75:
-		return moss.lerp(dry_grass, clampf((height - 0.75) / 1.0, 0.0, 0.65))
-	return grass.lerp(moss, clampf((height + 0.55) / 1.3, 0.0, 1.0))
+	var rocky_soil := Color(0.32, 0.33, 0.29)
+	var moisture := _biome_noise.get_noise_2d(position.x, position.z)
+	if position.y > 1.0:
+		return rocky_soil.lerp(moss, clampf(1.0 - (position.y - 1.0) / 2.0, 0.0, 0.35))
+	if moisture > 0.28:
+		return grass.lerp(moss, clampf((moisture - 0.28) / 0.55, 0.0, 1.0))
+	if moisture < -0.28:
+		return grass.lerp(dry_grass, clampf((-moisture - 0.28) / 0.55, 0.0, 1.0))
+	return grass.lerp(moss, clampf((position.y + 0.55) / 1.3, 0.0, 1.0))
