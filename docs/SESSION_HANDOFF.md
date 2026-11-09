@@ -1,6 +1,6 @@
 # RS Galaxies — Session Handoff
 
-Last updated: 2026-11-09 (boss snapshot contract added; CI pending)
+Last updated: 2026-11-09 (boss snapshot and Godot HUD groundwork; CI pending)
 
 ## Project identity
 
@@ -369,3 +369,19 @@ Continue the existing boss vertical slice: integrate cycle-scoped boss persisten
 3. Add PostgreSQL tests for one boss ability resolving once under concurrent ticks, stale worker rejection, player defeat, boss death, and a fresh state after respawn.
 4. Render the optional fields in Godot only after the authoritative transactional server path is integrated; preserve Rewards and all existing HUD panels.
 5. Only then register Stoneback Colossus and reuse the existing multi-item reward claims.
+
+## Godot boss HUD groundwork (2026-11-09)
+
+- Godot main.gd now recognizes the optional server boss snapshot fields and renders boss identity, phase and active ability in the world-space enemy label.
+- Added a centered boss encounter panel with server-sourced health progress, phase and ability warning. It appears only while an active boss snapshot is present and hides when no live boss is included.
+- Client change commit: 8894a3399892b4337410cc08b47ae9f7b34a790c.
+- Snapshot/domain groundwork preceding it: 2c7abb5, a44fc76, 1dc7623 and 3c98572. Boss-specific damage groundwork: b45319e and 5897753. Telegraph validation: d6c1220 and aac8771.
+- The HUD is intentionally passive: it does not calculate boss health, phase, ability choice or telegraph timing locally. It only renders authoritative snapshot values.
+- This does not make Stoneback Colossus playable. The enemy catalog does not yet include the boss, TickEnemyAI does not yet advance/persist boss state, and player-initiated boss defeat is not yet connected.
+- No CI job results have been verified for these changes. The last verified server checkpoint remains Action #550 (run 42587608297); no new server/client tests are claimed.
+
+### Next work
+1. Integrate the boss engine into the world tick and all boss defeat paths in PostgreSQL transactions.
+2. Add PostgreSQL integration tests for exactly-once ability damage under concurrent workers, range interruption, stale-cycle rejection, death and respawn.
+3. Verify the server and Godot client workflows and inspect their individual test/import steps.
+4. Register the live Stoneback Colossus only after the complete server/client path passes.
