@@ -140,3 +140,6 @@ Each milestone is a tested, reviewable slice. A feature is not complete because 
 - [ ] Verify public TickEnemyAI/RunEnemyAITick, authenticated snapshots and end-to-end reward claim flow.
 
 - [x] Add an end-to-end Stoneback defeat, durable settlement, multi-item claim and idempotent retry PostgreSQL integration test (CI pending).
+
+- [x] Update existing enemy snapshot integration coverage for the third catalogued spawn.
+- [x] Isolate boss world-tick integration tests in unique zones and make no-target/ability timing setup deterministic (CI pending).
