@@ -41,7 +41,7 @@ The Go service selects PostgreSQL repositories when `RS_GALAXIES_DATABASE_URL` i
 - One bounded starter zone with a spawn point and server-time movement validation.
 - Eighteen active data-driven ordinary skills: two combat parent skills, six combat specializations, two independent combat co-skills, four gathering skills and four production skills. All use level 1–99 progression and a 200,000,000 XP cap. Skill categories, parent relationships and Jedi mastery eligibility are server-internal and omitted from public catalogs. Accuracy is a derived server-side combat outcome, not a trainable skill. Legacy Combat/Tactics progress keys are retained in old character records but are inactive and omitted from the client skill panel. See docs/SKILL_ROSTER.md and docs/COMBAT_PROGRESSION.md. A future hidden Jedi unlock is specified in docs/JEDI_PROGRESSION_DESIGN.md; it is not implemented or exposed yet.
 - Tree/stone/copper gathering, node charges and respawn, workbench/forge recipes and transactional skill XP awards.
-- Basic server-authoritative PvE with enemy health/respawn state, cooldowns, retaliation, skill-attributed XP (combat specialization, parent and co-skills), starter loot and safe-spawn recovery.
+- Server-authoritative PvE with enemy health/respawn state, cooldowns, retaliation, skill-attributed XP (combat specialization, parent and co-skills), starter loot and safe-spawn recovery. Per-spawn AI state persists behavior, position, telegraph deadlines and cooldowns. A PostgreSQL-backed 250 ms world worker selects fresh same-zone presence, advances aggro/chase/telegraph/leash/return behavior and commits telegraphed enemy damage plus player health/Defense XP atomically. Authenticated zone snapshots feed Godot health/behavior labels and interpolated enemy movement; player attacks validate against persisted live enemy positions.
 
 ### Inventory and economy
 
@@ -61,7 +61,7 @@ The Go service selects PostgreSQL repositories when `RS_GALAXIES_DATABASE_URL` i
 
 - Never trust client-supplied XP, item counts, currency, position, combat results, account IDs or ownership.
 - Character operations resolve the character using the authenticated account and lock affected rows in a transaction.
-- Shared gathering and enemy state is stored in PostgreSQL and locked to prevent duplicate resource consumption or combat rewards across server instances.
+- Shared gathering and enemy state is stored in PostgreSQL and locked to prevent duplicate resource consumption or combat rewards across server instances. Enemy world ticks and player attacks both lock the player before the enemy; a completed AI telegraph, enemy state, player health and Defense XP commit in one transaction. Multiple world workers serialize through PostgreSQL row locks and persisted enemy cooldowns.
 - Inventory and currency changes validate all inputs and capacity before commit.
 - Any future trade must lock both parties in a stable order, reserve assets in escrow, validate acceptance and capacity, atomically deliver both sides, and write an append-only ledger in the same transaction.
 - Presence is ephemeral and lease-based; it must not be treated as proof of an active socket or as durable player state.
@@ -78,8 +78,9 @@ The Go service selects PostgreSQL repositories when `RS_GALAXIES_DATABASE_URL` i
 
 ## Next architectural decisions
 
-1. Replace polling with a measured realtime transport and authoritative zone snapshots.
-2. Define online/session ownership, reconnect and multi-device character rules.
-3. Add trade escrow and an append-only economy ledger before player-to-player exchange.
-4. Introduce item instances only when durability, binding or per-item modifiers require them.
-5. Split presence/cache and zone simulation only when load tests demonstrate PostgreSQL/HTTP polling is insufficient.
+1. Improve enemy target stickiness, threat selection and bounded pathfinding before party aggro and multi-phase encounters.
+2. Replace polling with a measured realtime transport and authoritative zone snapshots when latency/load measurements justify it.
+3. Define online/session ownership, reconnect and multi-device character rules.
+4. Add an append-only economy ledger before expanding player-to-player exchange.
+5. Introduce item instances only when durability, binding or per-item modifiers require them.
+6. Split presence/cache and zone simulation only when load tests demonstrate PostgreSQL/HTTP polling is insufficient.
