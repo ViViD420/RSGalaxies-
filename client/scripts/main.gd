@@ -1238,6 +1238,8 @@ func _on_gather_completed(result: int, response_code: int, _headers: PackedStrin
 	var player_data: Dictionary = payload.get("character", payload.get("player", {}))
 	if interaction_type == "combat":
 		var combat: Dictionary = payload.get("combat", {})
+		if player_node != null and is_instance_valid(player_node):
+			player_node.call("play_attack_animation")
 		_update_inventory(player_data.get("inventory", {}), player_data.get("bank", {}), player_data.get("coins", current_coins), player_data.get("equipment", {}), player_data.get("health", current_health))
 		var combat_message := "Hit for " + str(combat.get("damageDealt", 0)) + " • Enemy HP " + str(combat.get("enemyHealth", 0)) + " • Your HP " + str(current_health)
 		if bool(combat.get("enemyDefeated", false)):
