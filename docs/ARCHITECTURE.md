@@ -101,7 +101,7 @@ Boss-specific feature work and roster expansion are paused while the core game e
 
 ### Active core-game architecture priorities
 
-1. Build responsive third-person movement with acceleration, air control, jump buffering/coyote time, smooth facing and consistent touch/keyboard input.
+1. Implement responsive third-person movement with acceleration, air control, jump buffering/coyote time and smooth facing; headless smoke test and strict Godot 4.3 import/Web export pass in client Action #153. Continue real-device tuning, camera collision/zoom and movement reconciliation.
 2. Improve movement authority and reconciliation, including reconnect and remote-player snapshot behavior without trusting client position.
 3. Replace the flat test floor with server-aligned terrain, collision and traversable world geometry.
 4. Establish reusable character animation states and equipment attachment points before layering combat/ability animations on top.
