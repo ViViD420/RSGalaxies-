@@ -791,7 +791,7 @@ func _build_hud() -> void:
 	rest_button.visible = false
 	equipment_button = _create_action_button(action_toolbar, "Gear", _show_equipment_panel)
 	equipment_button.visible = false
-	character_button = _create_action_button(action_toolbar, "Characters", _request_character_list)
+	character_button = _create_action_button(action_toolbar, "Chars", _request_character_list)
 	character_button.visible = false
 	logout_button = _create_action_button(action_toolbar, "Sign out", _logout)
 	logout_button.visible = false
@@ -836,7 +836,7 @@ func _build_hud() -> void:
 func _create_action_button(parent: GridContainer, caption: String, action: Callable) -> Button:
 	var button := Button.new()
 	button.text = caption
-	button.custom_minimum_size = Vector2(100.0, 34.0)
+	button.custom_minimum_size = Vector2(0.0, 34.0)
 	button.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	button.add_theme_font_size_override("font_size", 12)
 	button.pressed.connect(action)
