@@ -122,6 +122,11 @@ func settleEncounterRewards(ctx context.Context, tx *sql.Tx, enemy game.EnemyDef
 // ListEncounterRewardClaimsForAccount returns only claims owned by the
 // authenticated account and selected character.
 func (r *AccountRepository) ListEncounterRewardClaimsForAccount(ctx context.Context, accountID string, characterID game.PlayerID) ([]game.EncounterRewardClaim, error) {
+	var owned bool
+	if err := r.db.QueryRowContext(ctx, "SELECT EXISTS(SELECT 1 FROM players WHERE account_id=$1 AND id=$2)", accountID, string(characterID)).Scan(&owned); err != nil {
+		return nil, fmt.Errorf("verify reward claim character ownership: %w", err)
+	}
+	if !owned { return nil, game.ErrPlayerNotFound }
 	rows, err := r.db.QueryContext(ctx, `SELECT enemy_id,encounter_id,character_id,
 		experience_skill_id,experience_amount,parent_skill_id,parent_experience_amount,
 		loot_item_id,loot_quantity,status,created_at,claimed_at
