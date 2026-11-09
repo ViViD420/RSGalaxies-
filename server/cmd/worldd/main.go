@@ -38,6 +38,28 @@ func runTradeExpiryWorker(ctx context.Context, repository *postgres.AccountRepos
 	}
 }
 
+func runEnemyAIWorker(ctx context.Context, repository *postgres.AccountRepository) {
+	if repository == nil { return }
+	ticker := time.NewTicker(250 * time.Millisecond)
+	defer ticker.Stop()
+	tick := func() {
+		workCtx, cancel := context.WithTimeout(ctx, 2*time.Second)
+		defer cancel()
+		if err := repository.RunEnemyAITick(workCtx, time.Now().UTC()); err != nil && ctx.Err() == nil {
+			log.Printf("advance authoritative enemy world: %v", err)
+		}
+	}
+	tick()
+	for {
+		select {
+		case <-ctx.Done():
+			return
+		case <-ticker.C:
+			tick()
+		}
+	}
+}
+
 func main() {
 	address := os.Getenv("RS_GALAXIES_ADDR")
 	if address == "" {
@@ -84,6 +106,7 @@ func main() {
 		api = httpapi.NewWithAccounts(players, accountRepository, accountRepository)
 		api.SetReadinessCheck(database.PingContext)
 		go runTradeExpiryWorker(workerCtx, accountRepository)
+		go runEnemyAIWorker(workerCtx, accountRepository)
 	}
 
 	server := &http.Server{
