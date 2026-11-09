@@ -227,3 +227,8 @@ Client Action #187 passed deterministic palette diversity and stable repeated sa
 ### Contextual interaction hints
 
 The HUD now presents a live nearest-interaction prompt for the existing interaction resolver, with in-range action text, out-of-range distance guidance, a pending/busy state and touchscreen-aware USE wording. The prompt is presentation-only; all gather/craft/combat/bank/trade actions continue through existing authenticated server routes. Client Action #188 verification is pending.
+
+
+### Interaction hint test lifecycle correction
+
+Client run #188 exposed errors in the new test harness: it queried global_position on a CharacterBody3D outside the SceneTree, asserted the wrong nearest candidate (the fixed trader was actually closer), and failed to release temporary objects on failure. These are test-harness defects, but their engine errors and RID leak diagnostics are recorded and must be fixed. The production interaction resolver remains unchanged until the test is corrected and CI re-run.

@@ -230,3 +230,7 @@ Client Action #183 (run 42604378304) passed; #182 (42604361140) passed. Client #
 - [x] Add a focused smoke test and include it in client CI.
 - [ ] Verify the contextual prompt regression in Client Action #188 (42620047493).
 - [ ] Review prompt layout and touch wording on actual desktop/mobile devices.
+
+
+- [ ] Correct Client Action #188 test harness: add the test CharacterBody3D to SceneTree before reading global_position, assert only the guaranteed out-of-range state, and free temporary nodes on all paths.
+- [ ] Re-run client CI and inspect complete logs for global-transform errors, RID/resource leaks and all later validation steps.

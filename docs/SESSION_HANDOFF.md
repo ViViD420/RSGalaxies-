@@ -1621,3 +1621,13 @@ The procedural placement algorithm is deterministic by design and now has direct
 - Touch-capable devices display USE rather than E.
 - Added client/tests/interaction_hint_smoke_test.gd and wired it into .github/workflows/client.yml before the existing player/terrain smoke test.
 - Client Action #188 / run 42620047493 is the validation run for this change. At this handoff update it is still in progress. Inspect the full logs before marking the feature verified.
+
+
+## Interaction hint smoke-test failure — 2026-11-09
+
+- Client Action #188 / run 42620047493 failed in the newly added interaction-hint smoke test before the existing movement/terrain test, editor import or Web export could run.
+- Full Godot output showed repeated "Condition !is_inside_tree() is true. Returning: Transform3D()" errors because the test accessed CharacterBody3D.global_position while the test character was not inside the scene tree.
+- The test also expected the far-away gathering node to remain the nearest candidate, but the real interaction resolver correctly selected the nearer fixed trader at that test position. The assertion was too specific and did not match the actual nearest-target priority.
+- Failed-test teardown then emitted RID/resource leak diagnostics because the test's failure path did not free its temporary scene objects. These are real test cleanup errors and must be eliminated, not filtered.
+- Root cause: test harness lifecycle and an incorrect expected target, not a demonstrated runtime interaction prompt defect. Fix by placing a plain CharacterBody3D test actor inside the SceneTree, use an assertion on the move-closer state rather than an incorrect target identity, and ensure every success/failure path frees all created objects before quitting.
+- Preserve run #188 as a historical failure. The interaction hint feature remains unverified until a complete clean client run passes all phases with no Godot ERROR output.
