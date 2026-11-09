@@ -1,6 +1,6 @@
 # RS Galaxies — Session Handoff
 
-Last updated: 2026-11-09 (boss tick integration committed; latest CI pending)
+Last updated: 2026-11-09 (boss interruption and respawn tests added; CI pending)
 
 ## Project identity
 
@@ -478,3 +478,27 @@ The boss persistence, telegraph validation, ability-specific damage, active-cycl
 
 Next add boss interruption/player death/respawn-cycle integration coverage, verify all server jobs, then register Stoneback Colossus as a live enemy and include it in RunEnemyAITick. Keep rewards on the existing multi-item claim pipeline. Preserve all current systems and 18 skills. Never modify GalaxyMMO or reuse proprietary code. Always update this handoff after meaningful changes; never claim tests passed without completed job evidence.
 ~~~
+
+## Boss interruption and respawn coverage (2026-11-09)
+
+- Added a second PostgreSQL world-tick integration test:
+  - Starts Stone Fist while the player is in range.
+  - Moves the player outside the ability's range but keeps them inside the enemy leash.
+  - Confirms the active telegraph is interrupted with no player health or Defense XP change.
+  - Forces the enemy into its respawn window and confirms the encounter ID does not rotate early.
+  - Advances beyond the respawn deadline and confirms a new encounter ID and clean guarded phase/cooldown state with no inherited cooldowns.
+- Test commit: ad3ebeafc8186f4bda05ded1d4c84caa7a80aa8f.
+- CI status at this checkpoint:
+  - Server #565 passed race-enabled PostgreSQL tests and Vet after the migration delimiter correction.
+  - Server #566–#573 passed; #573 verified terminal boss defeat persistence including a first-hit defeat before the first AI tick.
+  - Server #575 passed race-enabled PostgreSQL tests and Vet for the enemy tick coordinator refactor.
+  - Server #574, #576–#580 were still in progress at the last check. #579 includes the concurrent exactly-once ability test; #580 includes interruption and respawn-cycle tests.
+  - Client #135/#136 passed Godot 4.3 import and script validation.
+- Do not mark the new tick integration complete until the latest server workflow (at least #580 or a later code commit) has completed and its PostgreSQL/race and Vet steps have been inspected.
+
+### Remaining before live boss registration
+1. Resolve all pending server runs and inspect logs for any failure; fix code/tests and rerun.
+2. Add a test where a boss ability defeats the player, confirming player health and Defense XP commit once and the boss telegraph clears.
+3. Verify the player-initiated defeat path and AI ability path cannot overlap to double-apply state.
+4. Add the Stoneback definition to the enemy catalog and world tick loop only after all above checks pass.
+5. Verify snapshots show boss fields through the authenticated endpoint and Godot HUD using the live encounter. Keep rewards on the existing multi-item claim path.
