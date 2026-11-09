@@ -23,13 +23,13 @@ The server assigns a unique encounter-cycle ID to each enemy spawn life and reco
 5. Expand crafting into a profession-driven production loop using tools, stations, skill requirements, material families and quality.
 6. Add more bosses, regions, resources, recipe chains, markets and player services only after the first end-to-end loop is reliable.
 
-## Boss phase engine foundation (domain-only; persistence integration pending)
+## Boss phase engine foundation (domain-only; CI-verified, persistence integration pending)
 
 A reusable, server-owned domain engine now exists in `server/internal/game/boss.go`. Boss definitions are versioned and validated independently of enemy execution code. The prototype Stoneback Colossus definition demonstrates two phases: Guarded uses Stone Fist; at 50% health the encounter transitions to Rampage and unlocks Ground Shatter. Ability data defines telegraph duration, cooldown, min/max range and server-calculated damage.
 
 `AdvanceBossEncounter` is a deterministic state transition function. It resets state on a new encounter-cycle ID or definition version, keeps clocks monotonic within a cycle, selects phase by health threshold without phase regression, starts abilities only when their cooldown and range permit, interrupts telegraphs when the target leaves range, and emits a damage intent only after the telegraph completes in range. Interrupted abilities retain their cooldown. Defeat is terminal for that encounter cycle. Returned cooldown maps are defensive copies, and malformed persisted telegraph state is rejected.
 
-Unit coverage checks catalog immutability, invalid phase/ability definitions, threshold transitions, telegraph timing, range interruption/cooldown, new-cycle reset, monotonic clocks, terminal defeat, corrupt state and map-copy behavior. This is a domain foundation only: Stoneback Colossus is not yet a live enemy, and no boss phase state is persisted or exposed to Godot yet. The next slice must persist phase/ability state under the existing encounter-cycle ID and apply resolved ability damage in the same transaction as AI state and player health before adding the first live boss.
+Unit coverage checks catalog immutability, invalid phase/ability definitions, threshold transitions, telegraph timing, range interruption/cooldown, new-cycle reset, monotonic clocks, terminal defeat, corrupt state and map-copy behavior. Server Actions #550 (run 42587608297, commit 5360c24) passed the full test/race/vet workflow for the complete domain engine. This is a domain foundation only: Stoneback Colossus is not yet a live enemy, and no boss phase state is persisted or exposed to Godot yet. The next slice must persist phase/ability state under the existing encounter-cycle ID and apply resolved ability damage in the same transaction as AI state and player health before adding the first live boss.
 
 ## Boss encounter framework
 
