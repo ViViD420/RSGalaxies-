@@ -105,13 +105,34 @@ func TestPostgresEnemyWorldTickCommitsAttackExactlyOnce(t *testing.T) {
 	}
 	snapshots, err = accountRepo.ListEnemySnapshotsForAccount(ctx, account.ID, playerID, now.Add(31*time.Second))
 	if err != nil { t.Fatalf("list snapshots after leash return: %v", err) }
+	found = false
 	for _, snapshot := range snapshots {
 		if snapshot.EnemyID == enemyID {
+			found = true
 			if snapshot.Behavior != game.EnemyIdle || snapshot.X != 8 || snapshot.Z != 0 {
 				t.Fatalf("enemy did not return to spawn after stale target: %+v", snapshot)
 			}
-			return
+			break
 		}
 	}
-	t.Fatal("frontier rat missing after leash return")
+	if !found { t.Fatal("frontier rat missing after leash return") }
+
+	// Even a still-fresh presence must not make a defeated character an AI
+	// target. Force a telegraph at the character and verify the tick returns
+	// the enemy without applying a second attack.
+	if _, err := db.ExecContext(ctx, "UPDATE players SET health=0 WHERE id=$1", string(playerID)); err != nil { t.Fatal(err) }
+	if _, err := db.ExecContext(ctx, `UPDATE zone_presence SET zone_id=$2,position_x=0,position_z=0,last_seen_at=$3 WHERE character_id=$1`,
+		string(playerID), game.DefaultWorldZoneID, now.Add(31*time.Second)); err != nil { t.Fatal(err) }
+	if _, err := db.ExecContext(ctx, `UPDATE enemy_spawn_state SET behavior='telegraphing',position_zone_id=$2,
+		position_x=0,position_z=0,telegraph_until=$3,last_ai_updated_at=$4 WHERE enemy_id=$1`,
+		enemyID, game.DefaultWorldZoneID, now.Add(31*time.Second), now.Add(31*time.Second)); err != nil { t.Fatal(err) }
+	if err := accountRepo.TickEnemyAI(ctx, enemyID, now.Add(32*time.Second)); err != nil {
+		t.Fatalf("tick with defeated active presence: %v", err)
+	}
+	var defeatedHealth int
+	if err := db.QueryRowContext(ctx, "SELECT health FROM players WHERE id=$1", string(playerID)).Scan(&defeatedHealth); err != nil { t.Fatal(err) }
+	if defeatedHealth != 0 { t.Fatalf("defeated character health changed to %d", defeatedHealth) }
+	var behavior string
+	if err := db.QueryRowContext(ctx, "SELECT behavior FROM enemy_spawn_state WHERE enemy_id=$1", enemyID).Scan(&behavior); err != nil { t.Fatal(err) }
+	if behavior != string(game.EnemyReturning) { t.Fatalf("enemy behavior with defeated target = %q, want returning", behavior) }
 }
