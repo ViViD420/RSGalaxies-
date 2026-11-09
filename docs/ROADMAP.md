@@ -134,3 +134,18 @@ Each milestone is a tested, reviewable slice. A feature is not complete because 
 - [ ] Responsive HUD layout and consistent desktop/mobile interaction playtesting.
 
 - [ ] Validate responsive HUD on narrow mobile, tablet and desktop aspect ratios. Primary action toolbar now uses a responsive two-column grid and status text wraps; Actions #178/#179 caught an unsupported viewport API; corrected and passed in Client Action #180. Follow-up shrinkable-button refinement passed in #181; interactive device playtesting remains outstanding.
+
+
+## Core world and client milestone — 2026-11-09
+
+- [x] Deterministic moisture noise and multiple biome surface palettes integrated into the existing terrain mesh.
+- [x] Regression coverage for deterministic biome colors and multiple surface palettes; Client Actions #182 and #183 passed headless runtime smoke, Godot import and Web export.
+- [x] Integrated starter trail coloration in the same terrain mesh; Client Action #177 passed.
+- [x] Responsive HUD action toolbar and viewport sizing; Client Actions #180/#181 passed.
+- [x] Movement acceleration/deceleration, jump/coyote/buffer behavior, bounded camera zoom and initial allocation-free attack swing; Client Action #172 and subsequent full client runs passed.
+- [ ] Terrain environmental dressing, vegetation/rocks/landmarks and biome-specific resource placement.
+- [ ] Full locomotion/action animation state machine, hit reactions, gather/craft animations and weapon-family attacks.
+- [ ] Mobile virtual controls and physical-device usability/visual QA.
+- [ ] Movement authority review and explicit server-side terrain-height/jump/collision design decision.
+- [ ] End-to-end core gameplay loop polish: gathering, crafting, equipment, interaction, feedback and progression.
+- Boss expansion is deliberately paused per user direction until the core game is substantially stronger.
