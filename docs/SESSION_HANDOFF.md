@@ -15,6 +15,11 @@ An original sandbox MMORPG combining long-form skill progression and item gamepl
 
 ## Current implementation
 
+### Latest approved design direction
+
+- Broad progression is the intended character model: players may train across many skills. Equipment, tools, recipes and access requirements—not arbitrary caps on the number of skills—will create profession identity and economic interdependence.
+- The target core skill model removes Combat as a skill (combat is a gameplay system), removes Tactics from the initial roster, keeps Melee and Ranged as broad combat skills, keeps Defense and Strength as independently trained co-skills, and retains the eight current non-combat parent skills. Combat proficiency branches (Blades, Polearms, Unarmed, Pistols, Rifles and Magic) are accepted as the initial combat directions; advanced non-combat professions are deferred. This is a design decision, not yet reflected in the current 20-skill code/catalog; perform a compatibility-safe migration before claiming it is implemented.
+
 ### Go world server
 
 - Go authoritative world API, domain model and PostgreSQL persistence.
@@ -80,10 +85,10 @@ An original sandbox MMORPG combining long-form skill progression and item gamepl
 2. Add meaningful XP sources and server-authoritative abilities to combat disciplines in small vertical slices. Keep hit chance derived from governing skill, ability and equipment; do not add an Accuracy skill.
 3. Keep the server/client workflows green, then run trade abuse/load tests before enabling public production trade.
 4. Implement the hidden Jedi challenge and entitlement only after persistence, concurrency and anti-tampering tests are ready; follow docs/JEDI_PROGRESSION_DESIGN.md and keep all unlock metadata private.
-5. Test the multi-item Godot trade panel, invitation/confirmation feedback and remote-avatar movement on a real phone.
-6. Continue authoritative movement replication, reconnect recovery, enemy AI/movement and combat animations.
-7. Add unique item instances/durability, currency sinks, additional professions/recipes/NPCs, housing and settlements. Unique item instances are a prerequisite for correct dual-wield lightsaber equipment.
-8. Complete production account safeguards: email verification, recovery, MFA, distributed rate limiting, admin account tools and security/load review.
+6. Test the multi-item Godot trade panel, invitation/confirmation feedback and remote-avatar movement on a real phone.
+7. Continue authoritative movement replication, reconnect recovery, enemy AI/movement and combat animations.
+8. Add unique item instances/durability, currency sinks, additional professions/recipes/NPCs, housing and settlements. Unique item instances are a prerequisite for correct dual-wield lightsaber equipment.
+9. Complete production account safeguards: email verification, recovery, MFA, distributed rate limiting, admin account tools and security/load review.
 
 ## Continuation instruction
 
