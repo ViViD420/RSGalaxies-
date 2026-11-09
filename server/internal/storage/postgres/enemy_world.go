@@ -211,6 +211,14 @@ func (r *AccountRepository) tickEnemyAIForDefinition(ctx context.Context, enemy 
 	if err != nil { return err }
 	candidates, err := r.activeEnemyCandidates(ctx, enemy, observedState, now)
 	if err != nil { return err }
+	bossDefinition, isBoss := game.FindBossEncounterForEnemy(enemy.ID)
+	aiConfig := enemyAIConfig(enemy)
+	if isBoss {
+		// Boss abilities own their range and telegraph. Disable the ordinary
+		// enemy attack channel while retaining shared movement and leash logic.
+		aiConfig.AttackRange = -1
+		aiConfig.TelegraphDuration = 0
+	}
 
 	for _, candidate := range candidates {
 		tx, err := r.db.BeginTx(ctx, nil)
@@ -259,13 +267,21 @@ func (r *AccountRepository) tickEnemyAIForDefinition(ctx context.Context, enemy 
 			if err != nil { _ = tx.Rollback(); return fmt.Errorf("revalidate sticky enemy target: %w", err) }
 			if stickyTargetStillActive { _ = tx.Rollback(); return nil }
 		}
-		result := game.AdvanceEnemyAI(enemy, enemyAIConfig(enemy), state, player.Position, now)
+		result := game.AdvanceEnemyAI(enemy, aiConfig, state, player.Position, now)
 		if (result.State.Behavior == game.EnemyChasing || result.State.Behavior == game.EnemyTelegraphing) && player.Health > 0 {
 			result.State.TargetCharacterID = string(player.ID)
 		} else {
 			result.State.TargetCharacterID = ""
 		}
-		if result.AttackRequested {
+		if isBoss {
+			result.State.TelegraphUntil = time.Time{}
+			result.State.NextAttackAt = time.Time{}
+			if err := advanceBossEncounterInTransaction(ctx, tx, enemy, bossDefinition, encounterID,
+				health, &result.State, &player, candidate.accountID, now); err != nil {
+				_ = tx.Rollback()
+				return err
+			}
+		} else if result.AttackRequested {
 			attackResult, err := player.ReceiveEnemyAttack(enemy, result.State.Position, now)
 			if err != nil {
 				_ = tx.Rollback()
