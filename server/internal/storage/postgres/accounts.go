@@ -351,17 +351,17 @@ func (r *AccountRepository) AttackEnemyForAccount(ctx context.Context,accountID 
 		if resetAI {
 			_,err=tx.ExecContext(ctx,`UPDATE enemy_spawn_state SET health=$2,respawn_at=$3,initialized=$4,
 				behavior='chasing',position_zone_id=$5,position_x=$6,position_z=$7,
-				telegraph_until=NULL,next_attack_at=$8,last_ai_updated_at=$9 WHERE enemy_id=$1`,
+				telegraph_until=NULL,next_attack_at=$8,last_ai_updated_at=$9,target_character_id=$10 WHERE enemy_id=$1`,
 				enemyID,nextState.Health,respawnValue,nextState.Initialized,spawnDefinition.Position.ZoneID,
-				spawnDefinition.Position.X,spawnDefinition.Position.Z,nextAttackAt,now.UTC())
+				spawnDefinition.Position.X,spawnDefinition.Position.Z,nextAttackAt,now.UTC(),string(player.ID))
 		} else {
 			_,err=tx.ExecContext(ctx,`UPDATE enemy_spawn_state SET health=$2,respawn_at=$3,initialized=$4,
-				behavior='chasing',telegraph_until=NULL,next_attack_at=$5,last_ai_updated_at=$6 WHERE enemy_id=$1`,
-				enemyID,nextState.Health,respawnValue,nextState.Initialized,nextAttackAt,now.UTC())
+				behavior='chasing',telegraph_until=NULL,next_attack_at=$5,last_ai_updated_at=$6,target_character_id=$7 WHERE enemy_id=$1`,
+				enemyID,nextState.Health,respawnValue,nextState.Initialized,nextAttackAt,now.UTC(),string(player.ID))
 		}
 	} else {
 		_,err=tx.ExecContext(ctx,`UPDATE enemy_spawn_state SET health=$2,respawn_at=$3,initialized=$4,
-			behavior='idle',telegraph_until=NULL,next_attack_at=NULL,last_ai_updated_at=$5 WHERE enemy_id=$1`,
+			behavior='idle',telegraph_until=NULL,next_attack_at=NULL,last_ai_updated_at=$5,target_character_id=NULL WHERE enemy_id=$1`,
 			enemyID,nextState.Health,respawnValue,nextState.Initialized,now.UTC())
 	}
 	if err!=nil{return game.Player{},game.CombatResult{},fmt.Errorf("update enemy state: %w",err)}
