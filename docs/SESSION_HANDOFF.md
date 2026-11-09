@@ -1,6 +1,6 @@
 # RS Galaxies — Session Handoff
 
-Last updated: 2026-11-09 (verified against main HEAD e9764017c281897cc2a8c9d6d446919dfed0788e)
+Last updated: 2026-11-09 (durable boss persistence groundwork committed; see latest checkpoint below)
 
 ## Project identity
 
@@ -254,4 +254,59 @@ Current milestone: the boss phase engine in server/internal/game/boss.go is impl
 Next implement durable cycle-scoped boss-state persistence (verify the next migration number; migration 0015 is the last recorded migration), integrate telegraphed boss damage atomically with existing enemy AI/player-health/Defense-XP transactions, expose authoritative boss phase/telegraph data in enemy snapshots, and build the Godot boss HUD/warnings. Only then register Stoneback Colossus as a live encounter and route its rewards through the existing CI-verified multi-item claim system. Do not call the boss playable until the full vertical slice is complete and verified.
 
 Preserve the broad 18-skill progression, profession-specific equipment, live Frontier Rat/Wild Boar multi-drop tables, durable reward claims, and existing Rewards UI. Current anti-leech eligibility is damage-only: >=10% enemy max health and damage within two minutes. Party/support contribution rules remain future work.
+```
+
+
+---
+
+## Latest development checkpoint — durable boss persistence groundwork (2026-11-09)
+
+### Repository state
+- Repository: `ViViD420/RSGalaxies-`; branch: `main`.
+- Latest inspected pre-handoff HEAD: `ddb32de766354e992ec9dfdddf932db2c8c9f630` (architecture documentation update). This handoff update will advance main again; always fetch live HEAD before continuing.
+- Migration inventory and registry were inspected directly. Migration 0015 is the latest pre-existing migration and migration 0016 was free; no later migration was found.
+- Recent implementation commits:
+  - `59c3992e0fa2f962912002a6969076a49e040bcf` — add `0016_boss_encounter_state.sql`.
+  - `ab2160cb6010ef81b33503d4d68650a36e1f77ba` — register migration 0016 in `Migrate`.
+  - `76dd39e2a9cba3e4af8322ede6fd8a3cf281b7b2` — add transactional boss-state persistence helpers.
+  - `32455a4146c6730eff80bf3a6672c9bc52326105` — reject stale boss-state writes when the conditional upsert affects zero rows.
+  - `dabc0bebe8da7978305c6f28bfff7cf270e07441` — add PostgreSQL integration coverage for state round-trip, telegraph/cooldown recovery, and stale-cycle rejection.
+  - `8af3bad2e30c5e798f9f305b0ffaab3a8f7adb0d` — update roadmap.
+  - `ddb32de766354e992ec9dfdddf932db2c8c9f630` — update architecture.
+- Migration 0016 creates `boss_encounter_states`, keyed by `(enemy_id, encounter_id)`, with definition ID/version, phase, phase start, active ability, telegraph start/deadline, JSONB cooldown map, next-ability cursor, last-updated timestamp and terminal defeated flag. The row references `enemy_spawn_state` with cascade cleanup.
+- `boss_persistence.go` provides transaction-scoped load/save helpers. Both lock the parent `enemy_spawn_state` row first, verify the supplied cycle matches the currently active cycle, and lock the boss-state row on load. Cooldown JSON is decoded and validated. Save uses a cycle-scoped upsert with a monotonic timestamp condition and returns an error if a stale write is rejected.
+- `boss_persistence_integration_test.go` verifies full state round-trip (including active telegraph and multiple cooldowns), no state inheritance by a new cycle, and rejection of stale-cycle loads/writes.
+- `docs/ROADMAP.md` and `docs/ARCHITECTURE.md` now describe the persistence groundwork and its incomplete integration status.
+
+### CI status — do not overstate
+- The combined status lookup for implementation/test commit `dabc0bebe8da7978305c6f28bfff7cf270e07441` returned no status entries.
+- No new Actions run/job result has yet been verified for migration 0016, persistence helpers or their integration test. The previous verified boss-domain checkpoint remains Server Action #550 (run `42587608297`), whose race-enabled PostgreSQL test step and `go vet` passed. This does not verify the new code.
+- Trigger/inspect the server workflow after the next implementation commit and check the actual run conclusion plus job-level steps before claiming tests pass.
+
+### Remaining boss integration work
+1. Wire `loadBossEncounterStateForUpdate` and `persistBossEncounterState` into `AccountRepository.TickEnemyAI` inside its existing player-then-enemy transaction, but only for a registered boss enemy.
+2. Resolve boss ability damage with a dedicated server-authoritative player damage method using the existing Defense/armor calculation. Do not fake a boss as a normal enemy or change ordinary enemy behavior.
+3. Ensure player health, Defense XP, boss state and AI state commit atomically. The parent enemy row lock and encounter-cycle ID are the serialization boundary; test concurrent ticks and retry behavior so a resolved telegraph damages exactly once.
+4. Reset boss state only when a new enemy encounter cycle is created; do not reset it on ordinary ticks or stale worker retries.
+5. Extend `game.EnemySnapshot` and its PostgreSQL query with optional boss identity, phase, active ability and telegraph timing; ordinary enemy JSON must remain backward-compatible.
+6. Extend the existing Godot snapshot rendering/polling with boss name/health/phase/telegraph warnings. Preserve Rewards UI and all 18 skills.
+7. Only after those pieces are integrated should Stoneback Colossus be added to live enemy catalog/spawn lifecycle and reward settlement. Reuse the existing multi-item reward pipeline unchanged.
+
+### Next-chat continuation prompt
+```text
+RS GALAXIES — RESUME DEVELOPMENT FROM THE REPOSITORY HANDOFF.
+
+Continue exclusively in ViViD420/RSGalaxies- on main. First read docs/SESSION_HANDOFF.md completely, fetch live HEAD/recent commits, inspect GitHub Actions run/job results and verify the migration registry. Do not assume the HEAD recorded in this file is still current.
+
+Migration 0016 and cycle-scoped boss persistence groundwork are committed. Inspect:
+- server/internal/storage/postgres/migrations/0016_boss_encounter_state.sql
+- server/internal/storage/postgres/migrate.go
+- server/internal/storage/postgres/boss_persistence.go
+- server/internal/storage/postgres/boss_persistence_integration_test.go
+
+The state table stores definition/version, phase/timing, active ability/telegraph, cooldown JSON, ability cursor, last update and defeat state under (enemy_id, encounter_id). Transactional helpers lock the parent enemy spawn row, reject stale cycles and reject stale timestamp writes. Integration coverage was added, but no GitHub Actions result has yet been verified for these new changes. Do not claim CI passed.
+
+Next integrate the helpers into the existing AccountRepository.TickEnemyAI transaction. Keep the established player-then-enemy lock order. Add boss-only server-calculated damage with Defense/armor handling, and commit player health, Defense XP, AI state and boss state atomically. Verify exactly-once damage under concurrent workers/retries and reset only on a new encounter cycle. Then add optional authoritative boss fields to EnemySnapshot and render the boss HUD in the existing Godot snapshot path. Finally register Stoneback Colossus as a live encounter and route defeat rewards through the existing multi-item reward claim pipeline.
+
+Preserve all existing systems, 18-skill progression, crafting, live multi-item enemy loot and Rewards UI. Never modify GalaxyMMO or reuse proprietary code. Improve existing code, commit meaningful milestones, update this handoff after every meaningful progression, and never claim tests passed without checking GitHub Actions results.
 ```
