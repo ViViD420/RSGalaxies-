@@ -1000,3 +1000,11 @@ Core game focus only. The player controller now has smooth ground acceleration/d
 - Expanded terrain test diagnostics in commit 746334f8df6edff9ce173fdc562c237653c8aa36 to assert non-empty collision faces, report face count and include sampled ground height/player state if grounding fails.
 - This is a corrective hypothesis, not yet a verified fix. Inspect the next strict CI run and the full Godot log. If the player still falls through or the null-mesh engine error remains, continue root-cause analysis before moving on.
 
+
+## Terrain collision diagnostics and movement test synchronization (2026-11-09)
+
+- Client Actions #158 (run 42601907772, commit aa4af37b64a964e474ca3e70c92531683e977178) and #159 (run 42601927465, commit 746334f8df6edff9ce173fdc562c237653c8aa36) both failed at the movement acceleration assertion after the test successfully grounded the player on the terrain. #159 additionally confirmed the generated ConcavePolygonShape3D contained 55,296 face vertices and did not fail the terrain surface, collision-shape, deterministic-height, or initial-grounding assertions.
+- Root cause of the new assertion failure: after adding a grounded-state wait, the test read horizontal speed immediately after the `physics_frame` signal, before the player's `_physics_process` callback had completed. This was the same signal-boundary sampling issue previously found in the jump assertion.
+- Corrected the movement test in commit f3d36e38f4353d8c22fde868303abb2a7cace1a7 to await `process_frame` after the relevant physics frames before sampling acceleration/deceleration. The test also explicitly frees the terrain/player nodes and waits a frame before exit to investigate the additional `ERROR: Parameter "m" is null.` teardown message seen after the earlier assertion failures.
+- The terrain collision implementation in aa4af37 now validates non-empty faces and enables backface collision. The next strict CI run must prove the entire test passes and that the null-mesh engine error no longer appears. Do not call terrain runtime validation complete until then.
+
