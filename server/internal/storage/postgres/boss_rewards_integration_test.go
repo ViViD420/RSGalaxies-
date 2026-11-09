@@ -128,7 +128,6 @@ func TestPostgresStonebackDefeatSettlesAndClaimsMultiItemRewards(t *testing.T) {
 	}
 	close(startClaims)
 
-	var claimedPlayer game.Player
 	for attempt := 0; attempt < 2; attempt++ {
 		outcome := <-claimResults
 		if outcome.err != nil {
@@ -142,7 +141,6 @@ func TestPostgresStonebackDefeatSettlesAndClaimsMultiItemRewards(t *testing.T) {
 			t.Fatalf("concurrent claim duplicated or lost Stoneback rewards: claim=%+v inventory=%v blades=%d melee=%d",
 				outcome.claim, outcome.player.Inventory, outcome.player.Skills["blades"].Experience, outcome.player.Skills["melee"].Experience)
 		}
-		claimedPlayer = outcome.player
 	}
 
 	replayedPlayer, replayedClaim, err := repo.ClaimEncounterRewardForAccount(ctx, account.ID, playerID, enemy.ID, encounterID, now.Add(4*time.Second))
