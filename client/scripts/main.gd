@@ -382,29 +382,53 @@ func _add_enemy_visual(enemy_id: String, at: Vector3, enemy_name: String, max_he
 	var creature := Node3D.new()
 	creature.name = "Enemy_" + enemy_id
 	creature.position = at
+	var is_boss := enemy_id == "stoneback-colossus"
 	var hide_material := StandardMaterial3D.new()
-	hide_material.albedo_color = Color(0.48, 0.30, 0.18) if max_health < 20 else Color(0.32, 0.25, 0.18)
+	hide_material.albedo_color = Color(0.27, 0.29, 0.30) if is_boss else (Color(0.48, 0.30, 0.18) if max_health < 20 else Color(0.32, 0.25, 0.18))
+	hide_material.roughness = 0.92
 	var body := MeshInstance3D.new()
 	var body_mesh := CapsuleMesh.new()
-	body_mesh.radius = 0.42 if max_health < 20 else 0.7
-	body_mesh.height = 0.9 if max_health < 20 else 1.5
+	body_mesh.radius = 1.25 if is_boss else (0.42 if max_health < 20 else 0.7)
+	body_mesh.height = 2.5 if is_boss else (0.9 if max_health < 20 else 1.5)
 	body.mesh = body_mesh
 	body.position.y = body_mesh.height * 0.5
 	body.material_override = hide_material
 	creature.add_child(body)
 	var head := MeshInstance3D.new()
 	var head_mesh := SphereMesh.new()
-	head_mesh.radius = 0.28 if max_health < 20 else 0.42
+	head_mesh.radius = 0.72 if is_boss else (0.28 if max_health < 20 else 0.42)
 	head_mesh.height = head_mesh.radius * 2.0
 	head.mesh = head_mesh
-	head.position = Vector3(0.0, body_mesh.height * 0.75, -0.35)
+	head.position = Vector3(0.0, body_mesh.height * 0.78, -0.8 if is_boss else -0.35)
 	head.material_override = hide_material
 	creature.add_child(head)
+	if is_boss:
+		var plate_material := StandardMaterial3D.new()
+		plate_material.albedo_color = Color(0.42, 0.44, 0.45)
+		plate_material.roughness = 0.88
+		for index in range(3):
+			var plate := MeshInstance3D.new()
+			var plate_mesh := BoxMesh.new()
+			plate_mesh.size = Vector3(1.15, 0.42, 0.72)
+			plate.mesh = plate_mesh
+			plate.position = Vector3(0.0, 1.55 + float(index) * 0.42, 0.25 + float(index) * 0.32)
+			plate.rotation.x = -0.25
+			plate.material_override = plate_material
+			creature.add_child(plate)
+		for side in [-1.0, 1.0]:
+			var fist := MeshInstance3D.new()
+			var fist_mesh := SphereMesh.new()
+			fist_mesh.radius = 0.58
+			fist_mesh.height = 1.05
+			fist.mesh = fist_mesh
+			fist.position = Vector3(side * 1.35, 1.0, 0.05)
+			fist.material_override = hide_material
+			creature.add_child(fist)
 	var label := Label3D.new()
 	label.text = enemy_name + "\n" + str(max_health) + "/" + str(max_health) + " • Idle"
 	label.position.y = body_mesh.height + 0.45
 	label.billboard = BaseMaterial3D.BILLBOARD_ENABLED
-	label.font_size = 24
+	label.font_size = 32 if is_boss else 24
 	creature.add_child(label)
 	add_child(creature)
 	enemy_nodes[enemy_id] = creature
@@ -478,13 +502,9 @@ func _on_enemy_snapshots_completed(result: int, response_code: int, _headers: Pa
 		enemy_available[enemy_id] = health > 0
 		var behavior := str(snapshot.get("behavior", "idle"))
 		var creature: Node3D = enemy_nodes[enemy_id]
-		if creature.get_child_count() >= 2:
-			var body := creature.get_child(0) as MeshInstance3D
-			var head := creature.get_child(1) as MeshInstance3D
-			if body != null:
-				body.visible = health > 0
-			if head != null:
-				head.visible = health > 0
+		for visual_child in creature.get_children():
+			if visual_child is MeshInstance3D:
+				visual_child.visible = health > 0
 		var label: Label3D = enemy_labels[enemy_id]
 		var display_name := str(snapshot.get("name", enemy_id))
 		var boss_id := str(snapshot.get("bossId", ""))
