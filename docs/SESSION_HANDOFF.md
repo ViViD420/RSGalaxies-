@@ -956,3 +956,16 @@ Core game focus only. The player controller now has smooth ground acceleration/d
 - Updated the test in commit 92389202cafb454b71b9bdcbbbfae47ac713ad7e to await the following `process_frame` after the physics signal before reading the resulting velocity. The test now injects an actual KEY_SPACE InputEvent press/release, waits for a grounded state, and samples after the physics tick.
 - New client Action #153 must confirm this correction. If it still fails, continue diagnosis; do not weaken/remove the jump assertion or skip the smoke test.
 
+
+## Player movement smoke test and strict client CI verified (2026-11-09)
+
+- Client Action #153 (run 42601264381, commit 92389202cafb454b71b9bdcbbbfae47ac713ad7e) passed:
+  - Headless movement regression: `PASS: movement acceleration, sustained speed, deceleration, jump and collision/presentation separation.`
+  - Godot 4.3 editor import/script validation.
+  - Godot 4.3 Web export.
+  - Full job logs contained no Godot `SCRIPT ERROR:` or engine `ERROR:` lines.
+- The successful test uses an actual KEY_SPACE input event and samples the player's jump velocity after the physics callback has completed. It also confirms the player lands on the test floor, moves forward, accelerates from rest, reaches the configured speed band, slows after releasing input, and keeps the collision shape transform independent of mesh bob/lean.
+- Previous smoke-test failures #148–#152 are documented above. They were not suppressed; the input simulation and physics-frame sampling were corrected, and #153 is the first passing run with the new regression test enabled.
+- The latest client controller implementation (commit 21432e2) is now strict-CI validated. It remains subject to interactive desktop/mobile playtesting; headless smoke coverage does not prove visual quality or real-device feel.
+- Boss-specific work remains paused. Next core target: terrain foundation. Important architecture constraint: server `WorldPosition` currently stores only zone ID, X and Z; movement validates planar speed and bounds. Do not add client-only elevation in a way that makes remote snapshots, collision, interaction ranges or server movement inconsistent. Design terrain height deterministically and keep the collision/navigation/replication contract explicit before introducing slopes/elevation.
+
