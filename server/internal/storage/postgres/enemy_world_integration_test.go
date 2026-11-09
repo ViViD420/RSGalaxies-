@@ -302,7 +302,7 @@ func TestPostgresEncounterContributionsPersistAcrossEnemyRespawn(t *testing.T) {
 		_, _ = db.ExecContext(context.Background(), "DELETE FROM accounts WHERE id=$1", account.ID)
 	})
 
-	first, err := accountRepo.AttackEnemyForAccount(ctx, account.ID, playerID, enemyID, now.Add(2*time.Second))
+	_, first, err := accountRepo.AttackEnemyForAccount(ctx, account.ID, playerID, enemyID, now.Add(2*time.Second))
 	if err != nil { t.Fatalf("first encounter attack: %v", err) }
 	if first.DamageDealt != 2 || first.DamageReceived != 2 { t.Fatalf("first combat result = %+v", first) }
 	var firstEncounterID string
@@ -319,7 +319,7 @@ func TestPostgresEncounterContributionsPersistAcrossEnemyRespawn(t *testing.T) {
 	if _, _, err := accountRepo.AttackEnemyForAccount(ctx, account.ID, playerID, enemyID, now.Add(9*time.Second)); !errors.Is(err, game.ErrEnemyRespawning) {
 		t.Fatalf("attack during encounter respawn error = %v, want ErrEnemyRespawning", err)
 	}
-	second, err := accountRepo.AttackEnemyForAccount(ctx, account.ID, playerID, enemyID, now.Add(11*time.Second))
+	_, second, err := accountRepo.AttackEnemyForAccount(ctx, account.ID, playerID, enemyID, now.Add(11*time.Second))
 	if err != nil { t.Fatalf("attack new encounter after respawn: %v", err) }
 	if second.DamageDealt != 2 { t.Fatalf("second encounter combat result = %+v", second) }
 	var secondEncounterID string
