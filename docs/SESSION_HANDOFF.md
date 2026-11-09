@@ -163,6 +163,15 @@ An original sandbox MMORPG combining long-form skill progression and item gamepl
 - Authenticated account APIs: `GET /api/v1/account/characters/{id}/rewards` and `POST /api/v1/account/characters/{id}/rewards/{enemyID}/{encounterID}/claim`. Claiming locks the owned character and claim row, applies XP/parent XP and item inventory, and marks claimed in one transaction. Full item stacks return `reward_inventory_full` and leave the entire claim pending. Repeated successful claims are no-ops.
 - The settlement integration test verifies defeat creates one pending claim; claim integration coverage verifies full-stack retry, XP not being consumed on failure, inventory/XP applied once and idempotent retries. Godot now has a Rewards panel with authenticated claim listing, per-claim redemption, inventory refresh and a full-stack retry message; commits d245318, 054de04 and 54749fc. Commit 37193c6 adds HTTP-level tests for authenticated claim listing and missing-claim error mapping; 2824e93 adds successful claim and foreign-character HTTP checks. Commits 0c900aa/4b2ef3a enforce and test account/character ownership on the database claim-list query; 654b7c2 moves cleanup earlier in the integration test to prevent leaked rows if assertions fail. Client runs #129–#132 all passed, including Godot 4.3 project import and script validation for the Rewards panel, panel lifecycle and cancellation of stale requests on character switch/sign-out. Party identity, support actions, loot tables and boss-specific policies remain deferred.
 
+
+ 
+## Initial weighted enemy loot tables (CI pending)
+
+- `game/loot.go` and `game/loot_test.go` (`e0a9ec0`, `620d1ad`, `53aa063`, `038e4f5`, `24e38e9`) add deterministic weighted resolution over a 10,000-point roll range, table validation, defensive copies, and no-drop outcomes. Frontier Rat: 70% rat pelt / 20% rat tooth / 10% no drop. Wild Boar: 75% boar hide / 15% boar tusk / 10% no drop.
+- Item definitions add rat tooth and boar tusk (`fb6e933`); enemy definitions point to the new tables (`b9c14f1`). `enemy_rewards.go` generates cryptographically secure drop and quantity rolls during the atomic settlement (`0553107`).
+- Settlement integration tests now accept either valid weighted drop or the no-drop result (`1816ec2`, `8ebbcf8`, `1a6b368`, `aa26c06`). Actions #504–#515 for this slice were still running at last inspection; do not claim loot tables CI-passed until the latest run completes.
+- This is intentionally a first one-item-per-encounter table. Multi-drop tables, per-player rolls, guaranteed plus rare drops, quantity bands, boss materials and unique item instances remain future work.
+
 ## Next engineering tasks
 
 1. Verify CI #475/#476 and the new reward-policy commits. Then wire the eligibility policy into atomic enemy-defeat settlement, replace direct kill XP/loot awards with durable claims, and implement idempotent claim execution with full-inventory claims left pending. Sticky-target selection and threat-scoring Actions #471/#472 are complete and CI-validated.
