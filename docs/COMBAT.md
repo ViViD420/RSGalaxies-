@@ -13,7 +13,7 @@
 - Defeating an enemy awards its configured starter loot when the corresponding inventory stack has capacity. Dedicated loot tables, durable overflow claims, contribution eligibility and reward audit records are not implemented yet; these are explicit prerequisites for boss rewards.
 - Enemy health, initialization and respawn timestamps are shared world state stored in `enemy_spawn_state`. Migration 0010 adds persisted AI behavior, position, telegraph deadline, cooldown and last-update fields. `PlayerRepository.AdvanceEnemyAIForPlayer` locks and persists a spawn tick; its PostgreSQL restart test covers recovery. The current click-to-attack operation still locks and updates the player and enemy rows in one transaction.
 - A defeated character cannot perform gameplay actions. Resting while alive is restricted to the starter safe spawn; a defeated character is restored at that spawn.
-- Combat is currently a single-target action loop. The server-side AI domain state machine models idle, aggro/chase, attack telegraph/interruption and leash/return behavior with bounded timestamp-based movement, and its state now persists per spawn. There is not yet a server-owned tick scheduler or a transaction that commits a completed AI telegraph together with `ReceiveEnemyAttack` damage and player Defense XP. Autonomous enemy attacks must remain disabled until that combined transaction is implemented. The Godot client does not yet render/interpolate AI movement, so live enemies remain stationary in the current playable loop. Enemies still have no pathfinding, abilities or multi-phase behavior.
+- Combat is currently a single-target action loop. The server-side AI domain state machine models idle, aggro/chase, attack telegraph/interruption and leash/return behavior with bounded timestamp-based movement, and its state now persists per spawn. A PostgreSQL-backed server-owned world tick coordinator now selects fresh same-zone character presence, locks the target character before the enemy spawn, advances the AI and commits completed telegraph damage, player health, Defense XP and enemy state in one transaction. A background worker advances catalogued spawns every 250 ms; multiple server instances serialize through row locks and the persisted attack cooldown. An authenticated zone-scoped enemy snapshot endpoint exposes authoritative positions and behavior for clients. The Godot client has not yet been updated to poll/render these snapshots, so live enemy visuals remain at their static catalog positions until that client integration lands. Enemies still have no pathfinding, abilities or multi-phase behavior.
 
 ## Starter enemies
 
@@ -24,8 +24,8 @@
 
 ## Next combat foundation
 
-1. Complete the server-owned AI tick coordinator and combine telegraph completion, persisted enemy state, `ReceiveEnemyAttack`, player health and Defense XP in one transaction with consistent player-then-enemy row locking.
-2. Replicate authoritative enemy positions and behavior snapshots to Godot.
+1. Validate the world tick coordinator in CI and add any missing stale-presence, zone-change, death/respawn and multi-instance concurrency coverage.
+2. Replicate authenticated enemy snapshots and interpolate authoritative enemy positions/telegraphs in Godot.
 3. Introduce server-owned weapon-family and ability definitions, beginning with the existing melee families; resolve hit outcomes from validated ability, weapon, skill, equipment and target state with injectable randomness.
 4. Add durable combat telemetry and encounter participation records that can later support fair group rewards.
 5. Add a reusable boss encounter state machine only after ordinary enemy behavior and reward settlement are reliable.
