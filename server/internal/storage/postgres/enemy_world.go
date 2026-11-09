@@ -196,3 +196,45 @@ func (r *AccountRepository) RunEnemyAITick(ctx context.Context, now time.Time) e
 	}
 	return nil
 }
+
+ 
+// ListEnemySnapshotsForAccount returns authoritative enemy instances in the
+// requesting character's current zone. Character ownership is checked in SQL.
+func (r *AccountRepository) ListEnemySnapshotsForAccount(ctx context.Context, accountID string, characterID game.PlayerID, now time.Time) ([]game.EnemySnapshot, error) {
+	var zoneID string
+	err := r.db.QueryRowContext(ctx, `SELECT zone_id FROM players WHERE account_id=$1 AND id=$2`, accountID, string(characterID)).Scan(&zoneID)
+	if errors.Is(err, sql.ErrNoRows) { return nil, game.ErrPlayerNotFound }
+	if err != nil { return nil, fmt.Errorf("resolve enemy snapshot zone: %w", err) }
+	snapshots := make([]game.EnemySnapshot, 0)
+	for _, enemy := range game.EnemyDefinitions() {
+		if enemy.Position.ZoneID != zoneID { continue }
+		snapshot := game.EnemySnapshot{
+			EnemyID: enemy.ID, Name: enemy.Name, ZoneID: enemy.Position.ZoneID,
+			X: enemy.Position.X, Z: enemy.Position.Z, Health: enemy.MaxHealth,
+			MaxHealth: enemy.MaxHealth, Behavior: game.EnemyIdle,
+		}
+		var health int
+		var initialized bool
+		var behavior string
+		var storedZone sql.NullString
+		var x, z sql.NullFloat64
+		var telegraphUntil, respawnAt, lastUpdatedAt sql.NullTime
+		err := r.db.QueryRowContext(ctx, `SELECT health, initialized, behavior, position_zone_id,
+			position_x, position_z, telegraph_until, respawn_at, last_ai_updated_at
+			FROM enemy_spawn_state WHERE enemy_id=$1`, enemy.ID).Scan(
+			&health, &initialized, &behavior, &storedZone, &x, &z,
+			&telegraphUntil, &respawnAt, &lastUpdatedAt)
+		if err != nil && !errors.Is(err, sql.ErrNoRows) { return nil, fmt.Errorf("load enemy snapshot %s: %w", enemy.ID, err) }
+		if err == nil {
+			if initialized { snapshot.Health = health }
+			if behavior != "" { snapshot.Behavior = game.EnemyBehaviorState(behavior) }
+			if storedZone.Valid && x.Valid && z.Valid { snapshot.ZoneID, snapshot.X, snapshot.Z = storedZone.String, x.Float64, z.Float64 }
+			if telegraphUntil.Valid { snapshot.TelegraphUntil = telegraphUntil.Time.UTC() }
+			if respawnAt.Valid { snapshot.RespawnAt = respawnAt.Time.UTC() }
+			if lastUpdatedAt.Valid { snapshot.LastUpdatedAt = lastUpdatedAt.Time.UTC() }
+			if snapshot.Health <= 0 && snapshot.RespawnAt.IsZero() { snapshot.RespawnAt = now.UTC() }
+		}
+		snapshots = append(snapshots, snapshot)
+	}
+	return snapshots, nil
+}
