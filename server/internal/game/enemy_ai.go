@@ -140,4 +140,11 @@ type EnemySnapshot struct {
 	TelegraphUntil time.Time `json:"telegraphUntil,omitempty"`
 	RespawnAt time.Time `json:"respawnAt,omitempty"`
 	LastUpdatedAt time.Time `json:"lastUpdatedAt,omitempty"`
+	BossID string `json:"bossId,omitempty"`
+	BossDefinitionVersion int `json:"bossDefinitionVersion,omitempty"`
+	BossPhaseID string `json:"bossPhaseId,omitempty"`
+	BossPhaseStartedAt time.Time `json:"bossPhaseStartedAt,omitempty"`
+	BossActiveAbilityID string `json:"bossActiveAbilityId,omitempty"`
+	BossTelegraphStartedAt time.Time `json:"bossTelegraphStartedAt,omitempty"`
+	BossTelegraphUntil time.Time `json:"bossTelegraphUntil,omitempty"`
 }
