@@ -969,3 +969,22 @@ Core game focus only. The player controller now has smooth ground acceleration/d
 - The latest client controller implementation (commit 21432e2) is now strict-CI validated. It remains subject to interactive desktop/mobile playtesting; headless smoke coverage does not prove visual quality or real-device feel.
 - Boss-specific work remains paused. Next core target: terrain foundation. Important architecture constraint: server `WorldPosition` currently stores only zone ID, X and Z; movement validates planar speed and bounds. Do not add client-only elevation in a way that makes remote snapshots, collision, interaction ranges or server movement inconsistent. Design terrain height deterministically and keep the collision/navigation/replication contract explicit before introducing slopes/elevation.
 
+
+## Deterministic terrain foundation (2026-11-09)
+
+- Added `client/scripts/world_terrain.gd` in commit 3a48e2c391e3843e360023fd0576a7d6600748cc:
+  - Deterministic FastNoiseLite broad and detail noise with a fixed seed.
+  - Procedural 240m terrain mesh with generated vertex colors and normals.
+  - Static concave collision generated from the same mesh so visible and collidable surfaces share one source.
+  - Public `get_height_at(x,z)` sampler used to place objects consistently.
+- Integrated the terrain into `client/scripts/main.gd` in commit ce9fa7711032af213f186ad6a6ee7bc730a00b74:
+  - Replaced the flat plane/box floor.
+  - Places bank, merchant, crafting stations, gathering nodes and enemy visuals at sampled terrain elevation.
+  - Places the local player and remote-player placeholders on terrain.
+  - Applies terrain-aware Y correction on server position reconciliation while preserving the local airborne offset for ordinary movement acknowledgements; forced corrections settle at ground height.
+  - Enemy snapshot interpolation follows terrain elevation.
+- Strict client Action #156 (run 42601651267, commit ce9fa771) passed the movement smoke test, Godot 4.3 editor import and Web export with no Godot error output. This validates syntax/export but does not yet prove terrain runtime collision.
+- Expanded `client/tests/player_controller_smoke_test.gd` in commit d47ac273de01a33d272e23df5a6fcfcbd850b3fa to instantiate the procedural terrain, verify surface mesh and collision exist, verify finite/deterministic/non-flat height samples, and place the player on the generated terrain before running movement/jump checks.
+- Client Action #157 (run 42601768080) is the first runtime smoke validation of terrain generation/collision and remains pending at this checkpoint. Inspect its full job steps and logs. If terrain generation, collision or movement fails, stop and correct it before continuing.
+- Architecture constraint remains explicit: server world positions are planar X/Z today. The terrain sampler is deterministic and shared across local player, enemy and remote-player presentation, but vertical movement is still client-side and not a server-authoritative position component. Do not treat vertical terrain traversal as production-grade authoritative movement until a deliberate server terrain-height/vertical movement contract is designed and tested.
+
