@@ -54,6 +54,12 @@ var lootTableDefinitions = []LootTableDefinition{
 		{ItemID:"boar_hide",Weight:7500,MinQuantity:1,MaxQuantity:1},
 		{ItemID:"boar_tusk",Weight:1500,MinQuantity:1,MaxQuantity:1},
 	}},
+	{ID:"stoneback-colossus-harvest",Version:1,GuaranteedDrops:[]LootTableDrop{
+		{ItemID:"stoneback_scale",MinQuantity:2,MaxQuantity:4},
+	},BonusRolls:[]LootTableRoll{
+		{Drops:[]LootTableDrop{{ItemID:"stoneback_core",Weight:300,MinQuantity:1,MaxQuantity:1}}},
+		{Drops:[]LootTableDrop{{ItemID:"stoneback_plate",Weight:1500,MinQuantity:1,MaxQuantity:2}}},
+	}},
 }
 
 func LootTableDefinitions() []LootTableDefinition {
