@@ -48,3 +48,26 @@ func TestCombatCooldownDefeatAndSafeZoneRest(t *testing.T) {
 	if player.Position.X!=0||player.Position.Z!=0{t.Fatalf("defeated player did not respawn at spawn: %+v",player.Position)}
 	if player.Health!=MaxPlayerHealth{t.Fatalf("rest health=%d want=%d",player.Health,MaxPlayerHealth)}
 }
+
+func TestStrengthAndDefenseCoSkillsAffectCombat(t *testing.T) {
+	now := time.Now().UTC()
+	player, err := NewPlayer("combat-coskills", "CoSkillWayfarer", now)
+	if err != nil { t.Fatal(err) }
+	player.Position.X = 6
+	player.Skills["strength"] = SkillProgress{Level: 11}
+	player.Skills["defense"] = SkillProgress{Level: 11}
+	enemy, ok := FindEnemy("frontier-rat-001")
+	if !ok { t.Fatal("frontier rat missing") }
+	enemy.Position = player.Position
+
+	result, _, err := player.AttackEnemy(enemy, EnemyState{}, now.Add(2*time.Second))
+	if err != nil { t.Fatal(err) }
+	if result.SkillID != "unarmed" || result.ParentSkillID != "melee" {
+		t.Fatalf("unarmed action attribution = %s/%s", result.SkillID, result.ParentSkillID)
+	}
+	if result.DamageDealt != 3 { t.Fatalf("strength-adjusted damage = %d, want 3", result.DamageDealt) }
+	if result.DamageReceived != 1 { t.Fatalf("defense-adjusted incoming damage = %d, want 1", result.DamageReceived) }
+	if player.Skills["strength"].Experience != 1 || player.Skills["defense"].Experience != 1 {
+		t.Fatalf("co-skill XP not awarded: strength=%+v defense=%+v", player.Skills["strength"], player.Skills["defense"])
+	}
+}
