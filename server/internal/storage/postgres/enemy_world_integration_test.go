@@ -275,10 +275,12 @@ func TestPostgresEnemyAITargetRemainsStickyWhilePresenceIsActive(t *testing.T) {
 func TestPostgresEncounterContributionsPersistAcrossEnemyRespawn(t *testing.T) {
 	databaseURL := os.Getenv("RS_GALAXIES_TEST_DATABASE_URL")
 	if databaseURL == "" { t.Skip("RS_GALAXIES_TEST_DATABASE_URL is not configured") }
-	ctx := context.Background()
+	ctx, cancel := context.WithTimeout(context.Background(), 45*time.Second)
+	defer cancel()
 	db, err := sql.Open("pgx", databaseURL)
 	if err != nil { t.Fatal(err) }
 	defer db.Close()
+	db.SetMaxOpenConns(6)
 	if err := db.PingContext(ctx); err != nil { t.Fatalf("connect test database: %v", err) }
 	if err := Migrate(ctx, db); err != nil { t.Fatalf("migrate test database: %v", err) }
 
