@@ -29,6 +29,7 @@ type EnemyDefinition struct {
 	Experience int `json:"experience"`
 	LootItemID string `json:"lootItemId"`
 	LootQuantity int `json:"lootQuantity"`
+	LootTableID string `json:"lootTableId,omitempty"`
 	Position WorldPosition `json:"position"`
 	InteractionRange float64 `json:"interactionRange"`
 	RespawnSeconds int `json:"respawnSeconds"`
@@ -57,8 +58,8 @@ type CombatResult struct {
 }
 
 var enemyDefinitions = []EnemyDefinition{
-	{ID:"frontier-rat-001",Name:"Frontier Rat",MaxHealth:12,Attack:2,Defense:0,Experience:25,LootItemID:"rat_pelt",LootQuantity:1,Position:WorldPosition{ZoneID:DefaultWorldZoneID,X:8,Z:0},InteractionRange:3,RespawnSeconds:30},
-	{ID:"frontier-boar-001",Name:"Wild Boar",MaxHealth:35,Attack:6,Defense:2,Experience:60,LootItemID:"boar_hide",LootQuantity:1,Position:WorldPosition{ZoneID:DefaultWorldZoneID,X:-8,Z:0},InteractionRange:3,RespawnSeconds:60},
+	{ID:"frontier-rat-001",Name:"Frontier Rat",MaxHealth:12,Attack:2,Defense:0,Experience:25,LootItemID:"rat_pelt",LootQuantity:1,LootTableID:"frontier-rat-common",Position:WorldPosition{ZoneID:DefaultWorldZoneID,X:8,Z:0},InteractionRange:3,RespawnSeconds:30},
+	{ID:"frontier-boar-001",Name:"Wild Boar",MaxHealth:35,Attack:6,Defense:2,Experience:60,LootItemID:"boar_hide",LootQuantity:1,LootTableID:"frontier-boar-common",Position:WorldPosition{ZoneID:DefaultWorldZoneID,X:-8,Z:0},InteractionRange:3,RespawnSeconds:60},
 }
 
 func EnemyDefinitions() []EnemyDefinition {
