@@ -337,3 +337,63 @@ func TestPostgresEncounterContributionsPersistAcrossEnemyRespawn(t *testing.T) {
 		t.Fatalf("second encounter contribution = %+v", secondParticipants)
 	}
 }
+
+
+func TestPostgresEnemyTargetSelectionPrefersEncounterThreat(t *testing.T) {
+	databaseURL := os.Getenv("RS_GALAXIES_TEST_DATABASE_URL")
+	if databaseURL == "" { t.Skip("RS_GALAXIES_TEST_DATABASE_URL is not configured") }
+	ctx, cancel := context.WithTimeout(context.Background(), 45*time.Second)
+	defer cancel()
+	db, err := sql.Open("pgx", databaseURL)
+	if err != nil { t.Fatal(err) }
+	defer db.Close()
+	db.SetMaxOpenConns(6)
+	if err := db.PingContext(ctx); err != nil { t.Fatal(err) }
+	if err := Migrate(ctx, db); err != nil { t.Fatal(err) }
+
+	now := time.Now().UTC().Truncate(time.Second)
+	accountRepo := NewAccountRepository(db)
+	account, _, err := accountRepo.Register(ctx, fmt.Sprintf("enemy-threat-%d@example.test", now.UnixNano()), "StrongTestPassword!2026", now)
+	if err != nil { t.Fatal(err) }
+	threatID := game.PlayerID(fmt.Sprintf("enemy-threat-leader-%d", now.UnixNano()))
+	nearID := game.PlayerID(fmt.Sprintf("enemy-threat-near-%d", now.UnixNano()))
+	threatPlayer, err := game.NewPlayer(threatID, "ThreatLeader", now)
+	if err != nil { t.Fatal(err) }
+	nearPlayer, err := game.NewPlayer(nearID, "NearbyPlayer", now)
+	if err != nil { t.Fatal(err) }
+	threatPlayer.Position = game.WorldPosition{ZoneID:"threat-test-zone", X:7, Z:0}
+	nearPlayer.Position = game.WorldPosition{ZoneID:"threat-test-zone", X:2, Z:0}
+	if err := accountRepo.CreateCharacter(ctx, account.ID, threatPlayer); err != nil { t.Fatal(err) }
+	if err := accountRepo.CreateCharacter(ctx, account.ID, nearPlayer); err != nil { t.Fatal(err) }
+
+	const enemyID = "frontier-rat-001"
+	const encounterID = "threat-test-encounter"
+	_, err = db.ExecContext(ctx, `INSERT INTO enemy_spawn_state(
+		enemy_id,health,initialized,behavior,position_zone_id,position_x,position_z,encounter_id,target_character_id)
+		VALUES($1,12,TRUE,'idle',$2,8,0,$3,NULL)
+		ON CONFLICT(enemy_id) DO UPDATE SET health=12,initialized=TRUE,respawn_at=NULL,
+		behavior='idle',position_zone_id=$2,position_x=8,position_z=0,
+		encounter_id=$3,target_character_id=NULL,telegraph_until=NULL,next_attack_at=NULL,last_ai_updated_at=NULL`,
+		enemyID,"threat-test-zone",encounterID)
+	if err != nil { t.Fatal(err) }
+	_, err = db.ExecContext(ctx, `INSERT INTO enemy_encounter_participants(
+		encounter_id,enemy_id,account_id,character_id,damage_dealt,damage_received,action_count,first_contribution_at,last_contribution_at)
+		VALUES($1,$2,$3,$4,30,0,3,$5,$5)`, encounterID,enemyID,account.ID,string(threatID),now)
+	if err != nil { t.Fatal(err) }
+	t.Cleanup(func() {
+		_, _ = db.ExecContext(context.Background(), "DELETE FROM zone_presence WHERE character_id IN ($1,$2)", string(threatID),string(nearID))
+		_, _ = db.ExecContext(context.Background(), "DELETE FROM enemy_encounter_participants WHERE enemy_id=$1", enemyID)
+		_, _ = db.ExecContext(context.Background(), "DELETE FROM enemy_spawn_state WHERE enemy_id=$1", enemyID)
+		_, _ = db.ExecContext(context.Background(), "DELETE FROM players WHERE id IN ($1,$2)", string(threatID),string(nearID))
+		_, _ = db.ExecContext(context.Background(), "DELETE FROM accounts WHERE id=$1", account.ID)
+	})
+	if err := accountRepo.HeartbeatPresenceForAccount(ctx,account.ID,threatID,now); err != nil { t.Fatal(err) }
+	if err := accountRepo.HeartbeatPresenceForAccount(ctx,account.ID,nearID,now); err != nil { t.Fatal(err) }
+
+	if err := accountRepo.TickEnemyAI(ctx,enemyID,now); err != nil { t.Fatalf("tick enemy with threat candidates: %v",err) }
+	var targetID string
+	if err := db.QueryRowContext(ctx,"SELECT target_character_id FROM enemy_spawn_state WHERE enemy_id=$1",enemyID).Scan(&targetID); err != nil { t.Fatal(err) }
+	if targetID != string(threatID) {
+		t.Fatalf("enemy target = %s, want higher-threat participant %s despite nearer bystander %s",targetID,threatID,nearID)
+	}
+}
