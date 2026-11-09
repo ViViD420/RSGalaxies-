@@ -40,6 +40,7 @@ jobs:
               return 1
             fi
           }
+          run_godot_check /tmp/godot-movement-test.log godot --headless --path . --script tests/player_controller_smoke_test.gd
           run_godot_check /tmp/godot-import.log godot --headless --editor --path . --quit
           mkdir -p build/web
           run_godot_check /tmp/godot-web-export.log godot --headless --path . --export-release "Web" build/web/index.html
