@@ -179,4 +179,41 @@ func TestPostgresBossEncounterStatePersistsAndRejectsStaleCycles(t *testing.T) {
 	if err := newCycleTx.Commit(); err != nil {
 		t.Fatal(err)
 	}
+
+	// A player may defeat a boss before its first AI tick creates a boss-state
+	// row. The combat transaction must still persist a terminal state.
+	thirdCycle := "boss-cycle-first-hit-defeat"
+	if _, err := db.ExecContext(ctx, "UPDATE enemy_spawn_state SET encounter_id=$2 WHERE enemy_id=$1", enemyID, thirdCycle); err != nil {
+		t.Fatal(err)
+	}
+	firstHitDefeatAt := now.Add(5 * time.Second)
+	firstHitTx, err := db.BeginTx(ctx, nil)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if err := markBossEncounterDefeated(ctx, firstHitTx, enemyID, definition, thirdCycle, firstHitDefeatAt); err != nil {
+		_ = firstHitTx.Rollback()
+		t.Fatalf("persist first-hit boss defeat: %v", err)
+	}
+	if err := firstHitTx.Commit(); err != nil {
+		t.Fatal(err)
+	}
+	verifyFirstHitTx, err := db.BeginTx(ctx, nil)
+	if err != nil {
+		t.Fatal(err)
+	}
+	firstHitState, firstHitDefinitionID, found, err := loadBossEncounterStateForUpdate(ctx, verifyFirstHitTx, enemyID, thirdCycle)
+	if err != nil {
+		_ = verifyFirstHitTx.Rollback()
+		t.Fatal(err)
+	}
+	if !found || firstHitDefinitionID != definition.ID || !firstHitState.Defeated ||
+		firstHitState.PhaseID != definition.Phases[0].ID ||
+		!firstHitState.PhaseStartedAt.Equal(firstHitDefeatAt) {
+		_ = verifyFirstHitTx.Rollback()
+		t.Fatalf("first-hit terminal boss state = %+v definition=%q found=%v", firstHitState, firstHitDefinitionID, found)
+	}
+	if err := verifyFirstHitTx.Commit(); err != nil {
+		t.Fatal(err)
+	}
 }
