@@ -1,6 +1,6 @@
 # RS Galaxies — Session Handoff
 
-Last updated: 2026-11-09 (boss telegraph validation hardened; CI pending)
+Last updated: 2026-11-09 (boss damage primitive added; CI pending)
 
 ## Project identity
 
@@ -333,3 +333,19 @@ RS GALAXIES — RESUME DEVELOPMENT. Work only in ViViD420/RSGalaxies- on main. R
 
 Continue the existing boss vertical slice: integrate cycle-scoped boss persistence into TickEnemyAI, keep player-then-enemy lock order, apply boss ability damage with ability-specific range and existing Defense/armor mitigation, and commit player health/Defense XP plus AI/boss state atomically. Test concurrent ticks, exactly-once damage, stale-cycle rejection and respawn reset. Then add authoritative boss fields to EnemySnapshot, render the boss HUD/telegraph warnings in Godot, and only then activate Stoneback Colossus using the existing multi-item reward pipeline. Preserve all existing systems and the 18-skill progression. Never modify GalaxyMMO or reuse proprietary code. Improve existing code, commit milestones and update this handoff every time. Never claim tests pass without actual Actions job evidence.
 ~~~
+
+## Boss-specific damage groundwork (2026-11-09)
+
+- Additional code commits:
+  - b45319ee4a9fd7fc669f06a1dd2516d8c83013d6 — adds Player.ReceiveBossAttack, which accepts the ability's server-owned minimum/maximum range and raw damage, validates the ability parameters and same-zone distance, then applies existing equipment Defense bonuses and Defense-level mitigation. It awards Defense XP only when positive damage is received and updates LastCombatAt.
+  - 58977533977a82cb34ebec3b7a243aa4880cd379 — adds domain tests for Ground Shatter reaching a player beyond ordinary melee range, Defense mitigation/XP, out-of-range rejection and invalid ability parameters without player mutation.
+- These commits complement the strict telegraph validation commits d6c1220 and aac8771. No local tests were run and no Actions run/job result has been verified for these code changes. Latest verified server Action remains #550 (42587608297); it predates this work.
+- Important boundary: ReceiveBossAttack is a domain primitive only. TickEnemyAI does not yet call it, boss state persistence is not yet wired into the tick, and the Stoneback Colossus is not live. Do not report the boss as playable.
+- Current latest known implementation commit: 58977533977a82cb34ebec3b7a243aa4880cd379. Documentation updates will follow this checkpoint.
+
+### Next steps
+1. Inspect latest main and any available Actions status/run data. Re-read the entire handoff before the next milestone.
+2. Integrate the boss state machine and ReceiveBossAttack into the existing player-then-enemy transaction, using ability-specific range and atomic player/boss/AI persistence.
+3. Extend player attack/defeat transaction paths so a boss killed by a player immediately receives terminal boss state and cannot attack during the same cycle.
+4. Add PostgreSQL concurrency/retry, defeat and respawn-cycle tests; verify actual server CI.
+5. Extend EnemySnapshot and Godot rendering, then register Stoneback Colossus only after full CI verification.
