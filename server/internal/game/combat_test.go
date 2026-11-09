@@ -71,3 +71,52 @@ func TestStrengthAndDefenseCoSkillsAffectCombat(t *testing.T) {
 		t.Fatalf("co-skill XP not awarded: strength=%+v defense=%+v", player.Skills["strength"], player.Skills["defense"])
 	}
 }
+
+func TestReceiveBossAttackUsesAbilityRangeAndDefense(t *testing.T) {
+	now := time.Date(2026, 11, 9, 12, 0, 0, 0, time.UTC)
+	player, err := NewPlayer("boss-damage-player", "BossDamageTester", now.Add(-time.Second))
+	if err != nil {
+		t.Fatal(err)
+	}
+	player.Position = WorldPosition{ZoneID: DefaultWorldZoneID, X: 4, Z: 0}
+	player.Health = 50
+	player.Skills["defense"] = SkillProgress{Level: 11}
+	boss := WorldPosition{ZoneID: DefaultWorldZoneID, X: 0, Z: 0}
+
+	result, err := player.ReceiveBossAttack(12, boss, 0, 6, now)
+	if err != nil {
+		t.Fatalf("resolve Ground Shatter at four units: %v", err)
+	}
+	if result.DamageReceived != 11 || player.Health != 39 || player.Skills["defense"].Experience != 1 {
+		t.Fatalf("boss damage result=%+v health=%d Defense=%+v", result, player.Health, player.Skills["defense"])
+	}
+	if !player.LastCombatAt.Equal(now) {
+		t.Fatalf("LastCombatAt=%s, want %s", player.LastCombatAt, now)
+	}
+}
+
+func TestReceiveBossAttackRejectsOutOfRangeAndInvalidAbility(t *testing.T) {
+	now := time.Date(2026, 11, 9, 12, 0, 0, 0, time.UTC)
+	player, err := NewPlayer("boss-range-player", "BossRangeTester", now.Add(-time.Second))
+	if err != nil {
+		t.Fatal(err)
+	}
+	player.Position = WorldPosition{ZoneID: DefaultWorldZoneID, X: 7, Z: 0}
+	boss := WorldPosition{ZoneID: DefaultWorldZoneID, X: 0, Z: 0}
+	beforeHealth := player.Health
+	beforeXP := player.Skills["defense"].Experience
+
+	if _, err := player.ReceiveBossAttack(12, boss, 0, 6, now); !errors.Is(err, ErrEnemyOutOfRange) {
+		t.Fatalf("out-of-range boss ability error=%v", err)
+	}
+	if _, err := player.ReceiveBossAttack(12, boss, 7, 6, now); !errors.Is(err, ErrInvalidBossAttack) {
+		t.Fatalf("invalid range error=%v", err)
+	}
+	if _, err := player.ReceiveBossAttack(0, boss, 0, 6, now); !errors.Is(err, ErrInvalidBossAttack) {
+		t.Fatalf("zero damage error=%v", err)
+	}
+	if player.Health != beforeHealth || player.Skills["defense"].Experience != beforeXP {
+		t.Fatalf("rejected boss ability mutated player: health=%d Defense=%+v", player.Health, player.Skills["defense"])
+	}
+}
+
