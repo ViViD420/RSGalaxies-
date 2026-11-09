@@ -92,3 +92,7 @@ Persisted boss telegraphs are now validated as a strict two-state invariant: an 
 ### Boss damage resolution boundary
 
 The domain now has a boss-specific damage resolver that accepts the ability's server-defined range rather than reusing ordinary enemy melee range. It applies the same equipment Defense and Defense-skill mitigation as ordinary incoming attacks and awards Defense XP only for positive damage. This is currently a domain primitive; the PostgreSQL world tick and player-initiated boss defeat transaction must call it and persist its player mutation atomically with the boss/AI state before any boss is made live.
+
+### Boss snapshot contract
+
+Enemy snapshots now have optional boss identity/version, phase, active ability and telegraph timing fields. The PostgreSQL read joins boss state only for the enemy's currently active encounter-cycle ID, preventing stale-cycle leakage. Optional timestamps are pointer-backed so ordinary enemy snapshots retain their prior JSON shape. This is snapshot plumbing only: no live boss state is currently advanced by the world tick.
