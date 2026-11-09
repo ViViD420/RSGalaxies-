@@ -826,3 +826,19 @@ Start by checking current main HEAD and client Action #139 for commit 743c5a8. S
 - Server Action #601 (run 42598317321, commit 639a0f772a57e1a65b0a295216c823b77e0454ff) failed during Go compilation before tests: the first concurrent-claim test revision retained an unused local variable named claimedPlayer. The Actions log confirmed this exact compile error; no runtime or database assertion failed in that run.
 - Corrected the unused binding in commit 96e67caa6af9bf766caeca1483d0817dacb512ed. Server Action #602 (run 42598330356) is validating this corrected revision; at this checkpoint its race-enabled PostgreSQL Test step is still in progress and Vet has not started.
 - Do not treat the concurrent-claim test as CI-verified until #602 or a later run passes both Test and Vet.
+
+## Concurrent Stoneback claim CI verification (2026-11-09)
+
+- Server Action #602 (run 42598330356, commit 96e67caa6af9bf766caeca1483d0817dacb512ed) completed successfully. The single server job passed:
+  - Race detector and PostgreSQL integration tests.
+  - go vet.
+  - All setup/cleanup steps.
+- This validates the new simultaneous double-claim regression test: two concurrent requests for the same character/encounter both return the claimed state, with exactly the expected multi-item inventory and 500 Blades / 125 Melee XP; a subsequent sequential retry remains idempotent.
+- Server Action #601 (run 42598317321, commit 639a0f7) failed only at Go compile time due an unused local variable in the first test revision. Commit 96e67caa6af9bf766caeca1483d0817dacb512ed corrected it; #602 is the passing verification. Keep both results transparent.
+- Client Actions #138 (42597884482), #139 (42598099029) and #140 (42598227447) all passed Godot 4.3 setup, import and script validation for the successive boss HUD defeat, phase cue and responsive layout refinements.
+- Server Actions #599 (42594708616) and #600 (42594784308) passed race-enabled PostgreSQL integration tests and Vet for the core Stoneback server vertical slice.
+- docs/ROADMAP.md and docs/ARCHITECTURE.md were refreshed in commits d4741d7e4f4ba0f36f753653da846a2b9a53e1cd and 86397f7369f0574b980092c95d5dd95776240b42.
+
+### Current verified state and next work
+
+The Stoneback transactional server vertical slice and the latest client HUD presentation changes are CI-verified at their respective commits. The current repository handoff itself is documentation-only after the verified code commits. Continue with deeper encounter playtesting and edge-case review: target loss/reacquisition, phase/telegraph presentation, respawn visibility, repeated reward settlement and group encounter design. Do not overstate headless Godot import as visual viewport testing. Update all handoff/design docs after meaningful changes.
