@@ -166,18 +166,20 @@ func _run_movement_smoke_test() -> void:
 		return
 
 	player.call("play_attack_animation")
-	var attack_tween := player.get("_attack_tween") as Tween
-	if attack_tween == null or not attack_tween.is_running():
+	if not bool(player.get("_attack_animation_active")):
 		_fail("Successful combat presentation did not start the attack swing animation.")
+		return
+	await player.get_tree().create_timer(0.06).timeout
+	var swing_rotation := (player.get_node("BodyMesh") as MeshInstance3D).rotation.y
+	if absf(swing_rotation) < 0.01:
+		_fail("Attack swing animation did not visibly rotate the presentation mesh.")
 		return
 	await player.get_tree().create_timer(0.3).timeout
 	var final_attack_rotation := (player.get_node("BodyMesh") as MeshInstance3D).rotation.y
-	var attack_tween_still_owned := player.get("_attack_tween") != null
-	if absf(final_attack_rotation) > 0.01 or attack_tween.is_running() or attack_tween_still_owned:
-		_fail("Attack swing animation did not finish and release its tween; rotation_y=%s tween_running=%s tween_retained=%s." % [final_attack_rotation, attack_tween.is_running(), attack_tween_still_owned])
+	var attack_animation_still_active := bool(player.get("_attack_animation_active"))
+	if absf(final_attack_rotation) > 0.01 or attack_animation_still_active:
+		_fail("Attack swing animation did not return to neutral; rotation_y=%s active=%s." % [final_attack_rotation, attack_animation_still_active])
 		return
-	attack_tween = null
-	await process_frame
 
 	print("PASS: terrain mesh/collision, deterministic height, movement acceleration, sustained speed, deceleration, jump, camera zoom bounds, attack swing and collision/presentation separation.")
 	for child in root.get_children():
