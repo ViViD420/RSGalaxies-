@@ -95,6 +95,12 @@ func TestPostgresEncounterRewardClaimIsAtomicAndIdempotent(t *testing.T) {
 		parent_skill_id,parent_experience_amount,loot_item_id,loot_quantity,status,created_at)
 		VALUES($1,$2,$3,$4,'blades',25,'melee',6,'rat_pelt',1,'pending',$5)`,
 		enemyID,encounterID,account.ID,string(playerID),now); err != nil { t.Fatal(err) }
+	t.Cleanup(func() {
+		_, _ = db.ExecContext(context.Background(), "DELETE FROM enemy_encounter_reward_claims WHERE enemy_id=$1", enemyID)
+		_, _ = db.ExecContext(context.Background(), "DELETE FROM enemy_encounter_settlements WHERE enemy_id=$1", enemyID)
+		_, _ = db.ExecContext(context.Background(), "DELETE FROM players WHERE id=$1", string(playerID))
+		_, _ = db.ExecContext(context.Background(), "DELETE FROM accounts WHERE id=$1", account.ID)
+	})
 
 	listed, err := repo.ListEncounterRewardClaimsForAccount(ctx, account.ID, playerID)
 	if err != nil || len(listed) != 1 || listed[0].Status != "pending" {
@@ -106,12 +112,6 @@ func TestPostgresEncounterRewardClaimIsAtomicAndIdempotent(t *testing.T) {
 	if _, err := repo.ListEncounterRewardClaimsForAccount(ctx, account.ID, "foreign-character"); !errors.Is(err, game.ErrPlayerNotFound) {
 		t.Fatalf("foreign character reward list error=%v, want ErrPlayerNotFound", err)
 	}
-	t.Cleanup(func() {
-		_, _ = db.ExecContext(context.Background(), "DELETE FROM enemy_encounter_reward_claims WHERE enemy_id=$1", enemyID)
-		_, _ = db.ExecContext(context.Background(), "DELETE FROM enemy_encounter_settlements WHERE enemy_id=$1", enemyID)
-		_, _ = db.ExecContext(context.Background(), "DELETE FROM players WHERE id=$1", string(playerID))
-		_, _ = db.ExecContext(context.Background(), "DELETE FROM accounts WHERE id=$1", account.ID)
-	})
 
 	if _, _, err := repo.ClaimEncounterRewardForAccount(ctx, account.ID, playerID, enemyID, encounterID, now); !errors.Is(err, game.ErrRewardInventoryFull) {
 		t.Fatalf("full inventory claim error=%v, want ErrRewardInventoryFull", err)
