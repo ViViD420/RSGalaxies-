@@ -292,3 +292,22 @@ func TestFindBossEncounterForEnemyUsesSpawnIdentity(t *testing.T) {
 	}
 }
 
+func TestStonebackColossusIsRegisteredWithBossAndRewardDefinitions(t *testing.T) {
+	enemy, ok := FindEnemy("stoneback-colossus")
+	if !ok {
+		t.Fatal("Stoneback Colossus is missing from the enemy catalog")
+	}
+	if enemy.MaxHealth != 100 || enemy.Defense != 2 || enemy.Experience != 500 ||
+		enemy.Attack != 0 || enemy.LootTableID != "stoneback-colossus-harvest" ||
+		enemy.Position.ZoneID != DefaultWorldZoneID || enemy.RespawnSeconds != 300 {
+		t.Fatalf("unexpected Stoneback enemy definition: %+v", enemy)
+	}
+	boss, ok := FindBossEncounterForEnemy(enemy.ID)
+	if !ok || boss.ID != "stoneback-colossus" {
+		t.Fatalf("Stoneback boss definition lookup = %+v, found=%v", boss, ok)
+	}
+	if _, ok := FindLootTable(enemy.LootTableID); !ok {
+		t.Fatalf("Stoneback loot table %q is missing", enemy.LootTableID)
+	}
+}
+
