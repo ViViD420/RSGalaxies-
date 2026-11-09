@@ -32,16 +32,17 @@ func ensureEncounterID(ctx context.Context, tx *sql.Tx, enemyID string, resetCyc
 	return id, nil
 }
 
-func recordEncounterContribution(ctx context.Context, tx *sql.Tx, encounterID, enemyID, accountID string, characterID game.PlayerID, damageDealt, damageReceived int, now time.Time) error {
+func recordEncounterContribution(ctx context.Context, tx *sql.Tx, encounterID, enemyID, accountID string, characterID game.PlayerID, experienceSkillID string, damageDealt, damageReceived int, now time.Time) error {
 	_, err := tx.ExecContext(ctx, `INSERT INTO enemy_encounter_participants(
-		encounter_id,enemy_id,account_id,character_id,damage_dealt,damage_received,action_count,first_contribution_at,last_contribution_at)
-		VALUES($1,$2,$3,$4,$5,$6,1,$7,$7)
+		encounter_id,enemy_id,account_id,character_id,damage_dealt,damage_received,action_count,first_contribution_at,last_contribution_at,experience_skill_id)
+		VALUES($1,$2,$3,$4,$5,$6,1,$7,$7,$8)
 		ON CONFLICT(encounter_id,character_id) DO UPDATE SET
 			damage_dealt=enemy_encounter_participants.damage_dealt+EXCLUDED.damage_dealt,
 			damage_received=enemy_encounter_participants.damage_received+EXCLUDED.damage_received,
 			action_count=enemy_encounter_participants.action_count+1,
-			last_contribution_at=EXCLUDED.last_contribution_at`,
-		encounterID,enemyID,accountID,string(characterID),damageDealt,damageReceived,now.UTC())
+			last_contribution_at=EXCLUDED.last_contribution_at,
+			experience_skill_id=CASE WHEN EXCLUDED.damage_dealt>0 THEN EXCLUDED.experience_skill_id ELSE enemy_encounter_participants.experience_skill_id END`,
+		encounterID,enemyID,accountID,string(characterID),damageDealt,damageReceived,now.UTC(),experienceSkillID)
 	if err != nil { return fmt.Errorf("record encounter contribution: %w", err) }
 	return nil
 }
@@ -343,7 +344,7 @@ func (r *AccountRepository) ListEnemySnapshotsForAccount(ctx context.Context, ac
 // than accepting client-supplied contribution values.
 func (r *AccountRepository) ListEncounterParticipants(ctx context.Context, enemyID, encounterID string) ([]game.EncounterParticipant, error) {
 	rows, err := r.db.QueryContext(ctx, `SELECT encounter_id,enemy_id,account_id,character_id,
-		damage_dealt,damage_received,action_count,first_contribution_at,last_contribution_at
+		damage_dealt,experience_skill_id,damage_received,action_count,first_contribution_at,last_contribution_at
 		FROM enemy_encounter_participants WHERE enemy_id=$1 AND encounter_id=$2
 		ORDER BY damage_dealt DESC, first_contribution_at, character_id`, enemyID, encounterID)
 	if err != nil { return nil, fmt.Errorf("list encounter participants: %w", err) }
@@ -352,7 +353,7 @@ func (r *AccountRepository) ListEncounterParticipants(ctx context.Context, enemy
 	for rows.Next() {
 		var participant game.EncounterParticipant
 		if err := rows.Scan(&participant.EncounterID,&participant.EnemyID,&participant.AccountID,
-			&participant.CharacterID,&participant.DamageDealt,&participant.DamageReceived,
+			&participant.CharacterID,&participant.DamageDealt,&participant.ExperienceSkillID,&participant.DamageReceived,
 			&participant.ActionCount,&participant.FirstContributionAt,&participant.LastContributionAt); err != nil {
 			return nil, fmt.Errorf("scan encounter participant: %w", err)
 		}
