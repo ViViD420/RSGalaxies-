@@ -175,3 +175,75 @@ func TestPostgresEncounterRewardClaimIsAtomicAndIdempotent(t *testing.T) {
 			replayedClaim,replayedPlayer.Inventory["rat_pelt"],replayedPlayer.Skills["blades"].Experience,replayedPlayer.Skills["melee"].Experience)
 	}
 }
+
+func TestPostgresMultiItemRewardMigrationBackfillsLegacyLoot(t *testing.T) {
+	db := integrationDatabase(t)
+	ctx := context.Background()
+	now := time.Now().UTC().Truncate(time.Microsecond)
+	repo := NewAccountRepository(db)
+	account, _, err := repo.Register(ctx, fmt.Sprintf("reward-migration-%d@example.test", now.UnixNano()), "correct-horse-battery-staple", now)
+	if err != nil {
+		t.Fatal(err)
+	}
+	playerID := game.PlayerID(fmt.Sprintf("reward-migration-player-%d", now.UnixNano()))
+	player, err := game.NewPlayer(playerID, "MigrationWayfarer", now)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if err := repo.CreateCharacter(ctx, account.ID, player); err != nil {
+		t.Fatal(err)
+	}
+
+	const enemyID = "reward-migration-enemy"
+	const encounterID = "reward-migration-cycle"
+	t.Cleanup(func() {
+		_, _ = db.ExecContext(context.Background(), "DELETE FROM enemy_encounter_reward_claims WHERE enemy_id=$1", enemyID)
+		_, _ = db.ExecContext(context.Background(), "DELETE FROM enemy_encounter_settlements WHERE enemy_id=$1", enemyID)
+		_, _ = db.ExecContext(context.Background(), "DELETE FROM players WHERE id=$1", string(playerID))
+		_, _ = db.ExecContext(context.Background(), "DELETE FROM accounts WHERE id=$1", account.ID)
+		_ = Migrate(context.Background(), db)
+	})
+
+	if _, err := db.ExecContext(ctx, `INSERT INTO enemy_encounter_settlements(enemy_id,encounter_id,settled_at)
+		VALUES($1,$2,$3)`, enemyID, encounterID, now); err != nil {
+		t.Fatal(err)
+	}
+	if _, err := db.ExecContext(ctx, `INSERT INTO enemy_encounter_reward_claims(
+		enemy_id,encounter_id,account_id,character_id,experience_skill_id,
+		loot_item_id,loot_quantity,status,created_at)
+		VALUES($1,$2,$3,$4,'blades','rat_pelt',2,'pending',$5)`,
+		enemyID, encounterID, account.ID, string(playerID), now); err != nil {
+		t.Fatal(err)
+	}
+
+	if _, err := db.ExecContext(ctx, "DELETE FROM schema_migrations WHERE version=15"); err != nil {
+		t.Fatal(err)
+	}
+	if err := Migrate(ctx, db); err != nil {
+		t.Fatalf("apply reward-item migration: %v", err)
+	}
+	if err := Migrate(ctx, db); err != nil {
+		t.Fatalf("repeat reward-item migration: %v", err)
+	}
+
+	var itemID string
+	var quantity int
+	if err := db.QueryRowContext(ctx, `SELECT item_id,quantity
+		FROM enemy_encounter_reward_claim_items
+		WHERE enemy_id=$1 AND encounter_id=$2 AND character_id=$3`,
+		enemyID, encounterID, string(playerID)).Scan(&itemID, &quantity); err != nil {
+		t.Fatal(err)
+	}
+	if itemID != "rat_pelt" || quantity != 2 {
+		t.Fatalf("backfilled legacy loot = %s x%d, want rat_pelt x2", itemID, quantity)
+	}
+	var itemRows int
+	if err := db.QueryRowContext(ctx, `SELECT COUNT(*) FROM enemy_encounter_reward_claim_items
+		WHERE enemy_id=$1 AND encounter_id=$2 AND character_id=$3`,
+		enemyID, encounterID, string(playerID)).Scan(&itemRows); err != nil {
+		t.Fatal(err)
+	}
+	if itemRows != 1 {
+		t.Fatalf("backfilled item row count=%d, want exactly one after repeat migration", itemRows)
+	}
+}
