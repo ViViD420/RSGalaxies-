@@ -87,7 +87,7 @@ An original sandbox MMORPG combining long-form skill progression and item gamepl
 
 ## Enemy AI foundation (new)
 
-- Commits: `b805b26` added `server/internal/game/enemy_ai.go`; `b8bdd94` added behavior tests; `cf2540c` refined the bounded return-path test.
+- Commits: `b805b26` added `server/internal/game/enemy_ai.go`; `b8bdd94` added behavior tests; `cf2540c` and `1621e3f` refined the bounded return-path test.
 - `AdvanceEnemyAI` is a pure deterministic domain transition: idle acquires a same-zone target within aggro range, chases at bounded server-tick speed, telegraphs before requesting an attack, interrupts telegraphs when the player leaves attack range, and returns to spawn when the target leaves the leash or zone. Long pauses cap movement catch-up at one second.
 - The function only emits an attack request; the future repository integration must atomically persist enemy state and apply server-calculated player damage. Do not expose a client-controlled enemy tick or trust client damage.
 - Current limitation: this is tested domain logic, not yet connected to PostgreSQL spawn rows, an encounter scheduler, or client-visible enemy movement.
