@@ -956,7 +956,7 @@ func _on_api_request_completed(result: int, response_code: int, _headers: Packed
 			skills_button.visible = false
 			if character_panel != null:
 				character_panel.visible = false
-					_stop_chat()
+			_stop_chat()
 			_stop_skills_request()
 			if skills_panel != null:
 				skills_panel.visible = false
