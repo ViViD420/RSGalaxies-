@@ -2591,6 +2591,14 @@ func _show_rewards_panel() -> void:
 	if rewards_panel != null:
 		rewards_panel.visible = not rewards_panel.visible
 		if rewards_panel.visible:
+			if skills_panel != null:
+				skills_panel.visible = false
+			if inventory_panel != null:
+				inventory_panel.visible = false
+			if market_panel != null:
+				market_panel.visible = false
+			if equipment_panel != null:
+				equipment_panel.visible = false
 			_request_reward_claims()
 		return
 	if skills_panel != null:
@@ -2751,6 +2759,8 @@ func _render_reward_claims(claims: Variant) -> void:
 
 
 func _show_inventory_panel() -> void:
+	if rewards_panel != null:
+		rewards_panel.visible = false
 	if skills_panel != null:
 		skills_panel.visible = false
 	if market_panel != null:
