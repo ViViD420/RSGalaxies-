@@ -98,7 +98,7 @@ Each milestone is a tested, reviewable slice. A feature is not complete because 
 - [x] Reject stale-cycle and stale-timestamp boss state writes; validate complete telegraph timestamp invariants.
 - [x] Advance boss phases and telegraphs inside the PostgreSQL enemy world tick; resolve ability-specific range checks and Defense/equipment mitigation transactionally with player health, contribution, boss state and AI state.
 - [x] Interrupt active telegraphs when the target moves out of ability range or no eligible target remains.
-- [x] Cover concurrent exactly-once damage, lethal player defeat, target/telegraph cleanup, respawn-cycle reset, public authenticated snapshots and concurrent reward-claim retries with PostgreSQL integration tests.
+- [x] Cover concurrent exactly-once damage, lethal player defeat, target/telegraph cleanup, respawn-cycle reset, public authenticated snapshots and concurrent reward-claim retries with PostgreSQL integration tests (server Actions #602 passed race-enabled integration tests and Vet).
 - [x] Register Stoneback Colossus in the public enemy catalog at Verdant Frontier (32,32): 100 HP, 2 Defense, no ordinary attack, 500 encounter XP and 300-second respawn.
 - [x] Assign the versioned Stoneback multi-item harvest table and verify defeat, durable settlement, claim listing, claim redemption, XP and idempotent retry.
 - [x] Render the boss world model and consume authoritative boss health/phase/ability snapshots in the Godot HUD.
