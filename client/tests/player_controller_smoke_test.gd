@@ -172,9 +172,12 @@ func _run_movement_smoke_test() -> void:
 		return
 	await player.get_tree().create_timer(0.3).timeout
 	var final_attack_rotation := (player.get_node("BodyMesh") as MeshInstance3D).rotation.y
-	if absf(final_attack_rotation) > 0.01 or attack_tween.is_running():
-		_fail("Attack swing animation did not return the body mesh to its neutral pose; rotation_y=%s tween_running=%s." % [final_attack_rotation, attack_tween.is_running()])
+	var attack_tween_still_owned := player.get("_attack_tween") != null
+	if absf(final_attack_rotation) > 0.01 or attack_tween.is_running() or attack_tween_still_owned:
+		_fail("Attack swing animation did not finish and release its tween; rotation_y=%s tween_running=%s tween_retained=%s." % [final_attack_rotation, attack_tween.is_running(), attack_tween_still_owned])
 		return
+	attack_tween = null
+	await process_frame
 
 	print("PASS: terrain mesh/collision, deterministic height, movement acceleration, sustained speed, deceleration, jump, camera zoom bounds, attack swing and collision/presentation separation.")
 	for child in root.get_children():
