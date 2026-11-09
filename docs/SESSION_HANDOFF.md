@@ -574,3 +574,19 @@ Next add boss interruption/player death/respawn-cycle integration coverage, veri
 1. Verify server #585, #586 and #587, inspecting job logs and fixing any remaining failure.
 2. Verify the newest server run after all three test corrections, including both race-enabled PostgreSQL tests and Vet.
 3. Once green, add the Stoneback enemy definition to the public catalog and run loop, then verify public snapshots, world model, boss HUD and multi-item reward claims.
+
+## No-target boss telegraph interruption coverage (2026-11-09)
+
+- Extended the boss world-tick integration test to cover the empty-target branch directly:
+  - Starts a second Stone Fist telegraph after cooldown.
+  - Expires the player's zone-presence lease.
+  - Runs the boss tick with no eligible target and verifies the active telegraph is cleared without damage or Defense XP.
+  - Continues into the respawn test and verifies the old cycle remains unchanged before the deadline and a fresh cycle has clean phase/cooldown state afterward.
+- Test commit: 415914f88e69f22dfc459c8a3acbeb7b248a9878.
+- CI status:
+  - Client #137 (42592975125, Stoneback model) passed Godot 4.3 import/script validation.
+  - Server #579 and #580 passed the exactly-once, out-of-range interruption and respawn-cycle PostgreSQL tests plus Vet.
+  - Server #581 failed because its Ground Shatter test accidentally put Stone Fist in range; deterministic setup correction is in #585 commit 6e8cc997.
+  - Server #582–#584 failed because public catalog and loot tests still expected 19 items/4 loot tables. Assertions were updated to 22 items/5 tables in #586–#587.
+  - Server #585–#588 were in progress at the last check. #588 includes the new no-target interruption test.
+- Do not register Stoneback in the public catalog until #585–#588 (or later latest-main runs) complete successfully and both race-enabled PostgreSQL tests and Vet are verified.
