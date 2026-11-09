@@ -72,6 +72,18 @@ func EnsureSkillProgress(skills map[string]SkillProgress) map[string]SkillProgre
 	return skills
 }
 
+func skillDefinition(id string) (SkillDefinition, bool) {
+	id = strings.TrimSpace(strings.ToLower(id))
+	for _, definition := range skillDefinitions { if definition.ID == id { return definition, true } }
+	return SkillDefinition{}, false
+}
+
+func skillParentID(id string) string {
+	definition, ok := skillDefinition(id)
+	if !ok { return "" }
+	return definition.ParentID
+}
+
 func IsKnownSkill(id string) bool {
 	id = strings.TrimSpace(strings.ToLower(id))
 	for _, definition := range skillDefinitions {
