@@ -44,6 +44,7 @@ type CombatResult struct {
 	EnemyID string `json:"enemyId"`
 	SkillID string `json:"skillId"`
 	ParentSkillID string `json:"parentSkillId,omitempty"`
+	ParentExperience int `json:"parentExperience,omitempty"`
 	EnemyHealth int `json:"enemyHealth"`
 	PlayerHealth int `json:"playerHealth"`
 	DamageDealt int `json:"damageDealt"`
@@ -111,6 +112,7 @@ func (p *Player) AttackEnemy(enemy EnemyDefinition,state EnemyState,now time.Tim
 		if parentSkillID != "" {
 			parentXP := enemy.Experience / 4
 			if parentXP < 1 { parentXP = 1 }
+			result.ParentExperience = parentXP
 			if _, err := p.AwardExperience(parentSkillID, parentXP); err != nil && !errors.Is(err, ErrExperienceOverflow) { return CombatResult{}, state, err }
 		}
 		if enemy.LootItemID!=""&&enemy.LootQuantity>0{
