@@ -121,3 +121,6 @@ Each milestone is a tested, reviewable slice. A feature is not complete because 
 - [x] Interrupt boss telegraphs when no eligible player is present.
 - [x] Add concurrent exactly-once boss ability damage PostgreSQL integration coverage (CI pending).
 - [ ] Verify latest server Actions #574–#579, then add interruption/player-death/respawn coverage before live registration.
+
+- [x] Cover boss telegraph interruption when the target leaves ability range and clean state after a respawn cycle (PostgreSQL integration coverage; CI pending).
+- [ ] Cover boss ability player defeat and interaction with player-initiated boss defeat before live registration.
