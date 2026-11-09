@@ -887,3 +887,26 @@ Boss expansion and boss-specific polish are paused. Preserve the completed Stone
 3. Once clean, continue movement refinements and add regression checks where practical; then tackle terrain, character animation, UI and server-authoritative abilities in reviewable slices.
 4. Keep all 18 skills, professions/equipment restrictions, gathering, crafting, inventory/economy, ordinary enemy progression and multi-item rewards intact.
 5. Update `docs/SESSION_HANDOFF.md`, `docs/ROADMAP.md` and `docs/ARCHITECTURE.md` after each meaningful milestone.
+
+## Strict client CI follow-up: second latent GDScript parse error (2026-11-09)
+
+- Client Action #144 (run 42600477028, commit 4fb31c97a19c82be91d39f5f0deab245b72ef1c9) correctly failed after CI log scanning was added. The import log exposed a second GDScript parse error in `client/scripts/main.gd:2966`: `There is already a variable named "scroll" declared in this scope.`
+- The first indentation correction at line 959 was necessary but exposed the next parser error. Client Action #143 (run 42600473494, commit 30104f69d2d4973252f0f5ca92c39e25a3c790f5) also concluded success under the old workflow while its logs contained this duplicate-variable parse error.
+- Root cause: `_show_inventory_panel()` declared and added an initial empty ScrollContainer/VBoxContainer before the filter/search controls, then declared a second `scroll` and populated `inventory_items_column`. The first pair was unused duplicate UI scaffolding.
+- Removed the unused first ScrollContainer/VBoxContainer block in commit 65b7b73fbac725b235d18a99d9b327d4be92e830. The active scroll list remains after the filter and search controls and is populated by `_refresh_inventory_item_list()`.
+- The strict client CI change in #144 is working as intended: it turns Godot's zero-exit-code parser log into a failing workflow rather than a false green.
+- Client Action for commit 65b7b73 is pending; inspect the strict import and Web-export logs. If another error is found, fix it before resuming movement/terrain/animation feature work.
+- The movement-controller improvement in commit 21432e25491e65ae86908289c9da7cccc529c637 remains unverified until a strict CI run proves the whole project parses and exports without logged errors.
+
+### False-green run history
+
+Full job logs, not just conclusions, were inspected:
+- Client #138 / run 42597884482: 4 parser/engine error lines for main.gd line 959.
+- Client #139 / run 42598099029: 4 parser/engine error lines for main.gd line 959.
+- Client #140 / run 42598227447: 4 parser/engine error lines for main.gd line 959.
+- Client #141 / run 42600280743: 4 parser/engine error lines for main.gd line 959.
+- Client #142 / run 42600344533: 4 parser/engine error lines for main.gd line 959.
+- Client #143 / run 42600473494: 4 parser/engine error lines for main.gd line 2966 (duplicate `scroll` declaration).
+- Client #144 / run 42600477028: correctly failed on the duplicate `scroll` declaration.
+- These earlier green conclusions are not valid evidence of clean Godot parsing. The error lines remain documented; fixes are tracked in commits 30104f6 and 65b7b73.
+
