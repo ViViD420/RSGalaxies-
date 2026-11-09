@@ -105,6 +105,22 @@ func (r *AccountRepository) TickEnemyAI(ctx context.Context, enemyID string, now
 		}
 		health, initialized, respawnAt, state, err := readEnemyAIStateForUpdate(ctx, tx, enemy)
 		if err != nil { _ = tx.Rollback(); return err }
+		if state.TargetCharacterID != "" && state.TargetCharacterID != string(candidate.characterID) &&
+			(state.Behavior == game.EnemyChasing || state.Behavior == game.EnemyTelegraphing) {
+			var stickyTargetStillActive bool
+			err := tx.QueryRowContext(ctx, `SELECT EXISTS(
+				SELECT 1 FROM zone_presence p
+				JOIN players target_player ON target_player.id=p.character_id AND target_player.account_id=p.account_id
+				WHERE p.character_id=$1 AND p.zone_id=$2 AND p.last_seen_at>$3
+				AND p.position_x BETWEEN $4 AND $5 AND p.position_z BETWEEN $6 AND $7
+				AND target_player.health>0)`,
+				state.TargetCharacterID, state.Position.ZoneID, now.Add(-game.PresenceLease),
+				state.Position.X-enemyAIConfig(enemy).LeashRange, state.Position.X+enemyAIConfig(enemy).LeashRange,
+				state.Position.Z-enemyAIConfig(enemy).LeashRange, state.Position.Z+enemyAIConfig(enemy).LeashRange,
+			).Scan(&stickyTargetStillActive)
+			if err != nil { _ = tx.Rollback(); return fmt.Errorf("revalidate sticky enemy target: %w", err) }
+			if stickyTargetStillActive { _ = tx.Rollback(); return nil }
+		}
 		if !initialized { health, initialized = enemy.MaxHealth, true }
 		if health <= 0 {
 			if respawnAt.Valid && now.Before(respawnAt.Time) { _ = tx.Rollback(); return nil }
