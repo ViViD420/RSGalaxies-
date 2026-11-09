@@ -17,6 +17,11 @@ extends CharacterBody3D
 @export var mouse_sensitivity := 0.0025
 @export var min_camera_pitch_degrees := -65.0
 @export var max_camera_pitch_degrees := 35.0
+@export var camera_zoom_step := 0.75
+@export var camera_min_distance := 2.5
+@export var camera_max_distance := 9.0
+@export var attack_swing_radians := 0.95
+@export var attack_swing_duration := 0.18
 
 @export_group("Placeholder Locomotion Presentation")
 @export var movement_bob_height := 0.035
@@ -24,6 +29,7 @@ extends CharacterBody3D
 @export var movement_lean_radians := 0.075
 
 @onready var camera_pivot: Node3D = $CameraPivot
+@onready var camera_arm: SpringArm3D = $CameraPivot/SpringArm3D
 @onready var body_mesh: MeshInstance3D = $BodyMesh
 
 var gravity: float = ProjectSettings.get_setting("physics/3d/default_gravity")
@@ -31,6 +37,7 @@ var _coyote_time_left := 0.0
 var _jump_buffer_left := 0.0
 var _body_mesh_base_y := 0.9
 var _locomotion_clock := 0.0
+var _attack_tween: Tween
 
 
 func _ready() -> void:
@@ -49,8 +56,38 @@ func _unhandled_input(event: InputEvent) -> void:
 		_rotate_camera(event.relative)
 	elif event is InputEventScreenDrag:
 		_rotate_camera(event.relative)
-	elif event is InputEventMouseButton and event.pressed and event.button_index == MOUSE_BUTTON_LEFT:
-		Input.mouse_mode = Input.MOUSE_MODE_CAPTURED
+	elif event is InputEventMouseButton and event.pressed:
+		if event.button_index == MOUSE_BUTTON_LEFT:
+			Input.mouse_mode = Input.MOUSE_MODE_CAPTURED
+		elif event.button_index == MOUSE_BUTTON_WHEEL_UP:
+			_adjust_camera_zoom(-camera_zoom_step)
+		elif event.button_index == MOUSE_BUTTON_WHEEL_DOWN:
+			_adjust_camera_zoom(camera_zoom_step)
+	elif event is InputEventKey and event.pressed and not event.echo:
+		if event.physical_keycode == KEY_EQUAL or event.physical_keycode == KEY_KP_ADD:
+			_adjust_camera_zoom(-camera_zoom_step)
+		elif event.physical_keycode == KEY_MINUS or event.physical_keycode == KEY_KP_SUBTRACT:
+			_adjust_camera_zoom(camera_zoom_step)
+
+
+func _adjust_camera_zoom(amount: float) -> void:
+	camera_arm.spring_length = clampf(
+		camera_arm.spring_length + amount,
+		camera_min_distance,
+		camera_max_distance
+	)
+
+
+func play_attack_animation() -> void:
+	if _attack_tween != null and _attack_tween.is_running():
+		_attack_tween.kill()
+	body_mesh.rotation.y = 0.0
+	_attack_tween = create_tween()
+	_attack_tween.set_trans(Tween.TRANS_QUAD)
+	_attack_tween.set_ease(Tween.EASE_OUT)
+	_attack_tween.tween_property(body_mesh, "rotation:y", attack_swing_radians, attack_swing_duration * 0.45)
+	_attack_tween.set_ease(Tween.EASE_IN)
+	_attack_tween.tween_property(body_mesh, "rotation:y", 0.0, attack_swing_duration * 0.55)
 
 
 func _rotate_camera(relative: Vector2) -> void:
