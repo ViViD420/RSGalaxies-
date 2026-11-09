@@ -1040,3 +1040,12 @@ Core game focus only. The player controller now has smooth ground acceleration/d
 - Expanded the headless player controller test to verify camera zoom step and min/max bounds, attack tween activation and return to neutral pose (commit 06f1693). The new tests are awaiting Client Action #164; do not claim this new feature/test addition is verified until that run passes and its full logs are clean.
 - Existing terrain runtime checks remain green in #161/#163. #157–#160 and #162 failures and their fixes remain documented above.
 - Next after #164: fix every surfaced failure before proceeding. Then improve combat impact feedback and weapon-specific animation hooks, refine camera collision/touch zoom, and expand terrain with traversable paths/biome details. Keep boss feature work paused.
+
+## Camera and attack-animation validation findings (2026-11-09)
+
+- Client Action #164 (run 42602561643, commit df1a912) passed strict Godot import and Web export for the camera zoom/attack animation implementation.
+- Client Action #165 (run 42602567320, commit 91535c4) passed strict import/Web export after wiring the attack swing only to successful authoritative combat responses.
+- Client Action #166 (run 42602595717, commit 06f1693) failed the expanded smoke test: the attack swing tween had not returned the mesh to neutral pose within the test's 20 process-frame wait. It also produced a null-mesh renderer error during failure cleanup. Do not omit this failure.
+- Root cause addressed in commits 9e24d4f and 4a424b4: the attack tween now animates the full rotation vector, preserves the pre-swing pose, restores that pose on the tween's finished signal, and the test waits 0.3 seconds of elapsed time while reporting final rotation and tween-running state on failure.
+- New client Actions for these fixes are pending. Inspect their full job results/logs before calling camera/animation work verified. If the test fails again, use the emitted rotation/tween state to correct the underlying behavior; do not weaken or remove the assertion.
+- The camera wheel/keyboard zoom checks are part of the same smoke test: one-step zoom, min distance, and max distance. Actions #164/#165 prove syntax/import/export, not runtime test assertions.
