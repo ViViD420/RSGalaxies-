@@ -321,8 +321,15 @@ func (r *AccountRepository) AttackEnemyForAccount(ctx context.Context,accountID 
 	if _,err:=tx.ExecContext(ctx,`INSERT INTO enemy_spawn_state(enemy_id,health,initialized) VALUES($1,0,FALSE) ON CONFLICT(enemy_id) DO NOTHING`,enemyID);err!=nil{return game.Player{},game.CombatResult{},fmt.Errorf("initialize enemy state: %w",err)}
 	var state game.EnemyState
 	var respawnAt sql.NullTime
-	if err:=tx.QueryRowContext(ctx,`SELECT health,respawn_at,initialized FROM enemy_spawn_state WHERE enemy_id=$1 FOR UPDATE`,enemyID).Scan(&state.Health,&respawnAt,&state.Initialized);err!=nil{return game.Player{},game.CombatResult{},fmt.Errorf("lock enemy state: %w",err)}
+	var liveZone sql.NullString
+	var liveX, liveZ sql.NullFloat64
+	if err:=tx.QueryRowContext(ctx,`SELECT health,respawn_at,initialized,position_zone_id,position_x,position_z
+		FROM enemy_spawn_state WHERE enemy_id=$1 FOR UPDATE`,enemyID).Scan(
+		&state.Health,&respawnAt,&state.Initialized,&liveZone,&liveX,&liveZ);err!=nil{return game.Player{},game.CombatResult{},fmt.Errorf("lock enemy state: %w",err)}
 	if respawnAt.Valid{state.RespawnAt=respawnAt.Time}
+	if liveZone.Valid && liveX.Valid && liveZ.Valid {
+		enemy.Position = game.WorldPosition{ZoneID:liveZone.String,X:liveX.Float64,Z:liveZ.Float64}
+	}
 	result,nextState,err:=player.AttackEnemy(enemy,state,now)
 	if err!=nil{return player,game.CombatResult{},err}
 	var respawnValue any
