@@ -254,7 +254,7 @@ func (s *testAccountStore) AuthenticateSession(_ context.Context,token string,_ 
 }
 func (s *testAccountStore) RevokeSession(_ context.Context,token string,_ time.Time)error{s.revoked[token]=true;return nil}
 
-type testCharacterStore struct { players map[string]map[game.PlayerID]game.Player; enemies map[string]game.EnemyState; messages []game.ChatMessage; lastChat map[game.PlayerID]time.Time; nextChatID int64; presence map[game.PlayerID]game.RemotePlayer; trades map[string]game.TradeSnapshot; activeTrades map[game.PlayerID]string; nextTradeID int }
+type testCharacterStore struct { players map[string]map[game.PlayerID]game.Player; enemies map[string]game.EnemyState; messages []game.ChatMessage; lastChat map[game.PlayerID]time.Time; nextChatID int64; presence map[game.PlayerID]game.RemotePlayer; trades map[string]game.TradeSnapshot; activeTrades map[game.PlayerID]string; nextTradeID int; rewardClaims map[game.PlayerID][]game.EncounterRewardClaim }
 func newTestCharacterStore()*testCharacterStore{return &testCharacterStore{players:map[string]map[game.PlayerID]game.Player{},enemies:map[string]game.EnemyState{},lastChat:map[game.PlayerID]time.Time{},presence:map[game.PlayerID]game.RemotePlayer{},trades:map[string]game.TradeSnapshot{},activeTrades:map[game.PlayerID]string{}}}
 func (s *testCharacterStore) CreateCharacter(_ context.Context,accountID string,player game.Player)error{
 	if s.players[accountID]==nil{s.players[accountID]=map[game.PlayerID]game.Player{}}
@@ -270,13 +270,21 @@ func (s *testCharacterStore) ListCharacters(_ context.Context,accountID string)(
 
 func (s *testCharacterStore) ListEncounterRewardClaimsForAccount(_ context.Context, accountID string, characterID game.PlayerID) ([]game.EncounterRewardClaim, error) {
 	if _, ok := s.players[accountID][characterID]; !ok { return nil, game.ErrPlayerNotFound }
-	return []game.EncounterRewardClaim{}, nil
+	return append([]game.EncounterRewardClaim{}, s.rewardClaims[characterID]...), nil
 }
 
-func (s *testCharacterStore) ClaimEncounterRewardForAccount(_ context.Context, accountID string, characterID game.PlayerID, _, _ string, _ time.Time) (game.Player, game.EncounterRewardClaim, error) {
+func (s *testCharacterStore) ClaimEncounterRewardForAccount(_ context.Context, accountID string, characterID game.PlayerID, enemyID, encounterID string, now time.Time) (game.Player, game.EncounterRewardClaim, error) {
 	player, ok := s.players[accountID][characterID]
 	if !ok { return game.Player{}, game.EncounterRewardClaim{}, game.ErrPlayerNotFound }
-	return player, game.EncounterRewardClaim{}, game.ErrRewardClaimNotFound
+	for index, claim := range s.rewardClaims[characterID] {
+		if claim.EnemyID == enemyID && claim.EncounterID == encounterID {
+			claim.Status = "claimed"
+			claim.ClaimedAt = now.UTC()
+			s.rewardClaims[characterID][index] = claim
+			return player, claim, nil
+		}
+	}
+	return game.Player{}, game.EncounterRewardClaim{}, game.ErrRewardClaimNotFound
 }
 
 func TestAuthenticatedCharacterLifecycleAndOwnership(t *testing.T) {
@@ -326,6 +334,22 @@ func TestAuthenticatedCharacterLifecycleAndOwnership(t *testing.T) {
 	claimMissingRequest.Header.Set("Authorization","Bearer "+registration.AccessToken)
 	handler.ServeHTTP(claimMissing,claimMissingRequest)
 	if claimMissing.Code!=http.StatusNotFound||!strings.Contains(claimMissing.Body.String(),"reward_claim_not_found"){t.Fatalf("missing reward claim status=%d body=%s",claimMissing.Code,claimMissing.Body.String())}
+
+	characters.rewardClaims[player.ID] = []game.EncounterRewardClaim{{
+		EnemyID:"frontier-rat-001",EncounterID:"encounter-success",CharacterID:player.ID,
+		ExperienceSkillID:"blades",ExperienceAmount:25,ParentSkillID:"melee",
+		ParentExperienceAmount:6,Status:"pending",CreatedAt:time.Now().UTC(),
+	}}
+	claimSuccess:=httptest.NewRecorder()
+	claimSuccessRequest:=httptest.NewRequest(http.MethodPost,"/api/v1/account/characters/"+string(player.ID)+"/rewards/frontier-rat-001/encounter-success/claim",nil)
+	claimSuccessRequest.Header.Set("Authorization","Bearer "+registration.AccessToken)
+	handler.ServeHTTP(claimSuccess,claimSuccessRequest)
+	if claimSuccess.Code!=http.StatusOK||!strings.Contains(claimSuccess.Body.String(),"\"status\":\"claimed\""){t.Fatalf("successful reward claim status=%d body=%s",claimSuccess.Code,claimSuccess.Body.String())}
+	foreignClaim:=httptest.NewRecorder()
+	foreignClaimRequest:=httptest.NewRequest(http.MethodPost,"/api/v1/account/characters/foreign-character/rewards/frontier-rat-001/encounter-success/claim",nil)
+	foreignClaimRequest.Header.Set("Authorization","Bearer "+registration.AccessToken)
+	handler.ServeHTTP(foreignClaim,foreignClaimRequest)
+	if foreignClaim.Code!=http.StatusNotFound{t.Fatalf("foreign character reward claim status=%d want 404 body=%s",foreignClaim.Code,foreignClaim.Body.String())}
 	cooldownChat:=httptest.NewRecorder()
 	cooldownChatRequest:=httptest.NewRequest(http.MethodPost,"/api/v1/account/characters/"+string(player.ID)+"/chat/local",bytes.NewBufferString(`{"message":"Too soon"}`))
 	cooldownChatRequest.Header.Set("Authorization","Bearer "+registration.AccessToken)
