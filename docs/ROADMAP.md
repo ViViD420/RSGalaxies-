@@ -138,3 +138,5 @@ Each milestone is a tested, reviewable slice. A feature is not complete because 
 
 - [x] Register Stoneback Colossus in the public enemy catalog and world tick loop with the prepared multi-item reward table (latest server CI pending).
 - [ ] Verify public TickEnemyAI/RunEnemyAITick, authenticated snapshots and end-to-end reward claim flow.
+
+- [x] Add an end-to-end Stoneback defeat, durable settlement, multi-item claim and idempotent retry PostgreSQL integration test (CI pending).
