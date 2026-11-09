@@ -144,3 +144,12 @@ Never hide or silently bypass an error. Stop, reproduce, diagnose and fix it bef
 
 - A third deterministic noise field modulates vertex colors for lush grass/moss, dry scrub and rocky high ground.
 - The palette is integrated into the existing terrain mesh and does not add collision or render nodes. Determinism and palette variety are covered by the client smoke test; CI is pending.
+
+
+## Core world/client checkpoint (2026-11-09)
+
+- Godot 4.3 client terrain uses deterministic elevation/detail/moisture noise, smooth vertex-color biome blending and four integrated dirt trails. No separate trail mesh is allocated.
+- Client player controller has acceleration/deceleration, jump buffering/coyote time, bounded third-person camera zoom and an allocation-free sine-arc melee swing on the visual mesh.
+- The responsive HUD action toolbar is viewport-aware and uses a two-column grid; device-level visual/touch QA remains outstanding.
+- Client Actions #182 (biome palette implementation) and #183 (biome regression tests) passed complete headless import/runtime smoke/Web export validation. Logs included the PASS line and no Godot SCRIPT ERROR or engine ERROR lines.
+- Boss development is intentionally paused while core movement, terrain, animation, interaction, UI and mobile controls are prioritized.
