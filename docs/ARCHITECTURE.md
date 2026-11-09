@@ -122,3 +122,5 @@ Three Stoneback crafting materials and a versioned harvest table have been added
 ### Stoneback client model
 
 The client can render the Stoneback Colossus with a larger stone-colored body, layered armor plates, oversized fists and an encounter-scale name label. All model meshes hide together when the authoritative snapshot reports zero health. This model remains dormant until the server enemy catalog exposes the boss.
+
+Recent CI runs caught two test-maintenance issues rather than schema defects: the lethal Ground Shatter test did not account for the boss's movement step when selecting an ability, and public catalog tests retained old item/loot counts. The integration test now seeds a deterministic chase state, and catalog assertions reflect 22 items and five loot tables. Corrective server runs are pending.
