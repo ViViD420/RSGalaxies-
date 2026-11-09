@@ -137,4 +137,4 @@ Never hide or silently bypass an error. Stop, reproduce, diagnose and fix it bef
 
 - The six primary account/gameplay actions now use a two-column GridContainer instead of six fixed-position buttons.
 - Status panel and toolbar widths adapt to viewport width; status and instruction labels wrap to avoid overflow. Mobile touch controls retain bottom-anchored placement.
-- Action #178 caught an unsupported get_viewport_rect() call during strict Godot 4.3 parsing. It was corrected to get_viewport().get_visible_rect().size.x in 3d46875; fixed CI is pending. Interactive device layout testing remains outstanding.
+- Actions #178/#179 caught an unsupported get_viewport_rect() call during strict Godot 4.3 parsing. It was corrected to get_viewport().get_visible_rect().size.x in 3d46875; Client Action #180 passed the full strict import/Web export and movement smoke test with no Godot errors. Follow-up toolbar shrink refinement is pending #181. Interactive device layout testing remains outstanding.
