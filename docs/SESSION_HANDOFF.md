@@ -1638,3 +1638,12 @@ The procedural placement algorithm is deterministic by design and now has direct
 - Commit 32b10aa89f93602ef1d3710af4c6ad0f6a1daa66 corrects the test harness identified in Client #188.
 - The test now uses a plain CharacterBody3D added to the SceneTree before reading/updating its global transform; it asserts the guaranteed move-closer state without assuming which farther candidate wins; and it queues SceneTree children for cleanup on failure.
 - Client Action #189 / run 42620203463 was triggered for the correction. It is still in progress at this checkpoint. Do not mark interaction guidance verified until the new focused smoke test, existing movement/terrain smoke, editor import and Web export all complete with no Godot errors or RID leaks.
+
+
+### Interaction hint resource-lifecycle failure — 2026-11-09
+
+- Client Action #189 / run 42620203463 passed the interaction prompt's functional assertions, including nearest gathering prompt, move-closer guidance, pending state and hidden unauthenticated state.
+- The workflow still failed because Godot reported one leaked CanvasItem RID and TextServer ShapedTextDataAdvanced RID/ObjectDB resources at exit.
+- Root cause: the test-created Label was assigned to the script variable but was not parented to the temporary Node3D, so freeing the test root did not release the Label's shaped-text resources.
+- Commit 2ec04277394b50df00883fd8564454d7c5185fd7 parents the Label under the temporary test Node3D and explicitly frees that Node3D on both success and failure paths.
+- Client Action #190 / run 42620322091 is the verification run. It must show no RID/resource leaks or Godot errors before the interaction prompt is marked verified. Run #189 remains a recorded failure despite its functional assertions passing.

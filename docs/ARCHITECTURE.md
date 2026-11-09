@@ -237,3 +237,8 @@ Client run #188 exposed errors in the new test harness: it queried global_positi
 ### Test harness correction
 
 The interaction-hint smoke test now places its CharacterBody3D test actor inside the SceneTree before global-transform access, validates only the guaranteed out-of-range prompt state, and queues temporary tree children for cleanup on failure. Client Action #189 is pending; no verification claim is made until all client workflow phases and full logs pass.
+
+
+### Interaction prompt test resource lifecycle
+
+Client #189 confirmed the prompt behavior but failed shutdown validation because the smoke test's standalone Label was not parented to its temporary owner, leaving CanvasItem/TextServer resources alive. The test now parents the Label to the test Node3D and explicitly frees the owner on both success and failure. Client Action #190 is pending verification; the leak is not treated as resolved until its full log is clean.

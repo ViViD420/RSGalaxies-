@@ -237,3 +237,6 @@ Client Action #183 (run 42604378304) passed; #182 (42604361140) passed. Client #
 
 
 - [ ] Verify corrected interaction-hint smoke harness in Client Action #189 (42620203463), including absence of global-transform errors and RID/resource leaks.
+
+
+- [ ] Verify Client Action #190 (42620322091) has no CanvasItem, TextServer, ObjectDB or RID/resource leak diagnostics after the interaction hint smoke test.
