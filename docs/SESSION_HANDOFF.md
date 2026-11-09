@@ -910,3 +910,17 @@ Full job logs, not just conclusions, were inspected:
 - Client #144 / run 42600477028: correctly failed on the duplicate `scroll` declaration.
 - These earlier green conclusions are not valid evidence of clean Godot parsing. The error lines remain documented; fixes are tracked in commits 30104f6 and 65b7b73.
 
+
+## Strict CI follow-up: Godot type and missing-method errors (2026-11-09)
+
+- Client Action #145 (run 42600595327, commit 65b7b73fbac725b235d18a99d9b327d4be92e830) correctly failed after the earlier duplicate inventory scroll was removed. The strict log scan surfaced the remaining errors that the old workflow had not detected:
+  - Six call-site type errors: `_add_hold_button()` declared its parent as `Control`, but its six touch-control call sites correctly passed the `CanvasLayer` used to parent the controls.
+  - Four unresolved method references: `_set_account_status()` was called from authentication/character error paths but had no implementation.
+  - `get_viewport_rect()` was called directly on the root `Node3D`, which has no such method; the dependent `viewport_width` type could not be inferred.
+- Fixed all of these in commit a00cd41db33458b3400b4437bd01550520dd67fa:
+  - Widened the hold-button parent argument to `Node`, matching the actual scene-tree parent contract while preserving child Control layout properties.
+  - Added a guarded `_set_account_status(message)` helper to update the authentication status and main status labels when present.
+  - Replaced the invalid viewport call with `get_viewport().get_visible_rect().size.x` and an explicit float type.
+- Client Action #146 (run 42600724191) was queued at the time of this note. Inspect full job results and logs. The strict scan must pass both editor import and Web export with zero `SCRIPT ERROR:` or `ERROR:` lines before resuming new feature work.
+- These are additional pre-existing defects uncovered because the client workflow previously trusted process exit codes. Do not hide or downplay them; all fixes and failed runs remain recorded.
+
