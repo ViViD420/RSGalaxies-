@@ -842,3 +842,48 @@ Start by checking current main HEAD and client Action #139 for commit 743c5a8. S
 ### Current verified state and next work
 
 The Stoneback transactional server vertical slice and the latest client HUD presentation changes are CI-verified at their respective commits. The current repository handoff itself is documentation-only after the verified code commits. Continue with deeper encounter playtesting and edge-case review: target loss/reacquisition, phase/telegraph presentation, respawn visibility, repeated reward settlement and group encounter design. Do not overstate headless Godot import as visual viewport testing. Update all handoff/design docs after meaningful changes.
+
+## Permanent no-hidden-errors rule and core-game development pivot (2026-11-09)
+
+### Mandatory engineering policy
+
+- Added `docs/DEVELOPMENT_RULES.md` in commit 4e506559e7fe51f1de3dbb624a507f7bdc972ac7. It makes the no-hidden-errors rule mandatory for every session: stop on errors, reproduce, diagnose root cause, fix, add regression validation, inspect actual Actions logs and document original failure plus correction before resuming unrelated work.
+- Linked the rule from root README in commit 460ac1ec485efcd003898bbed599863d9c49c2ae.
+- Corrected client README's stale statement that the live Skills panel contains ten skills; the game has eighteen active skills. Commit b02572ef04fcca1237868e03668a10f9d8258eaa.
+- Updated ROADMAP to pause boss expansion and prioritize core player experience: movement, authoritative movement/reconciliation, terrain, character animation foundation, responsive HUD/UI and a reusable player ability framework. Updated ARCHITECTURE to reflect the already-completed boss integration and new active core priorities. Commits 23dae37b4c41d9253fa4217fc3302ff243a2b7cb and 9d8c2818f9af36cb20dc98f515335256cc5ee0b.
+- Fixed a duplicated conjunction in the roadmap boss status line in commit 3790dd63f1ec9c4b602d050398027422e9a86ca6; refreshed architecture's explicit CI log-scanning rule in commit 8edc3895938b56cca252e83796268a6e209ac5d0.
+
+### Core movement implementation checkpoint
+
+- Improved `client/scripts/player_controller.gd` in commit 21432e25491e65ae86908289c9da7cccc529c637:
+  - Ground acceleration/deceleration and air control.
+  - Jump buffering and coyote time.
+  - Terminal fall-speed cap and configurable gravity.
+  - Smooth character facing while preserving camera world yaw.
+  - Placeholder-only body mesh bob/lean/airborne pitch without moving the collision body.
+  - Mouse recapture only on left click and release on application focus loss.
+- This movement change is NOT yet accepted as verified: its initial client Action #142 (run 42600344533) concluded success, but its log contains a real pre-existing main.gd GDScript parse error. Stop feature work until that is fixed and the hardened CI passes.
+  
+### Important false-green CI defect discovered and corrected
+
+- While inspecting full Actions logs under the new policy, discovered Godot 4.3 emitted:
+  - `SCRIPT ERROR: Parse Error: Expected statement, found "Indent" instead.`
+  - `ERROR: Failed to load script "res://scripts/main.gd" with error "Parse error".`
+  - Exact source: `client/scripts/main.gd:959`, where `_stop_chat()` was indented one level too far under the `if character_panel != null` block.
+- The prior client workflow checked only process exit codes. Godot 4.3 logged the parser failure but returned success, causing misleading green runs. Full logs confirmed the same issue in client Actions #138 (42597884482), #139 (42598099029), #140 (42598227447), #141 (42600280743) and #142 (42600344533). These runs must NOT be represented as clean script-validation passes. Their job conclusions were green but their logs contained parse errors.
+- Corrected the malformed indentation in `client/scripts/main.gd` in commit 30104f69d2d4973252f0f5ca92c39e25a3c790f5.
+- Hardened `.github/workflows/client.yml` in commit 4fb31c97a19c82be91d39f5f0deab245b72ef1c9: both editor import and Web export now tee complete logs and fail if `SCRIPT ERROR:` or `ERROR:` appears, even if Godot exits with status 0.
+- During the first attempt to download run #142 logs before completion, GitHub returned a temporary 404 BlobNotFound for the not-yet-published log artifact. Retried after job completion; logs became available and the parse error was confirmed. This was a log-availability issue, not a source fix or successful validation.
+- Client Action #143 (run 42600473494) validates the indentation correction with the previous workflow; Action #144 (run 42600477028) validates the hardened workflow. At handoff write time, both are queued/in progress. Inspect #144's individual steps and logs; a clean run must contain no parser/engine errors during both import and export. If it fails, stop and fix the newly surfaced error before continuing.
+
+### Current direction
+
+Boss expansion and boss-specific polish are paused. Preserve the completed Stoneback code and regression coverage, but focus development on the core game: responsive movement, authoritative reconciliation, world terrain, character presentation/animations, core HUD/UI, and a reusable player ability system. The first movement change is pending strict CI validation. Do not start unrelated work until Action #144 proves the current client source imports/exports without logged errors.
+
+### Immediate next actions
+
+1. Inspect current main HEAD and Actions #143/#144. Inspect #144 job steps and full logs.
+2. If any error appears, stop and fix it; do not proceed to new movement/UI/terrain work until strict client validation is clean.
+3. Once clean, continue movement refinements and add regression checks where practical; then tackle terrain, character animation, UI and server-authoritative abilities in reviewable slices.
+4. Keep all 18 skills, professions/equipment restrictions, gathering, crafting, inventory/economy, ordinary enemy progression and multi-item rewards intact.
+5. Update `docs/SESSION_HANDOFF.md`, `docs/ROADMAP.md` and `docs/ARCHITECTURE.md` after each meaningful milestone.
