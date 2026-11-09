@@ -1647,3 +1647,16 @@ The procedural placement algorithm is deterministic by design and now has direct
 - Root cause: the test-created Label was assigned to the script variable but was not parented to the temporary Node3D, so freeing the test root did not release the Label's shaped-text resources.
 - Commit 2ec04277394b50df00883fd8564454d7c5185fd7 parents the Label under the temporary test Node3D and explicitly frees that Node3D on both success and failure paths.
 - Client Action #190 / run 42620322091 is the verification run. It must show no RID/resource leaks or Godot errors before the interaction prompt is marked verified. Run #189 remains a recorded failure despite its functional assertions passing.
+
+
+## Contextual interaction prompt verification — 2026-11-09
+
+- Client Action #190 / run 42620322091 passed on code commit 2ec04277394b50df00883fd8564454d7c5185fd7.
+- The focused interaction-hint smoke test passed: nearest gathering target prompt, out-of-range move-closer guidance, pending/busy feedback and hidden state before character selection.
+- The existing terrain/movement smoke test passed.
+- Godot editor import passed.
+- Godot Web export passed.
+- Full job logs inspected: no SCRIPT ERROR, ERROR, CanvasItem/TextServer RID leak, ObjectDB leak or resource-in-use diagnostics.
+- Historical interaction test failures #188 and #189 remain documented; #188 exposed the outside-tree actor and incorrect target assertion; #189 passed functional assertions but exposed the standalone Label resource leak. The corrections are verified by #190.
+- No client code changed after the #190 validated code commit; subsequent changes are documentation-only.
+- Physical-device and non-headless visual QA remain outstanding.

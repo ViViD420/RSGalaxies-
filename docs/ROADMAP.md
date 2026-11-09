@@ -240,3 +240,7 @@ Client Action #183 (run 42604378304) passed; #182 (42604361140) passed. Client #
 
 
 - [ ] Verify Client Action #190 (42620322091) has no CanvasItem, TextServer, ObjectDB or RID/resource leak diagnostics after the interaction hint smoke test.
+
+
+- [x] Client Action #190 (run 42620322091) passed interaction hint behavior, terrain/movement smoke, Godot import and Web export with no errors or RID/resource leaks.
+- [ ] Validate contextual prompt readability and placement on physical desktop/mobile devices.

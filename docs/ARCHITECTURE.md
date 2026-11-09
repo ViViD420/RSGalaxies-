@@ -242,3 +242,8 @@ The interaction-hint smoke test now places its CharacterBody3D test actor inside
 ### Interaction prompt test resource lifecycle
 
 Client #189 confirmed the prompt behavior but failed shutdown validation because the smoke test's standalone Label was not parented to its temporary owner, leaving CanvasItem/TextServer resources alive. The test now parents the Label to the test Node3D and explicitly frees the owner on both success and failure. Client Action #190 is pending verification; the leak is not treated as resolved until its full log is clean.
+
+
+### Contextual interaction prompt verification
+
+Client Action #190 passed the focused prompt test, the existing terrain/movement smoke test, Godot import and Web export. Full logs contain no Godot errors or RID/resource leak diagnostics. The earlier #188/#189 failures are preserved as historical test-harness failures and their corrections are validated by #190. Actual device visual/touch QA remains outstanding.
