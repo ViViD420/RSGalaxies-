@@ -1669,3 +1669,13 @@ The procedural placement algorithm is deterministic by design and now has direct
 - The focused interaction smoke test covers both malformed JSON and request-start error feedback.
 - Client Action #191 / run 42620535140 validates this slice. At this documentation checkpoint it is queued/in progress; inspect complete logs before marking it verified.
 - Client Action #190 / run 42620322091 passed the previous contextual hint slice, including no Godot errors or RID/resource leaks. The new error-visibility behavior is not yet covered by that run.
+
+
+### Malformed JSON parser diagnostic — Client #191
+
+- Client Action #191 / run 42620535140 failed in the focused malformed-response regression.
+- Godot's static JSON.parse_string() emitted an engine ERROR diagnostic ("Parse JSON failed") for intentionally malformed test input before returning null. The callback's user-facing error branch was reached only after that diagnostic.
+- This violates the clean-error contract: malformed server payloads must be reported to the player without producing an unhandled engine error in logs.
+- Root cause: use of JSON.parse_string() in the interaction response callback, which logs a parser error for malformed JSON.
+- Correction: switch to an instance JSON parser and inspect JSON.parse()'s returned Error and data type explicitly. Keep the malformed payload regression; do not remove or weaken it.
+- Run #191 remains a recorded failure. Client Action #192 must verify the corrected parser, the malformed-payload message, request-start feedback, full terrain/movement smoke, editor import and Web export with no Godot errors or resource leaks.

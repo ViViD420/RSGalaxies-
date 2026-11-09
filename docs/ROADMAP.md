@@ -249,3 +249,6 @@ Client Action #183 (run 42604378304) passed; #182 (42604361140) passed. Client #
 - [x] Client Action #190 (42620322091) passed contextual prompt behavior and cleanup.
 - [x] Add visible feedback for interaction request-start failures and malformed successful payloads.
 - [ ] Verify the new error-feedback regression in Client Action #191 (42620535140).
+
+
+- [ ] Replace JSON.parse_string() with checked JSON.parse() in the shared interaction response path and verify malformed-payload feedback without Godot ERROR output in Client Action #192.

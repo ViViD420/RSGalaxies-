@@ -252,3 +252,8 @@ Client Action #190 passed the focused prompt test, the existing terrain/movement
 ### Interaction failure visibility
 
 The E/USE interaction path now displays request-start failures, and the shared response handler explicitly reports malformed successful payloads rather than silently returning. Focused smoke coverage was added for both cases. Client Action #191 is pending; the prior prompt slice passed in #190, but this additional error-handling change remains unverified until #191 is clean.
+
+
+### Safe interaction JSON parsing
+
+The shared interaction callback is being changed from JSON.parse_string() to JSON.new().parse(), checking the returned Error and parsed data type before accessing fields. This prevents malformed server data from being silently ignored or producing the parser's static ERROR diagnostic. Client #191 exposed the diagnostic; Client #192 is the required regression verification.
