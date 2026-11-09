@@ -2757,15 +2757,28 @@ func _render_reward_claims(claims: Variant) -> void:
 		var xp := int(claim.get("experienceAmount", 0))
 		var parent_skill := str(claim.get("parentSkillId", ""))
 		var parent_xp := int(claim.get("parentExperienceAmount", 0))
-		var loot_id := str(claim.get("lootItemId", ""))
-		var loot_quantity := int(claim.get("lootQuantity", 0))
+		var loot_items: Array = []
+		var raw_loot_items: Variant = claim.get("lootItems", [])
+		if raw_loot_items is Array:
+			for loot_value in raw_loot_items:
+				if loot_value is Dictionary:
+					var item_id := str(loot_value.get("itemId", ""))
+					var item_quantity := int(loot_value.get("quantity", 0))
+					if not item_id.is_empty() and item_quantity > 0:
+						loot_items.append({"itemId": item_id, "quantity": item_quantity})
+		# Older servers and legacy claim payloads may still expose one item.
+		if loot_items.is_empty():
+			var legacy_item_id := str(claim.get("lootItemId", ""))
+			var legacy_quantity := int(claim.get("lootQuantity", 0))
+			if not legacy_item_id.is_empty() and legacy_quantity > 0:
+				loot_items.append({"itemId": legacy_item_id, "quantity": legacy_quantity})
 		var status := str(claim.get("status", "pending"))
 		var summary := Label.new()
 		var reward_text := skill_id.capitalize() + " XP " + str(xp)
 		if not parent_skill.is_empty() and parent_xp > 0:
 			reward_text += " • " + parent_skill.capitalize() + " XP " + str(parent_xp)
-		if not loot_id.is_empty() and loot_quantity > 0:
-			reward_text += " • " + loot_id.replace("_", " ").capitalize() + " x" + str(loot_quantity)
+		for loot in loot_items:
+			reward_text += " • " + str(loot.itemId).replace("_", " ").capitalize() + " x" + str(loot.quantity)
 		summary.text = enemy_id.replace("-", " ").capitalize() + "\n" + reward_text + " • " + status.capitalize()
 		summary.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
 		rewards_claims_column.add_child(summary)
