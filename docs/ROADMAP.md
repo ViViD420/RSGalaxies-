@@ -51,6 +51,7 @@
 - [ ] Bounded pathfinding, party aggro, combat animations, enemy abilities, weapon-family expansion and server-derived hit/miss outcomes (see docs/COMBAT_PROGRESSION.md).
 - [ ] Boss encounter framework: multi-phase bosses, encounter state, group contribution/eligibility, telegraphs, persistence and reward integration. Build after ordinary enemy/combat foundations.
 - [x] Initial server-owned weighted ordinary-enemy loot tables with cryptographically secure rolls, weighted common materials and no-drop outcomes; settlement assigns one result to the top eligible contributor (server Actions #518 passed).
+- [x] Versioned multi-drop loot-table domain model with guaranteed drops, independent weighted bonus rolls, no-drop intervals, quantity bands and aggregated stack validation (server persistence integration pending).
 - [ ] Expand loot tables with multiple drops, guaranteed/conditional rewards, rarity tiers, boss-exclusive materials, unique item instances, versioned tuning and economy safeguards.
 - [ ] Deeper crafting framework: richer recipes, tool/station/skill requirements, material properties, quality, experimentation and crafted-item progression.
 - [ ] Recipe quality, tool requirements, advanced stations and broader profession progression. Advanced non-combat specialization trees remain deferred until core loops are stable.
