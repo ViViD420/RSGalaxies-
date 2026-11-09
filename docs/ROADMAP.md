@@ -131,3 +131,5 @@ Each milestone is a tested, reviewable slice. A feature is not complete because 
 - [ ] Assign the table to the live boss enemy definition and verify reward settlement end-to-end.
 
 - [x] Add a distinctive armored Stoneback world model and boss-scale label in Godot (client CI pending).
+
+- [x] Correct deterministic Ground Shatter test positioning and refresh item/loot catalog count assertions after adding Stoneback content (server CI pending).
