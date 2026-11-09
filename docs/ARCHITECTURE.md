@@ -247,3 +247,8 @@ Client #189 confirmed the prompt behavior but failed shutdown validation because
 ### Contextual interaction prompt verification
 
 Client Action #190 passed the focused prompt test, the existing terrain/movement smoke test, Godot import and Web export. Full logs contain no Godot errors or RID/resource leak diagnostics. The earlier #188/#189 failures are preserved as historical test-harness failures and their corrections are validated by #190. Actual device visual/touch QA remains outstanding.
+
+
+### Interaction failure visibility
+
+The E/USE interaction path now displays request-start failures, and the shared response handler explicitly reports malformed successful payloads rather than silently returning. Focused smoke coverage was added for both cases. Client Action #191 is pending; the prior prompt slice passed in #190, but this additional error-handling change remains unverified until #191 is clean.

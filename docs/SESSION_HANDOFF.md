@@ -1660,3 +1660,12 @@ The procedural placement algorithm is deterministic by design and now has direct
 - Historical interaction test failures #188 and #189 remain documented; #188 exposed the outside-tree actor and incorrect target assertion; #189 passed functional assertions but exposed the standalone Label resource leak. The corrections are verified by #190.
 - No client code changed after the #190 validated code commit; subsequent changes are documentation-only.
 - Physical-device and non-headless visual QA remain outstanding.
+
+
+## Interaction error visibility hardening — 2026-11-09
+
+- Commit 5fe93cc1d41e238f392f1b37a88cfa1bfe4f6058 changes the E/USE interaction path so a request-start failure is displayed to the player rather than leaving only a stale prompt.
+- The shared interaction completion handler now reports a malformed/non-dictionary successful response as "Interaction: invalid server response" instead of silently returning.
+- The focused interaction smoke test covers both malformed JSON and request-start error feedback.
+- Client Action #191 / run 42620535140 validates this slice. At this documentation checkpoint it is queued/in progress; inspect complete logs before marking it verified.
+- Client Action #190 / run 42620322091 passed the previous contextual hint slice, including no Godot errors or RID/resource leaks. The new error-visibility behavior is not yet covered by that run.

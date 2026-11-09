@@ -244,3 +244,8 @@ Client Action #183 (run 42604378304) passed; #182 (42604361140) passed. Client #
 
 - [x] Client Action #190 (run 42620322091) passed interaction hint behavior, terrain/movement smoke, Godot import and Web export with no errors or RID/resource leaks.
 - [ ] Validate contextual prompt readability and placement on physical desktop/mobile devices.
+
+
+- [x] Client Action #190 (42620322091) passed contextual prompt behavior and cleanup.
+- [x] Add visible feedback for interaction request-start failures and malformed successful payloads.
+- [ ] Verify the new error-feedback regression in Client Action #191 (42620535140).
