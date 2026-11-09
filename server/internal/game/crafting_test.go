@@ -126,3 +126,33 @@ func TestCraftingRejectsWrongStation(t *testing.T) {
 	player.Position=forge.Position
 	if _,err:=player.Craft(recipe,forge,time.Now());!errors.Is(err,ErrUnknownCraftingStation){t.Fatalf("wrong station error=%v",err)}
 }
+
+func TestRatToothBladeCraftingConnectsLootToProfessionSpecificEquipment(t *testing.T) {
+	player, err := NewPlayer("rat-tooth-smith", "FrontierSmith", time.Now())
+	if err != nil { t.Fatal(err) }
+	player.Position.Z = 8
+	player.Inventory["copper_bar"] = 2
+	player.Inventory["rat_tooth"] = 2
+	player.Inventory["wooden_plank"] = 1
+	if _, err := player.AwardExperience("smithing", 100); err != nil { t.Fatal(err) }
+	recipe, ok := FindCraftingRecipe("rat-tooth-blade")
+	if !ok { t.Fatal("rat-tooth blade recipe missing") }
+	forge, ok := FindCraftingStation("frontier-forge")
+	if !ok { t.Fatal("frontier forge missing") }
+	result, err := player.Craft(recipe, forge, time.Now())
+	if err != nil { t.Fatalf("craft rat-tooth blade: %v", err) }
+	if result.Experience != 90 || player.Inventory["copper_bar"] != 0 ||
+		player.Inventory["rat_tooth"] != 0 || player.Inventory["wooden_plank"] != 0 ||
+		player.Inventory["rat_tooth_blade"] != 1 {
+		t.Fatalf("rat-tooth blade craft result=%+v inventory=%v", result, player.Inventory)
+	}
+	if err := player.EquipItem("rat_tooth_blade"); !errors.Is(err, ErrInsufficientEquipmentSkill) {
+		t.Fatalf("equip below blades level 2 error=%v, want skill requirement", err)
+	}
+	if _, err := player.AwardExperience("blades", 100); err != nil { t.Fatal(err) }
+	if err := player.EquipItem("rat_tooth_blade"); err != nil {
+		t.Fatalf("equip rat-tooth blade at blades level 2: %v", err)
+	}
+	attack, _ := player.EquipmentBonuses()
+	if attack != 3 { t.Fatalf("rat-tooth blade attack bonus=%d, want 3", attack) }
+}
