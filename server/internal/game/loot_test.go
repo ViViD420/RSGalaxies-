@@ -6,50 +6,67 @@ import (
 )
 
 func TestRollLootTableUsesWeightedBoundaries(t *testing.T) {
-	tests := []struct{roll int; want string}{
-		{0,"rat_pelt"},{6999,"rat_pelt"},{7000,"rat_tooth"},{8999,"rat_tooth"},
+	tests := []struct {
+		roll int
+		want string
+	}{
+		{0, "rat_pelt"},
+		{6999, "rat_pelt"},
+		{7000, "rat_tooth"},
+		{8999, "rat_tooth"},
 	}
-	for _,tt := range tests {
-		got,ok,err := RollLootTable("frontier-rat-common",tt.roll,0)
+	for _, tt := range tests {
+		got, ok, err := RollLootTable("frontier-rat-common", tt.roll, 0)
 		if err != nil || !ok || got.ItemID != tt.want || got.Quantity != 1 {
-			t.Fatalf("roll %d = %+v ok=%v err=%v, want %s x1",tt.roll,got,ok,err,tt.want)
+			t.Fatalf("roll %d = %+v ok=%v err=%v, want %s x1", tt.roll, got, ok, err, tt.want)
 		}
-		for _, roll := range []int{9000,9999} {
-		if _,ok,err := RollLootTable("frontier-rat-common",roll,0); err != nil || ok {
-			t.Fatalf("no-drop roll %d = ok:%v err:%v, want no drop",roll,ok,err)
+	}
+	for _, roll := range []int{9000, 9999} {
+		if _, ok, err := RollLootTable("frontier-rat-common", roll, 0); err != nil || ok {
+			t.Fatalf("no-drop roll %d = ok:%v err:%v, want no drop", roll, ok, err)
 		}
 	}
 }
 
 func TestRollLootTableRejectsUnknownTablesAndOutOfRangeRolls(t *testing.T) {
-	if _,_,err := RollLootTable("missing-table",0,0); !errors.Is(err,ErrUnknownLootTable) {
-		t.Fatalf("unknown table error=%v",err)
+	if _, _, err := RollLootTable("missing-table", 0, 0); !errors.Is(err, ErrUnknownLootTable) {
+		t.Fatalf("unknown table error=%v", err)
 	}
-	for _,roll := range []int{-1,LootRollRange} {
-		if _,_,err := RollLootTable("frontier-rat-common",roll,0); !errors.Is(err,ErrInvalidLootRoll) {
-			t.Fatalf("roll %d error=%v, want ErrInvalidLootRoll",roll,err)
+	for _, roll := range []int{-1, LootRollRange} {
+		if _, _, err := RollLootTable("frontier-rat-common", roll, 0); !errors.Is(err, ErrInvalidLootRoll) {
+			t.Fatalf("roll %d error=%v, want ErrInvalidLootRoll", roll, err)
 		}
 	}
-	if _,_,err := RollLootTable("frontier-rat-common",0,LootRollRange); !errors.Is(err,ErrInvalidLootRoll) {
-		t.Fatalf("quantity roll error=%v, want ErrInvalidLootRoll",err)
+	if _, _, err := RollLootTable("frontier-rat-common", 0, LootRollRange); !errors.Is(err, ErrInvalidLootRoll) {
+		t.Fatalf("quantity roll error=%v, want ErrInvalidLootRoll", err)
 	}
 }
 
 func TestLootTableCatalogIsValidAndDefensivelyCopied(t *testing.T) {
 	tables := LootTableDefinitions()
-	if len(tables) != 2 { t.Fatalf("loot table count=%d, want 2",len(tables)) }
-	for _,table := range tables {
+	if len(tables) != 2 {
+		t.Fatalf("loot table count=%d, want 2", len(tables))
+	}
+	for _, table := range tables {
 		total := 0
 		seen := map[string]bool{}
-		for _,drop := range table.Drops {
-			if seen[drop.ItemID] { t.Fatalf("duplicate item %s in %s",drop.ItemID,table.ID) }
+		for _, drop := range table.Drops {
+			if seen[drop.ItemID] {
+				t.Fatalf("duplicate item %s in %s", drop.ItemID, table.ID)
+			}
 			seen[drop.ItemID] = true
 			total += drop.Weight
-			if _,ok := FindItem(drop.ItemID); !ok { t.Fatalf("unknown item %s in %s",drop.ItemID,table.ID) }
+			if _, ok := FindItem(drop.ItemID); !ok {
+				t.Fatalf("unknown item %s in %s", drop.ItemID, table.ID)
+			}
 		}
-		if total <= 0 || total > LootRollRange { t.Fatalf("table %s weights=%d, want 1..%d",table.ID,total,LootRollRange) }
+		if total <= 0 || total > LootRollRange {
+			t.Fatalf("table %s weights=%d, want 1..%d", table.ID, total, LootRollRange)
+		}
 	}
 	tables[0].Drops[0].ItemID = "corrupted"
-	again,_ := FindLootTable("frontier-rat-common")
-	if again.Drops[0].ItemID != "rat_pelt" { t.Fatal("loot table catalog exposed mutable internal slices") }
+	again, _ := FindLootTable("frontier-rat-common")
+	if again.Drops[0].ItemID != "rat_pelt" {
+		t.Fatal("loot table catalog exposed mutable internal slices")
+	}
 }
