@@ -138,3 +138,9 @@ Never hide or silently bypass an error. Stop, reproduce, diagnose and fix it bef
 - The six primary account/gameplay actions now use a two-column GridContainer instead of six fixed-position buttons.
 - Status panel and toolbar widths adapt to viewport width; status and instruction labels wrap to avoid overflow. Mobile touch controls retain bottom-anchored placement.
 - Actions #178/#179 caught an unsupported get_viewport_rect() call during strict Godot 4.3 parsing. It was corrected to get_viewport().get_visible_rect().size.x in 3d46875; Client Action #180 passed the full strict import/Web export and movement smoke test with no Godot errors. Follow-up toolbar shrink refinement passed in Client Action #181. Responsive HUD sizing is CI-validated in Client Action #181. Interactive desktop/mobile layout and touch testing remain outstanding. Interactive device layout testing remains outstanding.
+
+
+## Terrain biome palette
+
+- A third deterministic noise field modulates vertex colors for lush grass/moss, dry scrub and rocky high ground.
+- The palette is integrated into the existing terrain mesh and does not add collision or render nodes. Determinism and palette variety are covered by the client smoke test; CI is pending.
