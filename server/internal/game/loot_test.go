@@ -7,12 +7,16 @@ import (
 
 func TestRollLootTableUsesWeightedBoundaries(t *testing.T) {
 	tests := []struct{roll int; want string}{
-		{0,"rat_pelt"},{7499,"rat_pelt"},{7500,"rat_tooth"},{9999,"rat_tooth"},
+		{0,"rat_pelt"},{6999,"rat_pelt"},{7000,"rat_tooth"},{8999,"rat_tooth"},
 	}
 	for _,tt := range tests {
 		got,ok,err := RollLootTable("frontier-rat-common",tt.roll,0)
 		if err != nil || !ok || got.ItemID != tt.want || got.Quantity != 1 {
 			t.Fatalf("roll %d = %+v ok=%v err=%v, want %s x1",tt.roll,got,ok,err,tt.want)
+		}
+		for _, roll := range []int{9000,9999} {
+		if _,ok,err := RollLootTable("frontier-rat-common",roll,0); err != nil || ok {
+			t.Fatalf("no-drop roll %d = ok:%v err:%v, want no drop",roll,ok,err)
 		}
 	}
 }
@@ -43,7 +47,7 @@ func TestLootTableCatalogIsValidAndDefensivelyCopied(t *testing.T) {
 			total += drop.Weight
 			if _,ok := FindItem(drop.ItemID); !ok { t.Fatalf("unknown item %s in %s",drop.ItemID,table.ID) }
 		}
-		if total != LootRollRange { t.Fatalf("table %s weights=%d, want %d",table.ID,total,LootRollRange) }
+		if total <= 0 || total > LootRollRange { t.Fatalf("table %s weights=%d, want 1..%d",table.ID,total,LootRollRange) }
 	}
 	tables[0].Drops[0].ItemID = "corrupted"
 	again,_ := FindLootTable("frontier-rat-common")
