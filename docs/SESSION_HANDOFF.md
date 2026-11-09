@@ -1501,3 +1501,38 @@ Next:
 - Design decision log creation commit: `47d076db7bc4f0d33fa87c44c30ab98954ede6b4`.
 
 The architecture, roadmap and this handoff are being updated in follow-up documentation commits; fetch main again after these updates to record the final branch HEAD.
+
+
+---
+
+## Movement latency correction — commit and CI pending checkpoint (2026-11-09)
+
+### Change committed
+
+Commit: `df58725e8b22246203ebef653255bcacbabbda91`
+
+Files:
+- `server/internal/game/movement.go`
+- `server/internal/game/movement_test.go`
+
+The client movement sender in `client/scripts/main.gd` posts X/Z every 200 ms but serializes one HTTP request at a time. The server previously capped elapsed time at 250 ms. If an acknowledgement is delayed past the next timer tick, the next accepted update can occur 400 ms or more after the previous one. At 7 units/second, a 400 ms interval represents 2.8 units of legitimate movement, while the old 250 ms cap allowed only 1.9 units plus 0.15 tolerance. This could cause a legitimate correction under delayed acknowledgements.
+
+The server window is now bounded at one second. Maximum speed remains 7.0 units/second; tolerance remains 0.15; finite-coordinate checks, world bounds, action eligibility and server-measured elapsed time remain intact. Long idle catch-up remains capped.
+
+New tests:
+- `TestPlayerMovementAllowsSerializedClientLatencyWithinWindow`: a 400 ms interval at max configured speed is accepted.
+- `TestPlayerMovementStillBoundsLongIdleCatchup`: after a five-second interval, movement beyond the one-second capped allowance is rejected.
+
+### Verification state
+
+- Server Action #603, run `42606055274`, is in progress at this handoff update.
+- Job ID: `129122230809`.
+- Container initialization, checkout, Go setup and dependency resolution completed successfully.
+- Race-enabled Go/PostgreSQL test step was still running; Vet had not started.
+- Job logs are not yet available while the job is running (the log retrieval endpoint returned 404/BlobNotFound before completion). This is a log-availability limitation, not evidence of a code failure.
+- Do not call this change verified until the workflow completes and the full job log confirms package results, test completion and Vet.
+- If the workflow fails or stalls, inspect the completed job and complete logs, identify the cause, add regression coverage and rerun before unrelated changes.
+
+### Next action
+
+Wait for Server Action #603. If it passes, record the run URL and exact package/Vet outcomes. If it fails, stop and fix before proceeding. After verified movement work, resume core world improvements (deterministic environmental dressing, resource placement, player state presentation and interaction feedback). Boss expansion remains paused.
