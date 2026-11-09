@@ -169,7 +169,7 @@ An original sandbox MMORPG combining long-form skill progression and item gamepl
 
 - `game/loot.go` and `game/loot_test.go` (`e0a9ec0`, `620d1ad`, `53aa063`, `038e4f5`, `24e38e9`) add deterministic weighted resolution over a 10,000-point roll range, table validation, defensive copies, and no-drop outcomes. Frontier Rat: 70% rat pelt / 20% rat tooth / 10% no drop. Wild Boar: 75% boar hide / 15% boar tusk / 10% no drop.
 - Item definitions add rat tooth and boar tusk (`fb6e933`); enemy definitions point to the new tables (`b9c14f1`). `enemy_rewards.go` generates cryptographically secure drop and quantity rolls during the atomic settlement (`0553107`).
-- Settlement integration tests now accept either valid weighted drop or the no-drop result (`1816ec2`, `8ebbcf8`, `1a6b368`, `aa26c06`). Rare materials are sellable but not merchant-purchasable (`b42af63`, `53fdb00`); HTTP catalog tests now expect 17 items and assert the rare-material restriction (`2dd6867`). Intermediate Actions #505–#513 failed on incomplete table dependencies, no-drop assertions or stale catalog counts; later commits correct those issues. Actions #514–#518 were still running at last inspection; #519–#522 also cover the rare-material crafting sink and catalog counts. Do not claim the loot/crafting loop CI-passed until the latest run completes.
+- Settlement integration tests now accept either valid weighted drop or the no-drop result (`1816ec2`, `8ebbcf8`, `1a6b368`, `aa26c06`). Rare materials are sellable but not merchant-purchasable (`b42af63`, `53fdb00`); HTTP catalog tests now expect 17 items and assert the rare-material restriction (`2dd6867`). Intermediate Actions #505–#513 failed on incomplete table dependencies, no-drop assertions or stale catalog counts; later commits correct those issues. Actions #518 (commit 2dd6867) passed, verifying weighted loot tables, no-drop outcomes, rare-material merchant restrictions and catalog count 17. #519–#522 cover the new Rat-Tooth Blade recipe and catalog counts; #523 adds the craft-only merchant assertion. These later runs were pending/in progress at last inspection.
 - This is intentionally a first one-item-per-encounter table. Multi-drop tables, per-player rolls, guaranteed plus rare drops, quantity bands, boss materials and unique item instances remain future work.
 
 
@@ -178,7 +178,7 @@ An original sandbox MMORPG combining long-form skill progression and item gamepl
 
 - `rat_tooth_blade` item (`b1fa944`) is a non-purchasable main-hand weapon requiring Blades level 2 and granting +3 attack.
 - `rat-tooth-blade` recipe (`39e08bb`) consumes 2 Rat Teeth, 2 Copper Bars and 1 Wooden Plank at the Frontier Forge, requires Smithing level 2 and grants 90 Smithing XP.
-- Game test `7ca109a` verifies material consumption, output creation, Smithing gate and Blades equip gate. HTTP catalog expectations were updated to 18 items and 6 recipes (`1d8d482`). Actions #519–#522 for these updates were in progress at last inspection; verify the newest run before marking the loop green.
+- Game test `7ca109a` verifies material consumption, output creation, Smithing gate and Blades equip gate. HTTP catalog expectations were updated to 18 items and 6 recipes (`1d8d482`). Actions #519–#523 for these updates were in progress/queued at last inspection; verify the latest run before marking the loop green.
 
 ## Next engineering tasks
 
