@@ -86,8 +86,8 @@ func (p *Player) AttackEnemy(enemy EnemyDefinition,state EnemyState,now time.Tim
 	attackBonus,_:=p.EquipmentBonuses()
 	styleSkillID := "unarmed"
 	if weaponID := p.Equipment["main_hand"]; weaponID != "" {
-		if weapon, exists := FindItem(weaponID); exists && skillDefinition(weapon.RequiredSkillID).ID != "" && skillParentID(weapon.RequiredSkillID) != "" {
-			styleSkillID = weapon.RequiredSkillID
+		if weapon, exists := FindItem(weaponID); exists {
+			if weaponSkill, known := skillDefinition(weapon.RequiredSkillID); known && weaponSkill.ParentID != "" { styleSkillID = weapon.RequiredSkillID }
 		}
 	}
 	parentSkillID := skillParentID(styleSkillID)
