@@ -70,3 +70,49 @@ func TestLootTableCatalogIsValidAndDefensivelyCopied(t *testing.T) {
 		t.Fatal("loot table catalog exposed mutable internal slices")
 	}
 }
+
+func TestRollLootTableDropsResolvesGuaranteedAndIndependentBonusDrops(t *testing.T) {
+	drops,err:=RollLootTableDrops("frontier-rat-harvest",[]LootRollInput{
+		{DropRoll:9999,QuantityRoll:0},
+		{DropRoll:0,QuantityRoll:9999},
+	})
+	if err!=nil{t.Fatal(err)}
+	if len(drops)!=2 || drops[0]!=(ItemQuantity{ItemID:"rat_pelt",Quantity:1}) ||
+		drops[1]!=(ItemQuantity{ItemID:"rat_tooth",Quantity:2}) {
+		t.Fatalf("multi-drop result=%+v, want guaranteed pelt plus 2-tooth bonus",drops)
+	}
+}
+
+func TestRollLootTableDropsSupportsIndependentNoDropOutcomes(t *testing.T) {
+	drops,err:=RollLootTableDrops("frontier-boar-harvest",[]LootRollInput{
+		{DropRoll:0,QuantityRoll:0},
+		{DropRoll:9999,QuantityRoll:0},
+	})
+	if err!=nil{t.Fatal(err)}
+	if len(drops)!=1 || drops[0]!=(ItemQuantity{ItemID:"boar_hide",Quantity:1}) {
+		t.Fatalf("no-bonus result=%+v, want guaranteed hide only",drops)
+	}
+}
+
+func TestRollLootTableDropsValidatesRollCountAndAggregatedStackLimit(t *testing.T) {
+	if _,err:=RollLootTableDrops("frontier-rat-harvest",nil);!errors.Is(err,ErrInvalidLootRoll){
+		t.Fatalf("missing rolls error=%v, want ErrInvalidLootRoll",err)
+	}
+	if _,err:=RollLootTableDrops("frontier-rat-harvest",[]LootRollInput{
+		{DropRoll:0,QuantityRoll:0},{DropRoll:-1,QuantityRoll:0},
+	});!errors.Is(err,ErrInvalidLootRoll){
+		t.Fatalf("negative drop roll error=%v, want ErrInvalidLootRoll",err)
+	}
+}
+
+func TestLootTableCatalogCopiesNestedMultiDropSlices(t *testing.T) {
+	tables:=LootTableDefinitions()
+	if len(tables)!=4{t.Fatalf("loot table count=%d, want 4",len(tables))}
+	tables[2].GuaranteedDrops[0].ItemID="corrupted"
+	tables[2].BonusRolls[0].Drops[0].ItemID="corrupted"
+	again,ok:=FindLootTable("frontier-rat-harvest")
+	if !ok || again.GuaranteedDrops[0].ItemID!="rat_pelt" ||
+		again.BonusRolls[0].Drops[0].ItemID!="rat_tooth" {
+		t.Fatal("multi-drop loot catalog exposed mutable nested slices")
+	}
+}
