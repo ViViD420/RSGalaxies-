@@ -35,7 +35,9 @@
 - [x] Transactional crafting with ingredient consumption, output capacity and skill XP.
 - [x] Basic PvE enemy definitions, server-calculated damage, cooldowns, retaliation, specialization/parent/co-skill XP, starter loot and respawns.
 - [x] Player health, defeated-state action restrictions and safe-spawn recovery.
-- [ ] Enemy movement/AI, combat animations, abilities, target selection, weapon-family support and server-derived hit resolution (see docs/COMBAT_PROGRESSION.md).
+- [x] Persistent server-owned enemy AI: aggro, chase, attack telegraphs/interruption, leash and return-to-spawn behavior; 250 ms PostgreSQL world worker, fresh-presence target selection, transactional enemy attacks and row-lock concurrency.
+- [x] Authenticated zone-scoped enemy snapshots; Godot polls, interpolates enemy movement and displays health, behavior, telegraphs and respawn state. Player attacks use persisted live enemy positions.
+- [ ] Sticky target/threat tables, bounded pathfinding, party aggro, combat animations, enemy abilities, weapon-family expansion and server-derived hit/miss outcomes (see docs/COMBAT_PROGRESSION.md).
 - [ ] Boss encounter framework: multi-phase bosses, encounter state, group contribution/eligibility, telegraphs, persistence and reward integration. Build after ordinary enemy/combat foundations.
 - [ ] Dedicated loot framework: server-owned weighted drop tables, guaranteed/conditional rewards, unique drops, contribution rules, anti-duplication and economy safeguards.
 - [ ] Deeper crafting framework: richer recipes, tool/station/skill requirements, material properties, quality, experimentation and crafted-item progression.
