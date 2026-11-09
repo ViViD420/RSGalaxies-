@@ -41,6 +41,9 @@ var enemyAIStateMigration string
 //go:embed migrations/0011_enemy_ai_target.sql
 var enemyAITargetMigration string
 
+//go:embed migrations/0012_enemy_encounter_participants.sql
+var enemyEncounterParticipantsMigration string
+
 func Migrate(ctx context.Context, db *sql.DB) error {
 	tx, err := db.BeginTx(ctx, nil)
 	if err != nil { return fmt.Errorf("begin migration: %w", err) }
@@ -67,6 +70,7 @@ func Migrate(ctx context.Context, db *sql.DB) error {
 		{version: 9, sql: playerTradeEscrowMigration},
 		{version: 10, sql: enemyAIStateMigration},
 		{version: 11, sql: enemyAITargetMigration},
+		{version: 12, sql: enemyEncounterParticipantsMigration},
 	}
 	for _, migration := range migrations {
 		var applied bool
