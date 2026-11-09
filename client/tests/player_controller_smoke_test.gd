@@ -59,9 +59,11 @@ func _run_movement_smoke_test() -> void:
 	var starting_z := player.global_position.z
 	Input.action_press("move_forward")
 	await physics_frame
+	await process_frame
 	var initial_speed := Vector2(player.velocity.x, player.velocity.z).length()
 	for frame in range(19):
 		await physics_frame
+	await process_frame
 	Input.action_release("move_forward")
 
 	var travelled_forward := starting_z - player.global_position.z
@@ -79,6 +81,7 @@ func _run_movement_smoke_test() -> void:
 
 	for frame in range(8):
 		await physics_frame
+	await process_frame
 	var slowed_speed := Vector2(player.velocity.x, player.velocity.z).length()
 	if slowed_speed >= peak_speed:
 		_fail("Ground deceleration did not reduce horizontal speed after input release.")
@@ -113,10 +116,20 @@ func _run_movement_smoke_test() -> void:
 		_fail("Locomotion presentation unexpectedly changed the collision shape transform.")
 		return
 
-	print("PASS: movement acceleration, sustained speed, deceleration, jump and collision/presentation separation.")
+	print("PASS: terrain mesh/collision, deterministic height, movement acceleration, sustained speed, deceleration, jump and collision/presentation separation.")
+	for child in root.get_children():
+		child.queue_free()
+	await process_frame
 	quit(0)
 
 
 func _fail(message: String) -> void:
 	push_error("Player movement smoke test failed: " + message)
-	quit(1)
+	for child in root.get_children():
+		child.queue_free()
+	call_deferred("_quit_after_cleanup", 1)
+
+
+func _quit_after_cleanup(exit_code: int) -> void:
+	await process_frame
+	quit(exit_code)
