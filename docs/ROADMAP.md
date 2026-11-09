@@ -49,7 +49,7 @@
 - [x] Authenticated reward-claim API, account-scoped listing, idempotent redemption and full-stack pending behavior; settlement/claim integration suite passed in #497.
 - [x] Authenticated HTTP API ownership/success-path tests (#498–#503) and Godot Rewards panel follow-up CI (#129–#132).
 - [ ] Bounded pathfinding, party aggro, enemy abilities, weapon-family expansion and server-derived hit/miss outcomes (see docs/COMBAT_PROGRESSION.md).
-- [ ] Expand the initial melee swing into weapon-family animations, hit reactions and ability effects. Initial server-confirmed placeholder swing and bounded third-person camera zoom are implemented; headless verification is in progress: Actions #164/#165 passed import/export; #166/#167 exposed an animation completion timing issue; #168 passed the animation assertions but exposed a retained-tween renderer shutdown error. Tween release did not resolve the renderer error. Replaced the tween with an allocation-free physics-driven sine swing and visible-motion/neutral-pose tests in 136f497/f948208; new CI is pending.
+- [ ] Expand the initial melee swing into weapon-family animations, hit reactions and ability effects. Initial server-confirmed placeholder swing and bounded third-person camera zoom are implemented; headless verification is in progress: Actions #164/#165 passed import/export; #166/#167 exposed an animation completion timing issue; #168 passed the animation assertions but exposed a retained-tween renderer shutdown error. Tween release did not resolve the renderer error. Replaced the tween with an allocation-free physics-driven sine swing and visible-motion/neutral-pose tests in 136f497/f948208; Client Action #172 passed the allocation-free visible-swing and neutral-pose runtime checks without Godot errors.
 - [x] Reusable versioned boss phase/ability domain engine with validated definitions, threshold transitions, telegraphs, cooldowns, range interruption, encounter-cycle reset and deterministic damage intents (domain-only; server Actions verification pending).
 - [ ] Durable boss encounter persistence groundwork: migration 0016 adds encounter-cycle-scoped state, versioned definition/phase, telegraph timestamps, JSONB cooldowns, ability cursor and terminal defeat state; PostgreSQL load/save helpers lock the parent enemy cycle and reject stale-cycle or stale-timestamp writes. Integration test added; GitHub Actions verification pending, and the world tick has not yet been wired to these helpers.
 - [x] Initial server-owned weighted ordinary-enemy loot tables with cryptographically secure rolls and no-drop outcomes (server Actions #518 passed; later superseded in live enemy definitions by the multi-drop pipeline).
@@ -122,3 +122,13 @@ Each milestone is a tested, reviewable slice. A feature is not complete because 
 - [ ] Add group encounters, party threat and support contribution before implementing group reward distribution.
 - [ ] Expand boss roster only after the Stoneback encounter remains robust under repeated combat, respawn and reward-claim testing.
 
+
+
+## Core client presentation
+
+- [x] Deterministic terrain mesh/collision, player grounding and physics-ray smoke tests (Client #161/#163/#172).
+- [x] Bounded third-person camera zoom with min/max regression coverage (Client #172).
+- [x] Initial server-confirmed melee swing presentation with visible motion and neutral-pose regression coverage (Client #172).
+- [ ] Add richer terrain paths, environmental dressing and biome transitions.
+- [ ] Improve interaction feedback, combat hit reactions, ability VFX and weapon-family animation sets.
+- [ ] Responsive HUD layout and consistent desktop/mobile interaction playtesting.
