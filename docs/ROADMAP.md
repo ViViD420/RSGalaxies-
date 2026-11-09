@@ -88,9 +88,21 @@
 - [ ] Distributed abuse prevention, economy monitoring, moderation and admin tools.
 - [ ] Closed alpha deployment and feedback loop.
 
+## Core game experience focus — active priority
+
+Boss roster expansion and boss-specific polish are paused. Development now prioritizes the core player experience across the whole game.
+
+- [ ] Improve third-person movement: acceleration/deceleration, air control, coyote time, jump buffering, facing/turn smoothing, camera controls and consistent keyboard/touch behavior.
+- [ ] Complete movement authority and reconciliation: server snapshots, bounded correction, reconnect recovery and smooth remote-player interpolation without client trust.
+- [ ] Replace the flat placeholder floor with server-aligned, collision-safe terrain that supports elevation, slopes, traversable paths, resource placement and future biome expansion.
+- [ ] Establish a real character presentation/animation foundation: idle, locomotion, start/stop, jump, fall, land, interact and combat states, with equipment-aware attachment points.
+- [ ] Improve the core HUD and responsive UI: health/resources, skills, inventory, contextual interaction, feedback, scalable panels and mobile-safe controls.
+- [ ] Build a reusable player ability/action framework with server-owned costs, cooldowns, range/target validation and client animation/feedback; keep it independent of boss mechanics.
+- [ ] Improve world interaction feedback, navigation, environmental readability and performance before adding more content systems.
+
 ## Working rule
 
-Each milestone is a tested, reviewable slice. A feature is not complete because a placeholder or interface exists: completion requires server rules, persistence where applicable, tests, and a usable client path. Keep production registration disabled until the documented security launch gates are met.
+Each milestone is a tested, reviewable slice. A feature is not complete because a placeholder or interface exists: completion requires server rules, persistence where applicable, tests, and a usable client path. Keep production registration disabled until the documented security launch gates are met. **Never hide an error:** stop, diagnose, fix, regression-test and verify every discovered failure before moving to unrelated work; preserve the failure and correction in the handoff. See docs/DEVELOPMENT_RULES.md.
 
 ## Boss encounter vertical slice
 
