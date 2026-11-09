@@ -46,8 +46,8 @@ The Go service selects PostgreSQL repositories when `RS_GALAXIES_DATABASE_URL` i
 ### Inventory and economy
 
 - Stack-based inventory, 100-slot bank, coin wallet and starter merchant.
-- Atomic bank transfers, merchant buy/sell and equipment equip/unequip.
-- Consumable healing items and derived equipment combat bonuses.
+- Atomic bank transfers, merchant buy/sell and equipment equip/unequip. Item definitions can declare server-enforced skill and level requirements; the starter sword requires Blades and armor requires Defense. Failed equip attempts leave inventory/equipment unchanged, and already-equipped items can always be unequipped if a skill later changes.
+- Consumable healing items and derived equipment combat bonuses. Profession/class-specific gear can expand this generic requirement model later without hardcoding restrictions into the client.
 - Item definitions are separate from player stack maps. Unique item instances, durability, binding and modifiers are future work.
 - Player-to-player trading must use atomic multi-party transactions, escrow and an auditable currency/item ledger before release.
 
