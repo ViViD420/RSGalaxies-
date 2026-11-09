@@ -130,3 +130,15 @@ The first boss is ready only when:
 - Reward eligibility and inventory-full behavior are explicit and tested.
 - Loot and crafting outputs persist after reconnect/restart.
 - At least one boss material has a useful, tested recipe path that feeds the player economy.
+
+
+## Delivered ordinary-enemy reward foundation
+
+The current implementation is a first ordinary-enemy policy, not the final party/boss loot system:
+
+- Each encounter has one durable settlement key `(enemy_id, encounter_id)` and one durable claim per eligible character. Both are written in the same PostgreSQL transaction that commits the killing attack.
+- Eligibility currently requires verified damage dealt equal to at least 10% of enemy maximum health, at least one recorded action, valid account/character/encounter identity and a damage action within the preceding two minutes. Incoming enemy damage does not refresh the damage-recency clock. Passive presence is never sufficient.
+- XP is divided proportionally to eligible damage; integer remainder goes to the highest-damage eligible participant. The single ordinary enemy drop goes to that same participant. The specialization used for damage is persisted in the contribution record and determines XP attribution.
+- Claims are account/character scoped. XP, parent XP, loot inventory mutation and the claimed timestamp are committed together. A full loot stack aborts the claim transaction and leaves the whole claim pending; retry after freeing stack capacity is safe. A repeated claim after success is a no-op.
+- Authenticated API endpoints expose a character's claims and allow an individual claim to be redeemed. Godot claim UI and client feedback remain to be integrated.
+- This policy is intentionally limited: no party membership, support/healing contribution types, multi-drop weighted loot tables, unique item instances, loot rolls or boss-specific distribution rules. Do not treat it as the final group-boss policy.
