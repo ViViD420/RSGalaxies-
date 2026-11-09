@@ -784,3 +784,22 @@ Continue deep player-facing Stoneback review: phase transition and telegraph int
 ### Continuation update
 
 Start by checking current main HEAD and client Action #139 for commit 743c5a8. Server Actions #599/#600 remain the latest verified server runs for the current server code; inspect any newer server workflow if present. Continue the Stoneback player-facing review and keep all three documentation files current.
+
+## Stoneback HUD phase cue and responsive layout (2026-11-09)
+
+- Client Action #139 (run 42598099029, commit 743c5a8e7afb51e128a2636a1c481ae4c3732d5f) completed successfully. Its Godot 4.3 setup, project import and script validation steps all passed.
+- Follow-up client commit e810999e6bec24b8646d3c31dc4f14d3f87ea0e4 improves narrow-viewport layout:
+  - The centered boss panel now uses viewport-relative 5% side margins instead of fixed 380px width.
+  - The health bar can flex to the available panel width rather than enforcing a 350px minimum.
+  - This is a layout improvement; actual interactive-device visual inspection remains a future playtesting task.
+- The phase cue from commit 743c5a8 compares consecutive server-provided phase IDs and shows a 2.5-second transition message. Client Action #139 validates that revision.
+- docs/ROADMAP.md and docs/ARCHITECTURE.md were refreshed in commits 9c6c78dd40d897257751ae3a27492a24d4db3e4b and c313ddcc4cc248cacd18e01ba8a0ab89adc9b6e0.
+- The new responsive-layout client commit must receive and pass its own client workflow before validation is claimed.
+- Existing server evidence remains #600 (race-enabled PostgreSQL integration tests and Vet passed) and #599 (same); no server code has changed in this HUD polish sequence.
+
+### Immediate next actions
+
+1. Inspect the client Actions run for e810999 and verify every job step.
+2. Inspect current main HEAD and latest server/client Actions again.
+3. Continue target/telegraph/respawn and reward idempotency review. Do not claim actual mobile viewport testing from headless script-import CI.
+4. Keep the handoff, roadmap and architecture synchronized after meaningful progress.
