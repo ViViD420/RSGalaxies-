@@ -108,12 +108,11 @@ func (p *Player) AttackEnemy(enemy EnemyDefinition,state EnemyState,now time.Tim
 		state.RespawnAt=now.Add(time.Duration(enemy.RespawnSeconds)*time.Second)
 		result.EnemyDefeated=true
 		result.Experience=enemy.Experience
-		if _, err := p.AwardExperience(styleSkillID, enemy.Experience); err != nil && !errors.Is(err, ErrExperienceOverflow) { return CombatResult{}, state, err }
+		if _, err := p.AwardExperience(styleSkillID, enemy.Experience); err != nil { if errors.Is(err, ErrExperienceOverflow) { result.Experience = 0 } else { return CombatResult{}, state, err } }
 		if parentSkillID != "" {
 			parentXP := enemy.Experience / 4
 			if parentXP < 1 { parentXP = 1 }
-			result.ParentExperience = parentXP
-			if _, err := p.AwardExperience(parentSkillID, parentXP); err != nil && !errors.Is(err, ErrExperienceOverflow) { return CombatResult{}, state, err }
+			if _, err := p.AwardExperience(parentSkillID, parentXP); err != nil { if errors.Is(err, ErrExperienceOverflow) { result.ParentExperience = 0 } else { return CombatResult{}, state, err } } else { result.ParentExperience = parentXP }
 		}
 		if enemy.LootItemID!=""&&enemy.LootQuantity>0{
 			item,ok:=FindItem(enemy.LootItemID)
