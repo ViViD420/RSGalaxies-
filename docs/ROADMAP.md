@@ -124,3 +124,5 @@ Each milestone is a tested, reviewable slice. A feature is not complete because 
 
 - [x] Cover boss telegraph interruption when the target leaves ability range and clean state after a respawn cycle (PostgreSQL integration coverage; CI pending).
 - [ ] Cover boss ability player defeat and interaction with player-initiated boss defeat before live registration.
+
+- [x] Cover lethal boss ability damage, player defeat, Defense XP and target/telegraph cleanup (PostgreSQL integration coverage; CI pending).
