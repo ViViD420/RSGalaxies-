@@ -359,7 +359,7 @@ func (r *AccountRepository) AttackEnemyForAccount(ctx context.Context,accountID 
 		} else {
 			_,err=tx.ExecContext(ctx,`UPDATE enemy_spawn_state SET health=$2,respawn_at=$3,initialized=$4,
 				behavior='chasing',telegraph_until=NULL,next_attack_at=$5,last_ai_updated_at=$6,target_character_id=$7 WHERE enemy_id=$1`,
-				enemyID,nextState.Health,respawnValue,nextState.Initialized,nextAttackAt,now.UTC(),string(player.ID))
+				enemyID,nextState.Health,respawnValue,nextState.Initialized,nextAttackAt,now.UTC(),targetCharacterID)
 		}
 	} else {
 		_,err=tx.ExecContext(ctx,`UPDATE enemy_spawn_state SET health=$2,respawn_at=$3,initialized=$4,
