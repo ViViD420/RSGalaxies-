@@ -251,3 +251,27 @@ func TestAdvanceBossEncounterNormalizesNegativeAbilityCursor(t *testing.T) {
 		t.Fatalf("negative ability cursor was not normalized: %+v", result)
 	}
 }
+
+func TestAdvanceBossEncounterCopiesCooldownMapBeforeMutation(t *testing.T) {
+	definition := stonebackDefinition(t)
+	now := time.Date(2026, 11, 9, 19, 0, 0, 0, time.UTC)
+	state := BossEncounterState{
+		EncounterID: "cycle-a",
+		DefinitionVersion: definition.Version,
+		PhaseID: "guarded",
+		PhaseStartedAt: now,
+		AbilityCooldowns: map[string]time.Time{
+			"ground-shatter": now.Add(time.Minute),
+		},
+	}
+	result, err := AdvanceBossEncounter(definition, state, bossInput("cycle-a", 100, now, 2))
+	if err != nil {
+		t.Fatal(err)
+	}
+	if _, mutated := state.AbilityCooldowns["stone-fist"]; mutated {
+		t.Fatal("AdvanceBossEncounter mutated the caller's cooldown map")
+	}
+	if result.State.AbilityCooldowns["stone-fist"].IsZero() {
+		t.Fatalf("returned state did not record the new cooldown: %+v", result.State.AbilityCooldowns)
+	}
+}
