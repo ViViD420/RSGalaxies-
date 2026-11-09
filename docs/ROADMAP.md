@@ -48,7 +48,8 @@
 - [ ] Final HTTP API ownership/success-path tests (#498–#503) and Godot Rewards panel follow-up CI (#129–#132); client panel is implemented.
 - [ ] Bounded pathfinding, party aggro, combat animations, enemy abilities, weapon-family expansion and server-derived hit/miss outcomes (see docs/COMBAT_PROGRESSION.md).
 - [ ] Boss encounter framework: multi-phase bosses, encounter state, group contribution/eligibility, telegraphs, persistence and reward integration. Build after ordinary enemy/combat foundations.
-- [ ] Dedicated loot framework: server-owned weighted drop tables, guaranteed/conditional rewards, unique drops, contribution rules, anti-duplication and economy safeguards.
+- [x] Initial server-owned weighted ordinary-enemy loot tables with cryptographically secure rolls, weighted common materials and no-drop outcomes; settlement assigns one result to the top eligible contributor (CI pending).
+- [ ] Expand loot tables with multiple drops, guaranteed/conditional rewards, rarity tiers, boss-exclusive materials, unique item instances, versioned tuning and economy safeguards.
 - [ ] Deeper crafting framework: richer recipes, tool/station/skill requirements, material properties, quality, experimentation and crafted-item progression.
 - [ ] Recipe quality, tool requirements, advanced stations and broader profession progression. Advanced non-combat specialization trees remain deferred until core loops are stable.
 
