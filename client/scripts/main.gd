@@ -480,12 +480,23 @@ func _on_enemy_snapshots_completed(result: int, response_code: int, _headers: Pa
 			if head != null:
 				head.visible = health > 0
 		var label: Label3D = enemy_labels[enemy_id]
+		var display_name := str(snapshot.get("name", enemy_id))
+		var boss_id := str(snapshot.get("bossId", ""))
+		var boss_phase := str(snapshot.get("bossPhaseId", ""))
+		var boss_ability := str(snapshot.get("bossActiveAbilityId", ""))
 		if health <= 0:
-			label.text = str(snapshot.get("name", enemy_id)) + "\nRespawning..."
+			label.text = display_name + "\nRespawning..."
+		elif not boss_id.is_empty():
+			var boss_status := ""
+			if not boss_phase.is_empty():
+				boss_status += " • " + boss_phase.replace("-", " ").capitalize()
+			if not boss_ability.is_empty():
+				boss_status += " • ⚠ " + boss_ability.replace("-", " ").to_upper()
+			label.text = display_name + "\n" + str(health) + "/" + str(maximum) + boss_status
 		elif behavior == "telegraphing":
-			label.text = str(snapshot.get("name", enemy_id)) + "\n" + str(health) + "/" + str(maximum) + " • ⚠ ATTACK"
+			label.text = display_name + "\n" + str(health) + "/" + str(maximum) + " • ⚠ ATTACK"
 		else:
-			label.text = str(snapshot.get("name", enemy_id)) + "\n" + str(health) + "/" + str(maximum) + " • " + behavior.capitalize()
+			label.text = display_name + "\n" + str(health) + "/" + str(maximum) + " • " + behavior.capitalize()
 
 func _update_enemy_visuals(delta: float) -> void:
 	var blend := 1.0 - exp(-delta * 10.0)
