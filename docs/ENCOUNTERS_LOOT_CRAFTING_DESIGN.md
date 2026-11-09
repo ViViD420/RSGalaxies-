@@ -142,3 +142,14 @@ The current implementation is a first ordinary-enemy policy, not the final party
 - Claims are account/character scoped. XP, parent XP, loot inventory mutation and the claimed timestamp are committed together. A full loot stack aborts the claim transaction and leaves the whole claim pending; retry after freeing stack capacity is safe. A repeated claim after success is a no-op.
 - Authenticated API endpoints expose a character's claims and allow an individual claim to be redeemed. Godot claim UI and client feedback remain to be integrated.
 - This policy is intentionally limited: no party membership, support/healing contribution types, multi-drop weighted loot tables, unique item instances, loot rolls or boss-specific distribution rules. Do not treat it as the final group-boss policy.
+
+
+## Initial weighted loot-table implementation (CI pending)
+
+The first data-driven tables are server-owned and use a 10,000-point roll range:
+
+- Frontier Rat: 70% Rat Pelt, 20% Rat Tooth, 10% no drop.
+- Wild Boar: 75% Boar Hide, 15% Boar Tusk, 10% no drop.
+- The world server generates independent cryptographically secure drop and quantity rolls. The pure game resolver is deterministic and boundary-tested.
+- The single result (or no-drop result) is resolved once during the unique encounter settlement and attached only to the highest-damage eligible participant's pending claim. XP distribution remains contribution-weighted.
+- This is the first loot-table slice: one selected item per encounter, fixed quantity ranges, no per-player multiple rolls, rarity modifiers, boss tables or unique item instances yet.
