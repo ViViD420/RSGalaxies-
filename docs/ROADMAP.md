@@ -101,3 +101,6 @@ Each milestone is a tested, reviewable slice. A feature is not complete because 
 - [ ] Add exactly-once concurrent tick/retry tests and verify migration 0016 against PostgreSQL CI.
 - [ ] Expose authoritative boss phase/telegraph snapshots and render the Godot boss HUD.
 - [ ] Activate Stoneback Colossus only after the server, persistence, snapshots and client path pass CI; use the existing multi-item reward claim pipeline.
+
+- [x] Add a boss ability damage resolver with ability-specific range checks and existing Defense/armor mitigation (domain primitive; not yet connected to the world tick).
+- [ ] Connect the boss damage resolver to transactional world-tick and player-defeat paths; persist terminal boss state atomically.
