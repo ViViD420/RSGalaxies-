@@ -67,6 +67,7 @@ Create a character with POST /api/v1/players and JSON body {"name":"Wayfarer"}. 
 4. Every progression system must have deterministic tests.
 5. No secrets, proprietary assets or copied game code are committed.
 6. Keep this repository and all project artifacts independent.
+7. Never hide an error. Stop, diagnose, fix, regression-test and verify every discovered failure before continuing; document the failure and correction. See [mandatory engineering rules](docs/DEVELOPMENT_RULES.md).
 
 See docs/ARCHITECTURE.md, docs/ROADMAP.md, docs/SESSION_HANDOFF.md, docs/SKILL_ROSTER.md, docs/COMBAT_PROGRESSION.md and docs/JEDI_PROGRESSION_DESIGN.md.
 
