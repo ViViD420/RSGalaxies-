@@ -2778,7 +2778,7 @@ func _render_reward_claims(claims: Variant) -> void:
 		if not parent_skill.is_empty() and parent_xp > 0:
 			reward_text += " • " + parent_skill.capitalize() + " XP " + str(parent_xp)
 		for loot in loot_items:
-			reward_text += " • " + str(loot.itemId).replace("_", " ").capitalize() + " x" + str(loot.quantity)
+			reward_text += " • " + str(loot.get("itemId", "")).replace("_", " ").capitalize() + " x" + str(loot.get("quantity", 0))
 		summary.text = enemy_id.replace("-", " ").capitalize() + "\n" + reward_text + " • " + status.capitalize()
 		summary.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
 		rewards_claims_column.add_child(summary)
