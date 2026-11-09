@@ -328,3 +328,28 @@ func (r *AccountRepository) ListEnemySnapshotsForAccount(ctx context.Context, ac
 	}
 	return snapshots, nil
 }
+
+ 
+// ListEncounterParticipants returns the server-recorded contribution ledger for
+// one spawn life. Reward settlement must consume this persisted ledger rather
+// than accepting client-supplied contribution values.
+func (r *AccountRepository) ListEncounterParticipants(ctx context.Context, enemyID, encounterID string) ([]game.EncounterParticipant, error) {
+	rows, err := r.db.QueryContext(ctx, `SELECT encounter_id,enemy_id,account_id,character_id,
+		damage_dealt,damage_received,action_count,first_contribution_at,last_contribution_at
+		FROM enemy_encounter_participants WHERE enemy_id=$1 AND encounter_id=$2
+		ORDER BY damage_dealt DESC, first_contribution_at, character_id`, enemyID, encounterID)
+	if err != nil { return nil, fmt.Errorf("list encounter participants: %w", err) }
+	defer rows.Close()
+	participants := make([]game.EncounterParticipant, 0)
+	for rows.Next() {
+		var participant game.EncounterParticipant
+		if err := rows.Scan(&participant.EncounterID,&participant.EnemyID,&participant.AccountID,
+			&participant.CharacterID,&participant.DamageDealt,&participant.DamageReceived,
+			&participant.ActionCount,&participant.FirstContributionAt,&participant.LastContributionAt); err != nil {
+			return nil, fmt.Errorf("scan encounter participant: %w", err)
+		}
+		participants = append(participants, participant)
+	}
+	if err := rows.Err(); err != nil { return nil, fmt.Errorf("iterate encounter participants: %w", err) }
+	return participants, nil
+}
