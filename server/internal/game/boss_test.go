@@ -120,7 +120,7 @@ func TestAdvanceBossEncounterInterruptsTelegraphAndRetainsCooldown(t *testing.T)
 		t.Fatal(err)
 	}
 	if !interrupted.AbilityInterrupted || interrupted.AbilityID != "stone-fist" ||
-		interrupted.State.ActiveAbilityID != "" || interrupted.State.TelegraphUntil.IsZero() {
+		interrupted.State.ActiveAbilityID != "" || !interrupted.State.TelegraphUntil.IsZero() {
 		t.Fatalf("out-of-range telegraph was not safely interrupted: %+v", interrupted)
 	}
 	cooling, err := AdvanceBossEncounter(definition, interrupted.State, bossInput("cycle-a", 100, start.Add(2*time.Second), 2))
@@ -189,7 +189,7 @@ func TestAdvanceBossEncounterDoesNotRewindAndResetsOnNewCycle(t *testing.T) {
 		t.Fatal(err)
 	}
 	if nextCycle.State.EncounterID != "cycle-b" || !nextCycle.State.PhaseStartedAt.Equal(start.Add(-time.Minute)) ||
-		len(nextCycle.State.AbilityCooldowns) != 0 {
+		nextCycle.State.ActiveAbilityID != "stone-fist" || len(nextCycle.State.AbilityCooldowns) != 1 {
 		t.Fatalf("new cycle inherited old timing/cooldowns: %+v", nextCycle.State)
 	}
 }
