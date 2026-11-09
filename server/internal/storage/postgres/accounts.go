@@ -330,6 +330,12 @@ func (r *AccountRepository) AttackEnemyForAccount(ctx context.Context,accountID 
 		&state.Health,&respawnAt,&state.Initialized,&liveZone,&liveX,&liveZ);err!=nil{return game.Player{},game.CombatResult{},fmt.Errorf("lock enemy state: %w",err)}
 	if respawnAt.Valid{state.RespawnAt=respawnAt.Time}
 	resetAI := state.Health <= 0
+	encounterID := ""
+	if encounterIDValue.Valid { encounterID = encounterIDValue.String }
+	if resetAI || encounterID == "" {
+		encounterID, err = newEncounterID()
+		if err != nil { return player,game.CombatResult{},err }
+	}
 	if resetAI {
 		if respawnAt.Valid && now.Before(respawnAt.Time) {
 			return player,game.CombatResult{},game.ErrEnemyRespawning
@@ -353,20 +359,21 @@ func (r *AccountRepository) AttackEnemyForAccount(ctx context.Context,accountID 
 		if resetAI {
 			_,err=tx.ExecContext(ctx,`UPDATE enemy_spawn_state SET health=$2,respawn_at=$3,initialized=$4,
 				behavior='chasing',position_zone_id=$5,position_x=$6,position_z=$7,
-				telegraph_until=NULL,next_attack_at=$8,last_ai_updated_at=$9,target_character_id=$10 WHERE enemy_id=$1`,
+				telegraph_until=NULL,next_attack_at=$8,last_ai_updated_at=$9,target_character_id=$10,encounter_id=$11 WHERE enemy_id=$1`,
 				enemyID,nextState.Health,respawnValue,nextState.Initialized,spawnDefinition.Position.ZoneID,
-				spawnDefinition.Position.X,spawnDefinition.Position.Z,nextAttackAt,now.UTC(),targetCharacterID)
+				spawnDefinition.Position.X,spawnDefinition.Position.Z,nextAttackAt,now.UTC(),targetCharacterID,encounterID)
 		} else {
 			_,err=tx.ExecContext(ctx,`UPDATE enemy_spawn_state SET health=$2,respawn_at=$3,initialized=$4,
-				behavior='chasing',telegraph_until=NULL,next_attack_at=$5,last_ai_updated_at=$6,target_character_id=$7 WHERE enemy_id=$1`,
-				enemyID,nextState.Health,respawnValue,nextState.Initialized,nextAttackAt,now.UTC(),targetCharacterID)
+				behavior='chasing',telegraph_until=NULL,next_attack_at=$5,last_ai_updated_at=$6,target_character_id=$7,encounter_id=$8 WHERE enemy_id=$1`,
+				enemyID,nextState.Health,respawnValue,nextState.Initialized,nextAttackAt,now.UTC(),targetCharacterID,encounterID)
 		}
 	} else {
 		_,err=tx.ExecContext(ctx,`UPDATE enemy_spawn_state SET health=$2,respawn_at=$3,initialized=$4,
-			behavior='idle',telegraph_until=NULL,next_attack_at=NULL,last_ai_updated_at=$5,target_character_id=NULL WHERE enemy_id=$1`,
-			enemyID,nextState.Health,respawnValue,nextState.Initialized,now.UTC())
+			behavior='idle',telegraph_until=NULL,next_attack_at=NULL,last_ai_updated_at=$5,target_character_id=NULL,encounter_id=$6 WHERE enemy_id=$1`,
+			enemyID,nextState.Health,respawnValue,nextState.Initialized,now.UTC(),encounterID)
 	}
 	if err!=nil{return game.Player{},game.CombatResult{},fmt.Errorf("update enemy state: %w",err)}
+	if err:=recordEncounterContribution(ctx,tx,encounterID,enemyID,accountID,player.ID,result.DamageDealt,result.DamageReceived,now);err!=nil{return game.Player{},game.CombatResult{},err}
 	if err:=updateOwnedPlayer(ctx,tx,accountID,player);err!=nil{return game.Player{},game.CombatResult{},err}
 	if err:=tx.Commit();err!=nil{return game.Player{},game.CombatResult{},fmt.Errorf("commit combat action: %w",err)}
 	return player,result,nil
