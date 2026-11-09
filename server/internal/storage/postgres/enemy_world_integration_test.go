@@ -72,6 +72,15 @@ func TestPostgresEnemyWorldTickCommitsAttackExactlyOnce(t *testing.T) {
 	if updated.Skills["defense"].Experience != 1 {
 		t.Fatalf("Defense XP = %d, want 1 (exactly one award)", updated.Skills["defense"].Experience)
 	}
+
+	// Player-initiated combat must also use the moving instance position,
+	// rather than the static catalog spawn coordinates.
+	_, combat, err := accountRepo.AttackEnemyForAccount(ctx, account.ID, playerID, enemyID, now.Add(6*time.Second))
+	if err != nil { t.Fatalf("attack moving enemy at persisted position: %v", err) }
+	if combat.DamageDealt <= 0 || combat.EnemyHealth != 10 {
+		t.Fatalf("attack against moving enemy result = %+v", combat)
+	}
+
 	snapshots, err := accountRepo.ListEnemySnapshotsForAccount(ctx, account.ID, playerID, now.Add(4*time.Second))
 	if err != nil { t.Fatalf("list enemy snapshots: %v", err) }
 	if len(snapshots) != 2 { t.Fatalf("snapshot count = %d, want two zone enemies", len(snapshots)) }
