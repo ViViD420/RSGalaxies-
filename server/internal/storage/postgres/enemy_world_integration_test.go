@@ -2,6 +2,7 @@ package postgres
 
 import (
 	"context"
+	"errors"
 	"database/sql"
 	"fmt"
 	"os"
@@ -146,4 +147,27 @@ func TestPostgresEnemyWorldTickCommitsAttackExactlyOnce(t *testing.T) {
 	if defeatedHealth != 100 { t.Fatalf("cross-zone target took damage: health=%d", defeatedHealth) }
 	if err := db.QueryRowContext(ctx, "SELECT behavior FROM enemy_spawn_state WHERE enemy_id=$1", enemyID).Scan(&behavior); err != nil { t.Fatal(err) }
 	if behavior != string(game.EnemyIdle) { t.Fatalf("enemy behavior after zone change = %q, want idle", behavior) }
+
+	// A dead spawn rejects attacks until its respawn deadline, then returns to
+	// its catalog spawn with all transient AI timers cleared.
+	if _, err := db.ExecContext(ctx, "UPDATE players SET health=100,zone_id=$2,position_x=8,last_combat_at=$3 WHERE id=$1",
+		string(playerID), game.DefaultWorldZoneID, now.Add(33*time.Second)); err != nil { t.Fatal(err) }
+	if _, err := db.ExecContext(ctx, "UPDATE zone_presence SET zone_id=$2,position_x=8,last_seen_at=$3 WHERE character_id=$1",
+		string(playerID), game.DefaultWorldZoneID, now.Add(33*time.Second)); err != nil { t.Fatal(err) }
+	if _, err := db.ExecContext(ctx, `UPDATE enemy_spawn_state SET health=0,respawn_at=$2,behavior='returning',
+		position_zone_id=$3,position_x=0,position_z=0,telegraph_until=$4,last_ai_updated_at=$4 WHERE enemy_id=$1`,
+		enemyID, now.Add(35*time.Second), game.DefaultWorldZoneID, now.Add(34*time.Second)); err != nil { t.Fatal(err) }
+	if _, _, err := accountRepo.AttackEnemyForAccount(ctx, account.ID, playerID, enemyID, now.Add(34*time.Second)); !errors.Is(err, game.ErrEnemyRespawning) {
+		t.Fatalf("attack before respawn deadline error = %v, want ErrEnemyRespawning", err)
+	}
+	_, respawnCombat, err := accountRepo.AttackEnemyForAccount(ctx, account.ID, playerID, enemyID, now.Add(36*time.Second))
+	if err != nil { t.Fatalf("attack respawned enemy at spawn: %v", err) }
+	if respawnCombat.EnemyHealth != 10 { t.Fatalf("respawned enemy health = %d, want 10", respawnCombat.EnemyHealth) }
+	var spawnX float64
+	var telegraph sql.NullTime
+	var lastUpdated sql.NullTime
+	if err := db.QueryRowContext(ctx, `SELECT position_x,telegraph_until,last_ai_updated_at FROM enemy_spawn_state WHERE enemy_id=$1`, enemyID).Scan(&spawnX,&telegraph,&lastUpdated); err != nil { t.Fatal(err) }
+	if spawnX != 8 || telegraph.Valid || lastUpdated.Valid {
+		t.Fatalf("respawn did not reset AI position/timers: x=%v telegraph=%v updated=%v", spawnX, telegraph, lastUpdated)
+	}
 }
