@@ -81,13 +81,20 @@ func _adjust_camera_zoom(amount: float) -> void:
 func play_attack_animation() -> void:
 	if _attack_tween != null and _attack_tween.is_running():
 		_attack_tween.kill()
-	body_mesh.rotation.y = 0.0
+	var neutral_rotation := body_mesh.rotation
+	var swing_rotation := neutral_rotation + Vector3(0.0, attack_swing_radians, 0.0)
 	_attack_tween = create_tween()
 	_attack_tween.set_trans(Tween.TRANS_QUAD)
-	_attack_tween.set_ease(Tween.EASE_OUT)
-	_attack_tween.tween_property(body_mesh, "rotation:y", attack_swing_radians, attack_swing_duration * 0.45)
-	_attack_tween.set_ease(Tween.EASE_IN)
-	_attack_tween.tween_property(body_mesh, "rotation:y", 0.0, attack_swing_duration * 0.55)
+	_attack_tween.tween_property(
+		body_mesh, "rotation", swing_rotation, attack_swing_duration * 0.45
+	).set_ease(Tween.EASE_OUT)
+	_attack_tween.tween_property(
+		body_mesh, "rotation", neutral_rotation, attack_swing_duration * 0.55
+	).set_ease(Tween.EASE_IN)
+	_attack_tween.finished.connect(func() -> void:
+		if is_instance_valid(body_mesh):
+			body_mesh.rotation = neutral_rotation
+	)
 
 
 func _rotate_camera(relative: Vector2) -> void:
