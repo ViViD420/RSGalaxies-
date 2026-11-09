@@ -871,10 +871,12 @@ func _build_hud() -> void:
 
 func _build_boss_hud(layer: CanvasLayer) -> void:
 	boss_hud_panel = PanelContainer.new()
-	boss_hud_panel.anchor_left = 0.5
-	boss_hud_panel.anchor_right = 0.5
-	boss_hud_panel.offset_left = -190
-	boss_hud_panel.offset_right = 190
+	# Use viewport-relative margins so the encounter panel fits narrow
+	# mobile screens as well as desktop windows.
+	boss_hud_panel.anchor_left = 0.05
+	boss_hud_panel.anchor_right = 0.95
+	boss_hud_panel.offset_left = 0
+	boss_hud_panel.offset_right = 0
 	boss_hud_panel.offset_top = 78
 	boss_hud_panel.offset_bottom = 194
 	boss_hud_panel.visible = false
@@ -886,7 +888,7 @@ func _build_boss_hud(layer: CanvasLayer) -> void:
 	boss_hud_name_label.add_theme_font_size_override("font_size", 18)
 	column.add_child(boss_hud_name_label)
 	boss_hud_health_bar = ProgressBar.new()
-	boss_hud_health_bar.custom_minimum_size = Vector2(350, 18)
+	boss_hud_health_bar.custom_minimum_size = Vector2(0, 18)
 	boss_hud_health_bar.show_percentage = false
 	column.add_child(boss_hud_health_bar)
 	boss_hud_phase_label = Label.new()
