@@ -24,7 +24,7 @@ An original sandbox MMORPG combining long-form skill progression and item gamepl
 
 - Go authoritative world API, domain model and PostgreSQL persistence.
 - The active skill catalog now contains 18 skills with private parent/co-skill metadata. New characters receive all 18 at level 1; PostgreSQL loading backfills missing entries for older characters. Legacy `combat` and `tactics` XP keys remain preserved in existing records but are inactive, omitted from the client skill panel and cannot receive new XP. The starter sword selects Blades; unarmed attacks select Unarmed. Enemy defeat awards specialization XP and one-quarter parent XP; successful hits award Strength XP; taking damage awards Defense XP. Strength contributes to melee damage, Defense to mitigation and item-defined armor requirements. The six specializations alone are marked as future Jedi mastery candidates. Accuracy remains a derived outcome. See docs/SKILL_ROSTER.md and docs/COMBAT_PROGRESSION.md.
-- Hidden Jedi progression remains a documented future feature in docs/JEDI_PROGRESSION_DESIGN.md. The six combat specializations—Blades, Polearms, Unarmed, Pistols, Rifles and Magic—are the only future mastery candidates; parent skills, Defense and Strength do not count. See docs/JEDI_PROGRESSION_DESIGN.md. The hidden challenge, entitlement and Jedi character archetype are still not implemented or exposed.
+- Hidden Jedi progression remains a documented future feature in docs/JEDI_PROGRESSION_DESIGN.md. The six combat specializations—Blades, Polearms, Unarmed, Pistols, Rifles and Magic—are the only future mastery candidates; parent skills, Defense and Strength do not count. The hidden challenge, entitlement and Jedi character archetype are still not implemented or exposed. See docs/JEDI_PROGRESSION_DESIGN.md.
 - Defensive in-memory repository copies and concurrency-safe experience awards.
 - Starter zone, spawn point, server-time movement validation and world bounds.
 - Tree, stone, copper and wild-herb gathering nodes with range checks, charges, respawn and atomic inventory/XP rewards. The Foraging skill feeds a new herbal-bundle workbench recipe. Godot chooses the nearest target and builds resource props from the server node catalog rather than hardcoded node IDs.
@@ -79,6 +79,12 @@ An original sandbox MMORPG combining long-form skill progression and item gamepl
 - Remote character presence and position snapshots are implemented; successful authoritative movement now refreshes the shared presence snapshot in the same transaction, coalesced to one database write per character per second. The client still polls snapshots; there is no interpolation protocol or zone ownership yet. Enemy AI/movement, combat animations/abilities, boss encounters, dedicated loot tables, deeper crafting, unique equipment instances/durability, housing, settlements and large-scale world streaming are also outstanding.
 - The account APIs require PostgreSQL. The server's in-memory-only development mode does not register account routes.
 
+## Latest verified repository state
+
+- Current server CI: run #408 passed at commit `2e2fe958`; run #407 also passed. Current client CI: run #124 passed at commit `a856a481`.
+- Documentation consistency update: `1bb8a9d` aligns `docs/COMBAT.md` with the active 18-skill hierarchy and actual combat behavior. This handoff update follows it.
+- Earlier skill transition runs #394–#402 included intermediate failures; later corrected runs #403–#408 passed. Do not describe every transition run as green; use the latest successful runs as the current validation signal.
+
 ## Latest skill-system implementation
 
 - Commits: `588bcc9` (18-skill hierarchy), `be004cb` (hierarchy lookup), `7238d7a` (roster/mastery tests), `21d1c76`/`dd7a39a` (combat progression), `2400283`/`489767b` (combat tests), `8a43b66`/`32e639c`/`2e2fe95` (combat result attribution and XP correctness), `30fd8cf`/`a856a48` (Godot skill display and parent XP feedback), `1bab5b9` (skill roster documentation), `957336d` (combat progression docs), `f9e4a5f` (Jedi mastery design), `4fd6da1` (architecture), `c88039a` (world catalog test), `04d5ce2` (legacy backfill test), `116d32f`/`c03c93b` (PostgreSQL combat persistence test), `ca174c4` (Strength/Defense combat tests), `5b7912f` (README), `7e299ce` (roadmap), `c546fed` (boss/loot/crafting design).
@@ -89,7 +95,7 @@ An original sandbox MMORPG combining long-form skill progression and item gamepl
 
 ## Next engineering tasks
 
-1. Finish ordinary combat foundations: server-owned weapon/ability definitions, derived hit resolution, enemy aggro, movement, leash and behavior state. See docs/COMBAT.md and docs/COMBAT_PROGRESSION.md.
+1. Finish ordinary combat foundations: server-owned weapon/ability definitions, derived hit resolution, enemy aggro, movement, leash and behavior state. `docs/COMBAT.md` now reflects the actual current combat implementation and the next sequence.
 2. Add durable encounter participation and reward settlement before implementing boss phases or group loot.
 3. Implement the reusable boss encounter state machine after ordinary enemy AI and combat are stable.
 4. Add dedicated loot tables, idempotent reward claims and explicit inventory-overflow handling before valuable boss drops.
