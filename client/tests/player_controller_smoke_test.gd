@@ -56,13 +56,21 @@ func _run_movement_smoke_test() -> void:
 		_fail("Ground deceleration did not reduce horizontal speed after input release.")
 		return
 
-	for frame in range(5):
+	var landing_frames := 0
+	while not player.is_on_floor() and landing_frames < 120:
 		await physics_frame
+		landing_frames += 1
+	if not player.is_on_floor():
+		_fail("Player did not settle onto the test floor before jump validation; position=%s velocity=%s." % [player.global_position, player.velocity])
+		return
+
 	Input.action_press("jump")
+	await process_frame
 	await physics_frame
+	var jump_speed := player.velocity.y
 	Input.action_release("jump")
-	if player.velocity.y <= 0.0:
-		_fail("Buffered jump input did not produce upward velocity while grounded.")
+	if jump_speed <= 0.0:
+		_fail("Jump input did not produce upward velocity while grounded; on_floor=%s position=%s velocity=%s action_pressed=%s." % [player.is_on_floor(), player.global_position, player.velocity, Input.is_action_pressed("jump")])
 		return
 
 	var collision_shape := player.get_node("CollisionShape3D") as CollisionShape3D
