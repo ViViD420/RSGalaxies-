@@ -12,15 +12,15 @@ A boss should not be valuable only because it drops a finished weapon. Bosses sh
 
 The ordinary enemy foundation now includes persistent per-spawn idle/chase/telegraph/return state, fresh-presence targeting, sticky single-target selection, bounded movement, server-side attack timing, telegraph interruption, leash return, shared cooldowns, respawn reset, transactional player damage/Defense XP and authenticated Godot snapshots/interpolation. Player attacks use the persisted live enemy position. This is a first-zone prototype, not the final encounter framework.
 
-The server now assigns a unique encounter-cycle ID to each enemy spawn life and records server-authoritative damage dealt, damage received and action counts for characters who engage. Autonomous incoming damage updates an existing participant record without making an unengaged bystander eligible. Enemy target candidate ordering now preserves the active sticky target first, then scores current-cycle threat (2× damage dealt + damage received + action count), then uses distance and character ID as deterministic tie-breakers. This threat score only chooses an AI target; it is not yet a reward-eligibility rule. PostgreSQL integration coverage verifies that a higher-threat participant outranks a nearer bystander; server Actions #471 and #472 passed. Migration 0013 now establishes a durable settlement key per enemy/encounter cycle and one character-owned pending/claimed reward record per eligible participant, with database-enforced idempotency, ownership, state and loot-quantity constraints. This is schema foundation only: the kill path does not yet create settlements, no claim API exists, and eligibility/anti-leech policy is not yet active. Still outstanding before boss rewards: party rules, eligibility windows and anti-leech policy, transactional settlement creation, idempotent claim execution, inventory-full claim behavior, and a dedicated loot-table service. Current ordinary enemies still use fixed starter drops. Do not jump directly to high-value boss loot.
+The server assigns a unique encounter-cycle ID to each enemy spawn life and records server-authoritative damage dealt, damage received and action counts for engaged characters. Target selection preserves a valid sticky target, then scores current-cycle threat (2× damage dealt + damage received + action count), with deterministic distance/character-ID tie-breakers; this score is separate from reward eligibility. Server Actions #471/#472 passed the threat-selection coverage. Ordinary enemy defeats now create durable, idempotent settlement records and account-owned pending claims. Eligibility requires at least 10% of enemy maximum health in verified damage and a recent damage action within two minutes; incoming damage and passive presence do not qualify. XP is split by eligible damage, while the one ordinary loot result is assigned to the highest-damage eligible participant. Claim redemption atomically applies XP and inventory, remains pending on a full stack, and is idempotent. The authenticated claim API and Godot Rewards panel are implemented; server Actions #497 and #498–#503 and client Actions #129–#132 validated these slices. Server-owned weighted ordinary-enemy tables now include no-drop outcomes and cryptographically secure production rolls; Actions #518 passed. Remaining before boss reward policy: party membership, support/healing contribution, group eligibility and boss-specific settlement rules.
 
 ## Implementation order
 
 1. Finish the ordinary character and world foundations: stable skill progression, authoritative combat actions, equipment requirements, inventory capacity, player health/death/recovery, movement and persistence.
-2. Complete ordinary enemy behavior and persistence: the single-target AI/telegraph/movement/return vertical slice, durable spawn-cycle IDs and per-character contribution ledger are implemented; add threat/party contribution rules and reliable reward settlement.
-3. Introduce the reusable boss encounter framework and implement one modest first boss as a vertical slice.
-4. Add a dedicated loot-table and reward service, then migrate ordinary enemies and the first boss from direct fixed drops.
-5. Expand crafting from simple recipes into a profession-driven production loop using tools, stations, skill requirements, material families and quality.
+2. Complete ordinary enemy behavior and persistence: AI/telegraphs, durable spawn-cycle IDs, threat selection, damage-based anti-leech, atomic reward settlement/claims and initial weighted loot tables are implemented; add party and support contribution rules.
+3. Introduce the reusable server-owned boss encounter framework and implement one modest first boss as a vertical slice, reusing durable settlement/claim infrastructure.
+4. Expand loot tables with multiple/guaranteed/rare drops, quantity bands, versioned tuning and boss-exclusive materials.
+5. Expand crafting into a profession-driven production loop using tools, stations, skill requirements, material families and quality.
 6. Add more bosses, regions, resources, recipe chains, markets and player services only after the first end-to-end loop is reliable.
 
 ## Boss encounter framework
@@ -144,7 +144,7 @@ The current implementation is a first ordinary-enemy policy, not the final party
 - This policy is intentionally limited: no party membership, support/healing contribution types, multi-drop weighted loot tables, unique item instances, loot rolls or boss-specific distribution rules. Do not treat it as the final group-boss policy.
 
 
-## Initial weighted loot-table implementation (CI pending)
+## Initial weighted loot-table implementation (server Actions #518 passed)
 
 The first data-driven tables are server-owned and use a 10,000-point roll range:
 
@@ -157,4 +157,9 @@ The first data-driven tables are server-owned and use a 10,000-point roll range:
 
 ## First rare-material crafting sink
 
-The Rat Tooth now feeds a forge recipe: two Rat Teeth, two Copper Bars and one Wooden Plank produce a Rat-Tooth Blade at Smithing level 2. The blade itself requires Blades level 2 to equip and provides a modest attack bonus. This deliberately separates the crafting profession gate (Smithing) from the combat equipment gate (Blades), reinforcing profession-specific gear progression. The recipe and its skill-gated equipment test are implemented; verify the corresponding server Actions before marking the loop CI-complete.
+The Rat Tooth now feeds a forge recipe: two Rat Teeth, two Copper Bars and one Wooden Plank produce a Rat-Tooth Blade at Smithing level 2. The blade itself requires Blades level 2 to equip and provides a modest attack bonus. This deliberately separates the crafting profession gate (Smithing) from the combat equipment gate (Blades), reinforcing profession-specific gear progression. The recipe and its skill-gated equipment test are implemented. The latest Rat-Tooth Blade server Actions #520–#523 remain unverified in this handoff because current check-run status is not exposed by the available repository integration; do not infer a pass.
+
+
+## Second rare-material crafting sink: Boar Tusk
+
+The Boar Tusk now feeds a separate polearm progression path. Two Boar Tusks, two Copper Bars and one Wooden Plank produce a Boar-Tusk Spear at the Frontier Forge, requiring Smithing level 3 and awarding 120 Smithing XP. The spear itself requires Polearms level 2 to equip and grants +4 attack. This preserves the distinction between the production profession gate and the combat specialization equipment gate. Boar Tusks remain loot-only; the starter merchant cannot sell the material or the finished spear. The crafting test covers ingredient consumption, output creation, the Polearms gate and the final equipment bonus. GitHub Actions verification is pending.
