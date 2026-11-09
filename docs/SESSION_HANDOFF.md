@@ -621,3 +621,18 @@ Latest catalog commits: 7f555a986eda25b7b56ad258a9b44ecac37b6188, 4a40a028ca1248
 
 Next verify latest server tests and Vet. Then add end-to-end Stoneback reward claim coverage and test the public TickEnemyAI/RunEnemyAITick and authenticated snapshot path. Keep existing multi-item claims and 18 skills. Do not claim production-ready until full CI evidence. Never modify GalaxyMMO or reuse proprietary code. Always update this handoff after meaningful progress.
 ~~~
+
+## Stoneback end-to-end reward claim coverage (2026-11-09)
+
+- Added a PostgreSQL integration test that defeats the catalogued Stoneback through AccountRepository.AttackEnemyForAccount, verifies terminal boss state and one durable settlement, then reads and claims the multi-item reward through the existing account-owned claim API.
+- The test seeds an eligible damage contribution, verifies the guaranteed 2–4 Stoneback Scale line, accepts either/both independent bonus material lines, checks the expected 500 Blades XP and 125 Melee parent XP, and retries the claim to prove item/XP idempotency.
+- Test commit: 8b4a3f0272133d7834c3c3ac5e83ea4ce385b577.
+- This verifies the existing multi-item claim system is used rather than direct combat rewards. The random bonus rolls remain server-generated; the test only asserts the guaranteed material and validates any bonus item IDs/quantities.
+- CI status at this checkpoint: server runs #585–#592 were pending/in progress. #581 and #587 had failed on the Ground Shatter test setup; the deterministic cooldown fix is in #589. #582–#584 had stale item/loot counts; the corrections are in #586–#587. #588 adds no-target interruption. #589–#592 test the fixes and public catalog registration. Client #137 passed Godot import/script validation.
+- New server run for this reward test is expected after commit 8b4a3f0; do not mark the full boss milestone green until it passes race-enabled PostgreSQL tests and Vet.
+
+### Remaining validation
+1. Inspect #585–#592 and the reward test's new Actions run, including logs and individual test/Vet steps.
+2. Test the public TickEnemyAI/RunEnemyAITick and authenticated snapshot path after Stoneback registration.
+3. Review the actual group encounter reward policy and ensure the existing top-damage multi-item claim behavior is retained.
+4. Only report the boss as ready after all current-main server/client workflows pass.
