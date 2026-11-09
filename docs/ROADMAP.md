@@ -198,3 +198,10 @@ Client Action #183 (run 42604378304) passed; #182 (42604361140) passed. Client #
 - [x] Add regression coverage for deterministic transforms, minimum generated instance counts, protected-site exclusion and terrain-height alignment.
 - [ ] Replace placeholder primitive prop meshes with original art while preserving batching and deterministic transforms.
 - [ ] Add collision/navigation policy for substantial world obstacles only after a server-authority and pathing design is agreed; current decorative props are intentionally non-colliding.
+
+
+### Environmental dressing verification follow-up
+
+- [ ] Inspect client run #186 (42619558244) after the regression-test correction; inspect the complete log for the earlier dummy-renderer cleanup error.
+- [ ] Verify actual MultiMesh transforms and visual placement in a non-headless Godot renderer.
+- [ ] Keep decorative props non-colliding until a separate collision/navigation and server-authority design is implemented.

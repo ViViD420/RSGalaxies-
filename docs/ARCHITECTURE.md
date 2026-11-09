@@ -202,3 +202,8 @@ Server Action #603 / run `42606055274` is currently in progress. Do not mark thi
 The starter terrain now creates foliage and rock decoration after the terrain visual and matching collision mesh have been built. Both prop groups use MultiMeshInstance3D batches, deterministic RandomNumberGenerator seeds derived from the terrain seed, and the same get_height_at() sampler used by the terrain surface.
 
 Placement rejects the spawn-clearance radius, the existing integrated trail corridors, the zone edge margin and steep local height transitions. Decorative props are presentation-only in this slice: they do not claim server-authoritative obstruction or collision. Their placement is regression-tested for repeatable transforms, valid-site exclusions and terrain-height alignment. The current implementation intentionally uses low-poly primitive meshes as temporary original placeholder geometry; art replacement must preserve the deterministic placement contract and batching.
+
+
+### Headless validation boundary for MultiMesh dressing
+
+The deterministic placement generator is validated independently of RenderingServer transform readback. In the Godot headless dummy renderer, MultiMesh.get_instance_transform() returned an identity-origin transform for a populated instance, so the smoke test no longer treats that readback as proof of deterministic placement. A non-headless rendered-client check remains required to verify actual GPU instance placement and visual output. Do not interpret the headless readback test limitation as evidence that visual placement has passed.
