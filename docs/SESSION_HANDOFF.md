@@ -937,3 +937,14 @@ Full job logs, not just conclusions, were inspected:
 ### Current active work
 
 Core game focus only. The player controller now has smooth ground acceleration/deceleration, air control, coyote time, jump buffering, a fall-speed cap, smooth facing that preserves camera world yaw, and placeholder mesh bob/lean/pitch. The headless regression test and CI integration are the current in-progress task. Boss-specific work remains paused.
+
+## Movement smoke-test input simulation correction (2026-11-09)
+
+- The first headless movement regression runs exposed a test-harness failure at the jump assertion, not a Godot parser/import error:
+  - Client #148 (run 42600939055, commit 47e1c0d) and #149 (run 42600977100, commit cb96bd1) failed because `Input.action_press("jump")` did not produce the one-frame `is_action_just_pressed` edge expected by the controller.
+  - Client #150 (run 42601011352, commit 2aaa3ed) had the same result.
+  - Client #151 (run 42601069503, commit 969a7e6) waited until `is_on_floor()` was true and printed state: the player was grounded, but the action was no longer pressed when the assertion ran. This confirmed the test's synthetic press/release timing was not modeling a physical key edge reliably.
+- Production movement code was not changed in response to this test failure. The test now binds `jump` to `KEY_SPACE` and injects a pressed/released `InputEventKey` via `Input.parse_input_event()`, matching the actual keyboard input path more closely.
+- Test harness correction commit: ab30dca7aea725b2ada6f354d5a10020b9df5df6. Its new client workflow must prove the jump assertion and all other movement assertions pass; inspect logs before accepting it.
+- The movement smoke test already passed forward travel, acceleration ramp, sustained speed and deceleration before reaching the jump assertion. Do not mark the test green until the jump event path and remaining assertions pass.
+
