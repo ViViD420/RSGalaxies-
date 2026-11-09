@@ -81,9 +81,10 @@ An original sandbox MMORPG combining long-form skill progression and item gamepl
 
 ## Latest verified repository state
 
-- Current server CI: run #408 passed at commit `2e2fe958`; run #407 also passed. Current client CI: run #124 passed at commit `a856a481`.
-- Documentation consistency update: `1bb8a9d` aligns `docs/COMBAT.md` with the active 18-skill hierarchy and actual combat behavior. This handoff update follows it.
-- Earlier skill transition runs #394–#402 included intermediate failures; later corrected runs #403–#408 passed. Do not describe every transition run as green; use the latest successful runs as the current validation signal.
+- Latest confirmed successful enemy-AI domain tests: server runs #411 and #412 passed at commits `cf2540c8` and `1621e3fa`. Earlier run #410 failed during the intermediate behavior-test iteration; #411/#412 contain the corrected tests.
+- The persistent-AI implementation has triggered server runs #413 (migration), #414 (migration registration), #415 (repository persistence), and #416 (restart integration test). At the time of this handoff, #413–#415 were in progress and #416 was queued. Do not claim these changes are green until Actions reports success.
+- Current client baseline: run #124 passed at commit `a856a481`. The latest known fully green server baseline before this milestone is run #412.
+- Documentation consistency update `1bb8a9d` aligns `docs/COMBAT.md` with the active 18-skill hierarchy and actual combat behavior.
 
 ## Enemy AI foundation (new)
 
@@ -102,16 +103,17 @@ An original sandbox MMORPG combining long-form skill progression and item gamepl
 
 ## Next engineering tasks
 
-1. Integrate the new enemy AI state machine with persisted spawn instances and a bounded server-side tick/attack transaction; add migration, concurrency, restart and account-isolation tests. Then replicate enemy position/state to Godot.
-2. Add server-owned weapon/ability definitions and derived hit resolution. `docs/COMBAT.md` now documents the AI domain foundation and its remaining persistence/scheduler/client integration.
-2. Add durable encounter participation and reward settlement before implementing boss phases or group loot.
-3. Implement the reusable boss encounter state machine after ordinary enemy AI and combat are stable.
-4. Add dedicated loot tables, idempotent reward claims and explicit inventory-overflow handling before valuable boss drops.
-5. Expand crafting into tools, station and skill requirements, material properties, quality and production chains that consume boss materials.
-6. Keep server/client workflows green; run trade abuse/load tests before enabling public production trade.
-7. Defer hidden Jedi challenge implementation until progression persistence, concurrency and anti-tampering tests are ready; only the six active combat specializations are mastery candidates.
-8. Test the Godot trade panel, invitations/confirmations and remote-avatar movement on a real phone; continue authoritative movement replication and reconnect recovery.
-9. Complete production account safeguards: email verification, recovery, MFA, distributed rate limiting, admin account tools and security/load review.
+1. Finish CI verification for migration 0010 and persisted enemy AI restart tests; correct any failures before continuing.
+2. Add a server-owned world tick coordinator that selects active targets from fresh persisted presence, advances spawn AI without per-client tick amplification, and combines telegraph completion, server-calculated damage, Defense XP and enemy state in one transaction with documented row-lock ordering. Add concurrency, stale-target, zone-change, death/respawn and restart tests.
+3. Add authenticated enemy snapshot/polling and Godot interpolation for authoritative enemy positions and behavior; keep enemy attack execution gated until transactional damage is complete.
+4. Add durable encounter participation and reward settlement before implementing boss phases or group loot.
+5. Implement the reusable boss encounter state machine after ordinary enemy AI and combat are stable.
+6. Add dedicated loot tables, idempotent reward claims and explicit inventory-overflow handling before valuable boss drops.
+7. Expand crafting into tools, station and skill requirements, material properties, quality and production chains that consume boss materials.
+8. Keep server/client workflows green; run trade abuse/load tests before enabling public production trade.
+9. Defer hidden Jedi challenge implementation until progression persistence, concurrency and anti-tampering tests are ready; only the six active combat specializations are mastery candidates.
+10. Test the Godot trade panel, invitations/confirmations and remote-avatar movement on a real phone; continue authoritative movement replication and reconnect recovery.
+11. Complete production account safeguards: email verification, recovery, MFA, distributed rate limiting, admin account tools and security/load review.
 
 ## Continuation instruction
 
