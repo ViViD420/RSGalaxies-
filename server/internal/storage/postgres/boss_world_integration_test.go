@@ -319,7 +319,7 @@ func TestPostgresBossAbilityCanDefeatPlayerAndClearsTarget(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	player.Position = game.WorldPosition{ZoneID: game.DefaultWorldZoneID, X: 25, Z: 0}
+	player.Position = game.WorldPosition{ZoneID: game.DefaultWorldZoneID, X: 28, Z: 0}
 	player.Health = 5
 	if err := accountRepo.CreateCharacter(ctx, account.ID, player); err != nil {
 		t.Fatal(err)
@@ -329,9 +329,9 @@ func TestPostgresBossAbilityCanDefeatPlayerAndClearsTarget(t *testing.T) {
 		t.Fatal(err)
 	}
 	_, err = db.ExecContext(ctx, `INSERT INTO enemy_spawn_state(
-		enemy_id,health,initialized,behavior,position_zone_id,position_x,position_z,encounter_id)
-		VALUES($1,50,TRUE,'idle',$2,$3,$4,$5)`,
-		enemy.ID, enemy.Position.ZoneID, enemy.Position.X, enemy.Position.Z, encounterID)
+		enemy_id,health,initialized,behavior,position_zone_id,position_x,position_z,last_ai_updated_at,encounter_id)
+		VALUES($1,50,TRUE,'chasing',$2,$3,$4,$5,$6)`,
+		enemy.ID, enemy.Position.ZoneID, enemy.Position.X, enemy.Position.Z, now.Add(-time.Second), encounterID)
 	if err != nil {
 		t.Fatalf("seed boss spawn cycle: %v", err)
 	}
@@ -345,8 +345,9 @@ func TestPostgresBossAbilityCanDefeatPlayerAndClearsTarget(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	// At 50% health the Rampage phase enables Ground Shatter. The player is
-	// outside Stone Fist range but inside Ground Shatter's six-unit radius.
+	// At 50% health the Rampage phase enables Ground Shatter. The seeded
+	// chasing state moves the boss to four units from the player, outside
+	// Stone Fist range but inside Ground Shatter's six-unit radius.
 	if err := accountRepo.tickEnemyAIForDefinition(ctx, enemy, now); err != nil {
 		t.Fatalf("start Ground Shatter telegraph: %v", err)
 	}
