@@ -1,6 +1,6 @@
 # RS Galaxies — Session Handoff
 
-Last updated: 2026-11-09 (durable boss persistence groundwork committed; see latest checkpoint below)
+Last updated: 2026-11-09 (boss telegraph validation hardened; CI pending)
 
 ## Project identity
 
@@ -310,3 +310,26 @@ Next integrate the helpers into the existing AccountRepository.TickEnemyAI trans
 
 Preserve all existing systems, 18-skill progression, crafting, live multi-item enemy loot and Rewards UI. Never modify GalaxyMMO or reuse proprietary code. Improve existing code, commit meaningful milestones, update this handoff after every meaningful progression, and never claim tests passed without checking GitHub Actions results.
 ```
+
+## Boss persistence validation hardening (2026-11-09)
+
+- Live main advanced from b89fcd58aeaef5ceeeaa71a74a6de4db4ba3a2b7 with two focused commits:
+  - d6c12208a3b165da15206d71b4585e2f46b98954 — validBossTelegraphState now requires an inactive ability to have both timestamps zero, and an active ability to have both timestamps populated with a non-inverted interval. This closes a malformed-state acceptance gap in both load and save validation.
+  - aac8771ca17c1d52fa7cc247d584546e50771af8 — adds table-driven regression coverage for inactive state, valid active telegraph, missing start/deadline, inverted timestamps and timestamps without an active ability.
+- These changes are code/test additions only; no test command has been executed in this environment and no GitHub Actions run for these commits has been verified. The last verified server run remains Action #550 (run 42587608297, commit 5360c24), with race-enabled PostgreSQL tests and go vet successful. It predates migration 0016 and the subsequent persistence changes.
+- The durable persistence helpers remain groundwork and are not yet wired into TickEnemyAI. Boss state is not yet included in snapshots or rendered by Godot; Stoneback Colossus is not a live spawn.
+- Review note: next integration must preserve player-then-enemy lock ordering, use the boss ability's own maximum range (Ground Shatter reaches farther than the ordinary enemy interaction radius), apply Defense/armor mitigation, and commit player health/Defense XP plus AI/boss state in one transaction. Do not activate the encounter until end-to-end server/client CI validates the full path.
+
+### Immediate continuation
+1. Fetch live HEAD and all recent commits; check any available Actions runs/jobs. Re-read this handoff completely.
+2. Run/verify the server suite against a PostgreSQL test database after migration 0016 and the new regression test; do not treat Action #550 as validation for these commits.
+3. Inspect existing enemy target transaction, EnemySnapshot definition/JSON tests, combat damage/armor helpers and Godot snapshot polling/rendering. Implement a dedicated boss damage calculation and boss-only tick branch while retaining normal enemy behavior.
+4. Add concurrent-tick/exactly-once and cycle-reset integration tests before enabling a live boss.
+5. Update this handoff after each milestone and provide the latest copy/paste continuation prompt.
+
+### Current continuation prompt
+~~~text
+RS GALAXIES — RESUME DEVELOPMENT. Work only in ViViD420/RSGalaxies- on main. Read docs/SESSION_HANDOFF.md completely, inspect live HEAD/recent commits and GitHub Actions jobs before changes. Latest known code commits: d6c12208a3b165da15206d71b4585e2f46b98954 (strict complete boss telegraph validation) and aac8771ca17c1d52fa7cc247d584546e50771af8 (regression tests). These commits have not yet been verified by CI. Server Action #550 (42587608297) is the last verified server checkpoint, and predates migration 0016 and the persistence code.
+
+Continue the existing boss vertical slice: integrate cycle-scoped boss persistence into TickEnemyAI, keep player-then-enemy lock order, apply boss ability damage with ability-specific range and existing Defense/armor mitigation, and commit player health/Defense XP plus AI/boss state atomically. Test concurrent ticks, exactly-once damage, stale-cycle rejection and respawn reset. Then add authoritative boss fields to EnemySnapshot, render the boss HUD/telegraph warnings in Godot, and only then activate Stoneback Colossus using the existing multi-item reward pipeline. Preserve all existing systems and the 18-skill progression. Never modify GalaxyMMO or reuse proprietary code. Improve existing code, commit milestones and update this handoff every time. Never claim tests pass without actual Actions job evidence.
+~~~
