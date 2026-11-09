@@ -88,3 +88,7 @@ The Go service selects PostgreSQL repositories when `RS_GALAXIES_DATABASE_URL` i
 ### Boss encounter state validation
 
 Persisted boss telegraphs are now validated as a strict two-state invariant: an inactive ability has no telegraph timestamps; an active ability has both a start and deadline, with the deadline not preceding the start. Partial timestamp combinations are rejected at both database load and save boundaries. The helper is covered by table-driven regression cases. This validation hardening is not yet CI-verified and does not mean boss combat is live.
+
+### Boss damage resolution boundary
+
+The domain now has a boss-specific damage resolver that accepts the ability's server-defined range rather than reusing ordinary enemy melee range. It applies the same equipment Defense and Defense-skill mitigation as ordinary incoming attacks and awards Defense XP only for positive damage. This is currently a domain primitive; the PostgreSQL world tick and player-initiated boss defeat transaction must call it and persist its player mutation atomically with the boss/AI state before any boss is made live.
