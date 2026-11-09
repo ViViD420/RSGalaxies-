@@ -1049,3 +1049,11 @@ Core game focus only. The player controller now has smooth ground acceleration/d
 - Root cause addressed in commits 9e24d4f and 4a424b4: the attack tween now animates the full rotation vector, preserves the pre-swing pose, restores that pose on the tween's finished signal, and the test waits 0.3 seconds of elapsed time while reporting final rotation and tween-running state on failure.
 - New client Actions for these fixes are pending. Inspect their full job results/logs before calling camera/animation work verified. If the test fails again, use the emitted rotation/tween state to correct the underlying behavior; do not weaken or remove the assertion.
 - The camera wheel/keyboard zoom checks are part of the same smoke test: one-step zoom, min distance, and max distance. Actions #164/#165 prove syntax/import/export, not runtime test assertions.
+
+## Attack animation lifetime error and correction (2026-11-09)
+
+- Client Action #167 (run 42602736350, commit 9e24d4f) failed because it ran the new tween implementation against the previous 20-process-frame assertion; that stale assertion still timed out. This was not accepted as a pass.
+- Client Action #168 (run 42602742128, commit 4a424b4) passed the expanded functional assertions for terrain, movement, camera zoom and attack swing/neutral pose, but failed because two Godot dummy-renderer `Parameter "m" is null` errors appeared after PASS during shutdown. The strict CI correctly treated this as failure.
+- Root-cause hypothesis addressed: the completed Tween remained retained in `_attack_tween`, including its body-mesh target and completion callback, until the player node was destroyed. Commit 6749495 changes the completion callback to a named method, restores the captured neutral pose and immediately releases `_attack_tween`. Test commit 7ed47d now explicitly asserts the tween is no longer owned after completion, clears its local reference and yields one frame before normal cleanup.
+- This is a targeted resource-lifetime fix, not a CI filter. Client Actions after 7ed47d are pending; inspect full logs. If null-mesh warnings persist, isolate the remaining renderer resource lifetime rather than relaxing the strict error gate.
+- Action #164 and #165 passed import/export for zoom and combat trigger wiring; #166–#168 remain recorded as failures and are not overwritten.
