@@ -204,6 +204,9 @@ func TestPostgresEnemyAITargetRemainsStickyWhilePresenceIsActive(t *testing.T) {
 	db.SetMaxOpenConns(8)
 	if err := db.PingContext(ctx); err != nil { t.Fatalf("connect test database: %v", err) }
 	if err := Migrate(ctx, db); err != nil { t.Fatalf("migrate test database: %v", err) }
+	// Other PostgreSQL integration tests may leave active starter-zone presence
+	// rows. Isolate this target-selection test from unrelated characters.
+	if _, err := db.ExecContext(ctx, "DELETE FROM zone_presence WHERE zone_id=$1", game.DefaultWorldZoneID); err != nil { t.Fatal(err) }
 
 	now := time.Now().UTC().Truncate(time.Second)
 	accountRepo := NewAccountRepository(db)
