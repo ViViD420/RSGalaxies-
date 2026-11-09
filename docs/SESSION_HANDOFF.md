@@ -948,3 +948,11 @@ Core game focus only. The player controller now has smooth ground acceleration/d
 - Test harness correction commit: ab30dca7aea725b2ada6f354d5a10020b9df5df6. Its new client workflow must prove the jump assertion and all other movement assertions pass; inspect logs before accepting it.
 - The movement smoke test already passed forward travel, acceleration ramp, sustained speed and deceleration before reaching the jump assertion. Do not mark the test green until the jump event path and remaining assertions pass.
 
+
+## Movement smoke-test physics-frame ordering correction (2026-11-09)
+
+- Client Action #152 (run 42601168392, commit ab30dca7aea725b2ada6f354d5a10020b9df5df6) still failed only at the jump assertion. Its detailed diagnostic proved the test had a grounded player and a pressed jump action, but observed `velocity.y == 0` immediately after awaiting the `physics_frame` signal.
+- The SceneTree `physics_frame` signal is emitted immediately before node `_physics_process` callbacks. The test was sampling velocity at the signal boundary before the player's physics callback had completed. This was a test synchronization defect, not evidence that the production jump logic failed.
+- Updated the test in commit 92389202cafb454b71b9bdcbbbfae47ac713ad7e to await the following `process_frame` after the physics signal before reading the resulting velocity. The test now injects an actual KEY_SPACE InputEvent press/release, waits for a grounded state, and samples after the physics tick.
+- New client Action #153 must confirm this correction. If it still fails, continue diagnosis; do not weaken/remove the jump assertion or skip the smoke test.
+
