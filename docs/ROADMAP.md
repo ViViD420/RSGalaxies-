@@ -38,7 +38,9 @@
 - [x] Persistent server-owned enemy AI: aggro, chase, attack telegraphs/interruption, leash and return-to-spawn behavior; 250 ms PostgreSQL world worker, fresh-presence target selection, transactional enemy attacks and row-lock concurrency.
 - [x] Authenticated zone-scoped enemy snapshots; Godot polls, interpolates enemy movement and displays health, behavior, telegraphs and respawn state. Player attacks use persisted live enemy positions.
 - [x] Persisted sticky enemy target identity: maintain a valid active target between ticks and select the nearest eligible character when that target is lost.
-- [x] Unique encounter-cycle IDs per enemy spawn life and durable per-character damage/action contribution ledger; autonomous incoming damage updates existing participants. Reward eligibility/settlement is still pending.
+- [x] Unique encounter-cycle IDs per enemy spawn life and durable per-character damage/action contribution ledger; autonomous incoming damage updates existing participants.
+- [ ] Threat scoring for enemy target selection (active sticky target first; otherwise current-cycle contribution score, then distance); PostgreSQL integration test added and awaiting Actions verification.
+- [ ] Party membership, reward eligibility/anti-leech rules and idempotent reward settlement.
 - [ ] Threat scoring, bounded pathfinding, party aggro, combat animations, enemy abilities, weapon-family expansion and server-derived hit/miss outcomes (see docs/COMBAT_PROGRESSION.md).
 - [ ] Boss encounter framework: multi-phase bosses, encounter state, group contribution/eligibility, telegraphs, persistence and reward integration. Build after ordinary enemy/combat foundations.
 - [ ] Dedicated loot framework: server-owned weighted drop tables, guaranteed/conditional rewards, unique drops, contribution rules, anti-duplication and economy safeguards.
