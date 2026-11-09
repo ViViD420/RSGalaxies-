@@ -23,12 +23,12 @@ type LootTableDefinition struct {
 
 var lootTableDefinitions = []LootTableDefinition{
 	{ID:"frontier-rat-common",Drops:[]LootTableDrop{
-		{ItemID:"rat_pelt",Weight:7500,MinQuantity:1,MaxQuantity:1},
-		{ItemID:"rat_tooth",Weight:2500,MinQuantity:1,MaxQuantity:1},
+		{ItemID:"rat_pelt",Weight:7000,MinQuantity:1,MaxQuantity:1},
+		{ItemID:"rat_tooth",Weight:2000,MinQuantity:1,MaxQuantity:1},
 	}},
 	{ID:"frontier-boar-common",Drops:[]LootTableDrop{
-		{ItemID:"boar_hide",Weight:8000,MinQuantity:1,MaxQuantity:1},
-		{ItemID:"boar_tusk",Weight:2000,MinQuantity:1,MaxQuantity:1},
+		{ItemID:"boar_hide",Weight:7500,MinQuantity:1,MaxQuantity:1},
+		{ItemID:"boar_tusk",Weight:1500,MinQuantity:1,MaxQuantity:1},
 	}},
 }
 
@@ -71,7 +71,8 @@ func RollLootTable(tableID string, roll, quantityRoll int) (ItemQuantity,bool,er
 		}
 		totalWeight += drop.Weight
 	}
-	if totalWeight != LootRollRange { return ItemQuantity{},false,ErrUnknownLootTable }
+	if totalWeight <= 0 || totalWeight > LootRollRange { return ItemQuantity{},false,ErrUnknownLootTable }
+	if roll >= totalWeight { return ItemQuantity{},false,nil }
 	cursor := 0
 	for _, drop := range table.Drops {
 		cursor += drop.Weight
