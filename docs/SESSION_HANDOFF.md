@@ -1,6 +1,6 @@
 # RS Galaxies — Session Handoff
 
-Last updated: 2026-11-09
+Last updated: 2026-11-09 (verified against main HEAD e9764017c281897cc2a8c9d6d446919dfed0788e)
 
 ## Project identity
 
@@ -78,7 +78,6 @@ An original sandbox MMORPG combining long-form skill progression and item gamepl
 - The Godot client does not persist access tokens across launches. Secure platform-specific persistence is a future decision.
 - Remote character presence and position snapshots are implemented; successful authoritative movement refreshes shared presence in the same transaction, coalesced to one database write per character per second. Enemy AI now has persisted per-spawn state, a server-owned 250 ms world tick worker, fresh-presence target selection, transactional telegraph attacks with player health/Defense XP, and an authenticated zone-scoped enemy snapshot endpoint. The Godot client still needs to poll/render/interpolate those snapshots. The current world tick uses a nearest eligible active character within the enemy leash; target stickiness/party threat, pathfinding and more advanced behavior remain future work. Combat animations/abilities, boss encounters, dedicated loot tables, deeper crafting, unique equipment instances/durability, housing, settlements and large-scale world streaming are also outstanding.
 - The account APIs require PostgreSQL. The server's in-memory-only development mode does not register account routes.
-
 ## Sticky enemy target selection (new milestone)
 
 - Migration `a11441f` adds nullable `target_character_id` to `enemy_spawn_state`; `1457cee` registers migration 11.
@@ -157,8 +156,7 @@ An original sandbox MMORPG combining long-form skill progression and item gamepl
 ## Encounter reward policy, settlement and claim API (implementation in CI)
 
 - `game.IsEligibleForEncounterReward` requires verified damage of at least 10% of enemy max health and a player damage action within two minutes; passive presence, damage received alone, missing IDs, stale/future timestamps and zero-action records are rejected. The last-damage recency clock is not refreshed by enemy damage.
-- Migration 0014 adds `experience_skill_id` to the participant ledger. This preserves which combat specialization generated damage so XP claims use the actual combat style.
-- On enemy defeat, the combat transaction inserts the unique settlement row, reads and locks participant rows, filters eligible contributors, splits base XP proportional to damage (integer remainder to highest damage), and assigns the single enemy drop to the highest-damage eligible participant. A settlement replay is a no-op.
+- Migration 0014 adds `experience_skill_id` to the participant ledger. This preserves which combat specialization generated damage so XP claims use the actual combat style.- On enemy defeat, the combat transaction inserts the unique settlement row, reads and locks participant rows, filters eligible contributors, splits base XP proportional to damage (integer remainder to highest damage), and assigns the single enemy drop to the highest-damage eligible participant. A settlement replay is a no-op.
 - Direct killer-only kill XP and loot were removed from the domain combat path. The reward is represented by pending claims, avoiding duplicate direct grants plus claims.
 - Authenticated account APIs: `GET /api/v1/account/characters/{id}/rewards` and `POST /api/v1/account/characters/{id}/rewards/{enemyID}/{encounterID}/claim`. Claiming locks the owned character and claim row, applies XP/parent XP and item inventory, and marks claimed in one transaction. Full item stacks return `reward_inventory_full` and leave the entire claim pending. Repeated successful claims are no-ops.
 - The settlement integration test verifies defeat creates one pending claim; claim integration coverage verifies full-stack retry, XP not being consumed on failure, inventory/XP applied once and idempotent retries. Godot now has a Rewards panel with authenticated claim listing, per-claim redemption, inventory refresh and a full-stack retry message; commits d245318, 054de04 and 54749fc. Commit 37193c6 adds HTTP-level tests for authenticated claim listing and missing-claim error mapping; 2824e93 adds successful claim and foreign-character HTTP checks. Commits 0c900aa/4b2ef3a enforce and test account/character ownership on the database claim-list query; 654b7c2 moves cleanup earlier in the integration test to prevent leaked rows if assertions fail. Client runs #129–#132 all passed, including Godot 4.3 project import and script validation for the Rewards panel, panel lifecycle and cancellation of stale requests on character switch/sign-out. Party identity, support actions, loot tables and boss-specific policies remain deferred.
@@ -210,3 +208,50 @@ RS GALAXIES — RESUME DEVELOPMENT. Continue only in ViViD420/RSGalaxies- on mai
 ```
 
 Before the chat ends, refresh this handoff with the newest commit and CI statuses and provide the continuation prompt again. Give the user an early warning when a conversation handoff is approaching; do not wait until the final message.
+
+---
+
+## Latest verified repository snapshot (2026-11-09; authoritative over older status notes above)
+
+### Repository and commit state
+- Repository: `ViViD420/RSGalaxies-`; branch: `main`.
+- Latest inspected HEAD: `e9764017c281897cc2a8c9d6d446919dfed0788e` — “Mark boss phase engine domain milestone CI-verified” (documentation-only status update). The immediately preceding documentation commits are `4d6e9955ba3ff119f84a9ec614c1c5f285f16a91` (“Record CI-verified boss domain engine”) and `d4a58e7320b6e99d244aa0d63400ef4db49d9e51` (“Record boss engine intermediate CI failures and corrections”). The boss implementation commits are listed in the boss-engine section above.
+- No boss persistence, transactional boss damage integration, boss snapshot fields, Godot boss UI, or live Stoneback Colossus implementation is present in this verified snapshot. The engine remains a domain-only foundation.
+- The existing migration inventory in this handoff records migrations 0001–0015, with 0015 supporting multi-item reward claims. Migration 0016 is the anticipated next migration, but before creating it, inspect the actual migration directory and migration registry on current HEAD to confirm there is no later/unregistered migration or naming conflict.
+
+### Verified GitHub Actions
+- Server Action #550, run `42587608297`, commit `5360c24`: completed successfully. The job and both substantive steps were explicitly checked: “Test (race detector and PostgreSQL integration)” = success; “Vet” = success.
+- Server Action #549, run `42587568842`, commit `0a6d6eb`: completed successfully; race-enabled PostgreSQL test step and vet both succeeded.
+- Server Action #548, run `42587565619`, commit `ed6ecfc`: completed successfully; race-enabled PostgreSQL test step and vet both succeeded.
+- Server Action #547, run `42587531770`, commit `69b5d96`: completed successfully; race-enabled PostgreSQL test step and vet both succeeded.
+- Earlier intermediate Actions #545/#546 failed on test expectation mismatches; those failures were corrected in subsequent commits. Keep that history visible; the later corrected runs above passed.
+- Server Action #470, run `42554765267`, commit `7847f47`: rechecked and completed successfully; race-enabled PostgreSQL tests and vet both succeeded.
+- Multi-item reward pipeline remains CI-validated by server Actions #541/#542 and client Actions #133/#134, as detailed above. Do not regress the live guaranteed-plus-bonus loot definitions.
+- The latest HEAD is a documentation commit after the tested boss implementation commit. Do not describe an absent workflow result for the documentation-only HEAD as a new code-test pass; the strongest verified boss-engine code checkpoint is Action #550.
+
+### Exact next task
+Implement the first boss integration vertical slice without restarting or replacing existing systems:
+1. Inspect migration files and registration on current HEAD; confirm the next migration number before authoring it.
+2. Persist boss state under the existing enemy encounter-cycle identity, including definition ID/version, phase, active ability/telegraph start and resolution timing, cooldowns/cursor, and terminal defeat state. Design for restart recovery, concurrent world workers, stale-cycle isolation and idempotent transitions.
+3. Integrate `AdvanceBossEncounter` into the existing server-owned enemy AI transaction. Apply resolved ability damage, player health and Defense XP atomically with boss/AI state; preserve range, telegraph, interruption and cooldown semantics; prevent duplicate damage on retries and prevent defeated enemies attacking.
+4. Extend the authenticated enemy snapshot with server-owned boss identity, phase, active ability/telegraph and timing. Preserve ordinary enemy payload compatibility.
+5. Add Godot boss health/name, phase and telegraph/ability warning feedback driven only by server snapshots. Preserve the existing Rewards UI.
+6. Only after persistence, transaction, snapshots, client rendering and end-to-end CI are verified should Stoneback Colossus become a live encounter. Route rewards through the existing multi-item claim pipeline.
+7. Keep the current anti-leech policy explicitly damage-only (10% of enemy max health and recent damage within two minutes); do not silently add support eligibility. Party/support contribution work is a later milestone.
+
+### Fresh-chat start instruction
+Use this exact prompt in the new chat:
+
+```text
+RS GALAXIES — RESUME DEVELOPMENT FROM THE REPOSITORY HANDOFF.
+
+Work only in ViViD420/RSGalaxies- on branch main. First read docs/SESSION_HANDOFF.md completely, then inspect the live main HEAD, recent commits, migration files/registry and GitHub Actions results. The latest handoff snapshot records HEAD e9764017c281897cc2a8c9d6d446919dfed0788e. Do not assume that SHA is still HEAD; fetch it again.
+
+Continue the existing project; do not restart, recreate or replace it. Do not touch GalaxyMMO or reuse its proprietary code. Work autonomously with minimal questions, improve existing code, commit meaningful milestones, and update docs/SESSION_HANDOFF.md after every meaningful progression. Never report tests as passing without checking the completed GitHub Actions run and job steps.
+
+Current milestone: the boss phase engine in server/internal/game/boss.go is implemented and CI-verified as domain logic only. Server Actions #547 (42587531770), #548 (42587565619), #549 (42587568842) and #550 (42587608297) all completed successfully; #550's race-enabled PostgreSQL integration tests and go vet passed. Earlier #545/#546 failed on intermediate test expectations and were corrected by later commits. Server Action #470 (42554765267) was also rechecked and passed.
+
+Next implement durable cycle-scoped boss-state persistence (verify the next migration number; migration 0015 is the last recorded migration), integrate telegraphed boss damage atomically with existing enemy AI/player-health/Defense-XP transactions, expose authoritative boss phase/telegraph data in enemy snapshots, and build the Godot boss HUD/warnings. Only then register Stoneback Colossus as a live encounter and route its rewards through the existing CI-verified multi-item claim system. Do not call the boss playable until the full vertical slice is complete and verified.
+
+Preserve the broad 18-skill progression, profession-specific equipment, live Frontier Rat/Wild Boar multi-drop tables, durable reward claims, and existing Rewards UI. Current anti-leech eligibility is damage-only: >=10% enemy max health and damage within two minutes. Party/support contribution rules remain future work.
+```
