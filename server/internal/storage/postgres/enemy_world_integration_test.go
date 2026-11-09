@@ -177,10 +177,10 @@ func TestPostgresEnemyWorldTickCommitsAttackExactlyOnce(t *testing.T) {
 	if err != nil { t.Fatalf("attack respawned enemy at spawn: %v", err) }
 	if respawnCombat.EnemyHealth != 10 { t.Fatalf("respawned enemy health = %d, want 10", respawnCombat.EnemyHealth) }
 	var spawnX float64
-	var telegraph sql.NullTime
-	var lastUpdated sql.NullTime
-	if err := db.QueryRowContext(ctx, `SELECT position_x,telegraph_until,last_ai_updated_at FROM enemy_spawn_state WHERE enemy_id=$1`, enemyID).Scan(&spawnX,&telegraph,&lastUpdated); err != nil { t.Fatal(err) }
-	if spawnX != 8 || telegraph.Valid || lastUpdated.Valid {
-		t.Fatalf("respawn did not reset AI position/timers: x=%v telegraph=%v updated=%v", spawnX, telegraph, lastUpdated)
+	var telegraph, lastUpdated, nextAttack sql.NullTime
+	if err := db.QueryRowContext(ctx, `SELECT position_x,telegraph_until,last_ai_updated_at,next_attack_at FROM enemy_spawn_state WHERE enemy_id=$1`, enemyID).Scan(&spawnX,&telegraph,&lastUpdated,&nextAttack); err != nil { t.Fatal(err) }
+	if spawnX != 8 || telegraph.Valid || !lastUpdated.Valid || !lastUpdated.Time.Equal(now.Add(36*time.Second)) ||
+		!nextAttack.Valid || !nextAttack.Time.Equal(now.Add(39*time.Second)) {
+		t.Fatalf("respawn did not reset AI position/timers: x=%v telegraph=%v updated=%v nextAttack=%v", spawnX, telegraph, lastUpdated, nextAttack)
 	}
 }
