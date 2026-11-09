@@ -1,7 +1,7 @@
 extends SceneTree
 
 const MAIN_SCRIPT := preload("res://scripts/main.gd")
-const PLAYER_SCENE := preload("res://scenes/player.tscn")
+var test_main_node: Node3D
 
 
 func _initialize() -> void:
@@ -10,13 +10,16 @@ func _initialize() -> void:
 
 func _run_interaction_hint_smoke_test() -> void:
 	var main_node := Node3D.new()
+	test_main_node = main_node
 	main_node.set_script(MAIN_SCRIPT)
+	var hint_label := Label.new()
+	main_node.add_child(hint_label)
 	var player := CharacterBody3D.new()
 	root.add_child(player)
 	main_node.set("player_node", player)
 	main_node.set("player_id", "interaction-hint-test")
 	main_node.set("interaction_pending", false)
-	main_node.set("interaction_hint_label", Label.new())
+	main_node.set("interaction_hint_label", hint_label)
 	main_node.set("station_catalog", [
 		{"id": "frontier-workbench", "name": "Frontier Workbench", "position": {"x": 0.0, "z": 4.0}}
 	])
@@ -62,6 +65,8 @@ func _fail(message: String) -> void:
 	push_error("Interaction hint smoke test failed: " + message)
 	for child in root.get_children():
 		child.queue_free()
+	if test_main_node != null and is_instance_valid(test_main_node):
+		test_main_node.free()
 	call_deferred("_quit_after_cleanup", 1)
 
 
