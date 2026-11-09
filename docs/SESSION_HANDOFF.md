@@ -1611,3 +1611,13 @@ The procedural placement algorithm is deterministic by design and now has direct
 - No production code changed after the #187 validated commit; subsequent changes are documentation-only.
 - The #186 run validates the base dressing placement; #187 validates the additional biome-aware per-instance tinting.
 - Actual non-headless visual review and physical desktop/mobile QA remain outstanding.
+
+
+## Contextual interaction guidance — 2026-11-09
+
+- Commit 9a40b0f37ce58ec539d4a5c8db3a62cca03e07fa adds a live interaction hint to the existing HUD.
+- The hint chooses the nearest candidate using the same priority ordering as the existing E/USE interaction resolver: trader, bank, crafting station, available enemy, then gathering node. It does not replace or bypass the existing server-authoritative action routes.
+- In-range targets display an action prompt; out-of-range targets display a move-closer distance; pending requests display a busy state; unauthenticated character selection hides the hint.
+- Touch-capable devices display USE rather than E.
+- Added client/tests/interaction_hint_smoke_test.gd and wired it into .github/workflows/client.yml before the existing player/terrain smoke test.
+- Client Action #188 / run 42620047493 is the validation run for this change. At this handoff update it is still in progress. Inspect the full logs before marking the feature verified.

@@ -222,3 +222,8 @@ Foliage and rock MultiMeshes now use per-instance color data derived from the sa
 ### Biome-aware environmental tint verification
 
 Client Action #187 passed deterministic palette diversity and stable repeated sampling, with per-instance color storage enabled on both foliage and rock MultiMeshes. The full headless terrain/movement smoke test, editor import and Web export also passed. The complete log contains no Godot script or engine errors. Actual rendered visual review remains outstanding.
+
+
+### Contextual interaction hints
+
+The HUD now presents a live nearest-interaction prompt for the existing interaction resolver, with in-range action text, out-of-range distance guidance, a pending/busy state and touchscreen-aware USE wording. The prompt is presentation-only; all gather/craft/combat/bank/trade actions continue through existing authenticated server routes. Client Action #188 verification is pending.

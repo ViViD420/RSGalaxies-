@@ -221,3 +221,12 @@ Client Action #183 (run 42604378304) passed; #182 (42604361140) passed. Client #
 
 - [x] Client Action #187 (run 42619776488) passed biome-aware prop tint regression, terrain/movement smoke, Godot import and Web export with no Godot errors.
 - [ ] Review actual rendered biome tint and prop placement in a non-headless client and on physical devices.
+
+
+### Interaction feedback — active
+
+- [x] Add contextual nearest-target prompt to the HUD with action and range feedback.
+- [x] Reflect pending interaction state and hide the prompt before character selection.
+- [x] Add a focused smoke test and include it in client CI.
+- [ ] Verify the contextual prompt regression in Client Action #188 (42620047493).
+- [ ] Review prompt layout and touch wording on actual desktop/mobile devices.
