@@ -184,3 +184,14 @@ Vertical movement remains local presentation only. Any authoritative height/jump
 - The CI runner also emitted a Node.js 20 deprecation warning for `actions/checkout@v4`. This is a tooling maintenance warning, not a Godot or Go test failure.
 
 Boss implementation remains preserved and boss expansion remains paused. Core movement, world presentation, interaction, animation, UI and mobile usability remain the active priorities.
+
+ 
+## Movement latency correction candidate — 2026-11-09
+
+Commit `df58725e8b22246203ebef653255bcacbabbda91` changes `MaxMovementWindow` from 250 ms to one second. The existing client serializes 200 ms HTTP updates, so request latency can cause the actual interval between accepted positions to exceed the former calculation window. The maximum speed (7 units/second), 0.15 tolerance, finite-coordinate checks, zone bounds and server-time basis remain unchanged.
+
+Two regression tests were added:
+- A 400 ms server-measured movement interval at the configured maximum speed is accepted.
+- A five-second idle interval remains capped to the one-second window and cannot accumulate an unbounded movement distance.
+
+Server Action #603 / run `42606055274` is currently in progress. Do not mark this change verified until the complete race-enabled PostgreSQL test and Vet job logs have been inspected. If it fails, stop unrelated work and diagnose the actual cause.
