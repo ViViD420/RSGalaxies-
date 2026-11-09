@@ -130,9 +130,9 @@ An original sandbox MMORPG combining long-form skill progression and item gamepl
 ## Next engineering tasks
 
 1. Finish CI verification for #470; #469 passed the full server suite including encounter-cycle rotation, contribution upsert and participant retrieval. Then proceed to party eligibility and idempotent reward settlement. Sticky-target selection is complete and CI-validated by #457/#458. Defeated-target, cross-zone, stale-presence, leash-return, respawn-reset and shared-cooldown coverage is in the integration suite.
-2. Improve enemy target stickiness/threat selection and add bounded pathfinding; do this before party aggro or multi-enemy encounters.
+2. Add threat scoring, target-switch rules and bounded pathfinding; sticky single-target persistence is already implemented. Do this before party aggro or multi-enemy encounters.
 3. Add server-owned enemy abilities and combat telegraph types, then combat animations/feedback in Godot.
-4. Add durable encounter participation, contribution tracking and reward settlement before boss phases or group loot.
+4. Add party contribution rules, eligibility/anti-leech thresholds and idempotent reward settlement on top of the existing per-character ledger before boss phases or group loot.
 5. Implement reusable boss encounter phases after ordinary enemy behavior and reward settlement are reliable.
 6. Add dedicated loot tables, idempotent reward claims and explicit inventory-overflow handling before valuable boss drops.
 7. Expand crafting into tools, station and skill requirements, material properties, quality and production chains that consume boss materials.
