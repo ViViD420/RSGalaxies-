@@ -126,3 +126,6 @@ Each milestone is a tested, reviewable slice. A feature is not complete because 
 - [ ] Cover boss ability player defeat and interaction with player-initiated boss defeat before live registration.
 
 - [x] Cover lethal boss ability damage, player defeat, Defense XP and target/telegraph cleanup (PostgreSQL integration coverage; CI pending).
+
+- [x] Prepare Stoneback-specific crafting materials and a guaranteed-plus-independent-bonus multi-item loot table using the existing claim pipeline.
+- [ ] Assign the table to the live boss enemy definition and verify reward settlement end-to-end.
