@@ -95,7 +95,7 @@ An original sandbox MMORPG combining long-form skill progression and item gamepl
 - `24c99c0` adds PostgreSQL coverage for unique encounter IDs across respawns and per-cycle contribution records. `d495d6f` asserts that autonomous AI damage updates an already-engaged participant's incoming-damage/action counters.
 - Contribution policy currently records a character when they perform a player attack. Subsequent AI damage updates that participant but does not make an unengaged bystander eligible. The ledger is groundwork only: no party membership, threat score, reward eligibility policy, loot roll or idempotent reward settlement exists yet.
 - Server CI runs #459–#463 and #465–#466 were in progress at latest check. #464 failed on an intermediate compile error (`encounterIDValue` was referenced before the SELECT/Scan was updated); `139b122` corrects it. #467/#468 failed because the new contribution test omitted one return value from `AttackEnemyForAccount`; `4067119` fixes both assignments and #469 is validating it. Verify migration, repository, integration and contribution tests before treating this milestone as green.
-- Documentation: `07c50f5` updates the encounter/boss/loot design prerequisites; `5bd4638` updates combat documentation; `c9ba4ed` marks the ledger slice on the roadmap.
+- Documentation: `07c50f5` updates the encounter/boss/loot design prerequisites; `5bd4638` updates combat documentation; `c9ba4ed` marks the ledger slice on the roadmap; `eeb2afb` documents encounter-cycle and participant persistence in the architecture.
 
 ## Latest verified repository state
 
