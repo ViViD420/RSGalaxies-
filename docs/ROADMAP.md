@@ -110,3 +110,5 @@ Each milestone is a tested, reviewable slice. A feature is not complete because 
 - [ ] Render boss phase and telegraph feedback in Godot after transactional boss state integration.
 
 - [x] Render authoritative boss health, phase and active ability warnings in the Godot enemy label and centered boss HUD (passive snapshot consumer; live boss integration remains incomplete).
+
+- [x] Correct migration 0016's SQL comment so the existing semicolon-splitting migration runner does not submit comment text as SQL (commit f098eda; awaiting server CI).
