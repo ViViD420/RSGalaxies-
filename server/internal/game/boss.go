@@ -258,8 +258,10 @@ func AdvanceBossEncounter(definition BossEncounterDefinition, state BossEncounte
 		state.TelegraphStartedAt = time.Time{}
 		state.TelegraphUntil = time.Time{}
 		state.NextAbilityIndex = 0
-		state.LastUpdatedAt = now
-		return BossEncounterResult{State: state, PhaseChanged: !reset}, nil
+		if !reset {
+			state.LastUpdatedAt = now
+			return BossEncounterResult{State: state, PhaseChanged: true}, nil
+		}
 	}
 
 	if state.ActiveAbilityID != "" {
