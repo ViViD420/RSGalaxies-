@@ -1114,3 +1114,10 @@ Core game focus only. The player controller now has smooth ground acceleration/d
 
 - After correcting the Godot viewport API in 3d46875, tightened the narrow-screen sizing in dd32e8a: toolbar buttons no longer enforce a 100px minimum width, allowing the two-column grid to fit its calculated viewport width; the long Characters caption is shortened to Chars.
 - The first fixed-viewport validation Action #180 is pending for 3d46875; Action #181 will validate the minimum-width and label refinement. Device-level visual testing remains required.
+
+## HUD viewport API correction verification (2026-11-09)
+
+- Client Actions #178 (7125b0f) and #179 (10d36dd) both failed with the same strict parser error: get_viewport_rect() does not exist on Node in Godot 4.3; the viewport_width type inference failure was a consequence of that invalid call.
+- Commit 3d46875 replaced it with get_viewport().get_visible_rect().size.x and an explicit float declaration.
+- Client Action #180 (run 42604040649, commit 3d46875) passed the complete client job: movement/terrain/camera/attack smoke test, editor import, and Web export. Full logs contained no Godot SCRIPT ERROR or engine ERROR lines. https://github.com/ViViD420/RSGalaxies-/actions/runs/42604040649
+- Follow-up commit dd32e8a removed the toolbar's 100px minimum button width and shortened Characters to Chars so the two-column grid can shrink on narrow viewports. Action #181 is pending to validate that refinement.
