@@ -249,8 +249,7 @@ func TestPostgresBossWorldTickInterruptsAndResetsEncounterCycle(t *testing.T) {
 	if err := accountRepo.tickEnemyAIForDefinition(ctx, enemy, now.Add(6*time.Second)); err != nil {
 		t.Fatalf("start second boss telegraph: %v", err)
 	}
-	if _, err := db.ExecContext(ctx, "UPDATE zone_presence SET last_seen_at=$2 WHERE character_id=$1",
-		string(playerID), now.Add(-30*time.Second)); err != nil {
+	if _, err := db.ExecContext(ctx, "DELETE FROM zone_presence WHERE character_id=$1", string(playerID)); err != nil {
 		t.Fatal(err)
 	}
 	if err := accountRepo.tickEnemyAIForDefinition(ctx, enemy, now.Add(7*time.Second)); err != nil {
@@ -411,8 +410,21 @@ func TestPostgresBossAbilityCanDefeatPlayerAndClearsTarget(t *testing.T) {
 	if activeAbility != "ground-shatter" {
 		t.Fatalf("boss selected %q, want Ground Shatter", activeAbility)
 	}
-	if err := accountRepo.tickEnemyAIForDefinition(ctx, enemy, now.Add(2*time.Second)); err != nil {
+	if err := accountRepo.tickEnemyAIForDefinition(ctx, enemy, now.Add(3*time.Second)); err != nil {
 		t.Fatalf("resolve lethal Ground Shatter: %v", err)
+	}
+
+	var bossX, playerX float64
+	var persistedTarget, persistedAbility sql.NullString
+	var persistedDeadline sql.NullTime
+	if err := db.QueryRowContext(ctx, `SELECT s.position_x,p.position_x,s.target_character_id,
+		b.active_ability_id,b.telegraph_until
+		FROM enemy_spawn_state s
+		JOIN players p ON p.id=$3
+		JOIN boss_encounter_states b ON b.enemy_id=s.enemy_id AND b.encounter_id=s.encounter_id
+		WHERE s.enemy_id=$1 AND s.encounter_id=$2`, enemy.ID, encounterID, string(playerID)).Scan(
+		&bossX, &playerX, &persistedTarget, &persistedAbility, &persistedDeadline); err != nil {
+		t.Fatalf("inspect boss after lethal ability tick: %v", err)
 	}
 
 	updated, err := accountRepo.GetCharacter(ctx, account.ID, playerID)
@@ -420,7 +432,8 @@ func TestPostgresBossAbilityCanDefeatPlayerAndClearsTarget(t *testing.T) {
 		t.Fatal(err)
 	}
 	if updated.Health != 0 || updated.Skills["defense"].Experience != 1 {
-		t.Fatalf("lethal boss ability result: health=%d Defense=%+v", updated.Health, updated.Skills["defense"])
+		t.Fatalf("lethal boss ability result: health=%d Defense=%+v bossX=%.2f playerX=%.2f target=%+v active=%+v deadline=%+v",
+			updated.Health, updated.Skills["defense"], bossX, playerX, persistedTarget, persistedAbility, persistedDeadline)
 	}
 	var targetCharacter sql.NullString
 	var remainingAbility sql.NullString
