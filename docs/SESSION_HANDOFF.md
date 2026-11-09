@@ -1128,3 +1128,9 @@ Core game focus only. The player controller now has smooth ground acceleration/d
 - The responsive action toolbar now has no fixed horizontal minimum width, uses two columns and short Chars label, and computes its width from the current viewport. The information panel also scales to 42% of viewport width up to 390px, and its status/instruction labels wrap.
 - #180 (viewport API fix) and #181 (narrow button sizing) both passed. #178/#179 parse failures remain documented above.
 - Desktop/mobile visual and touch usability still need interactive device testing; headless import/export cannot prove layout feel or touch ergonomics.
+
+## Responsive HUD sizing refinement verified (2026-11-09)
+
+- Client Action #181 (run 42604113289, commit dd32e8a) passed strict client CI after the shrinkable-button refinement. The headless movement/terrain/camera/attack smoke test passed, editor import passed, and Web export passed; full logs contained no Godot SCRIPT ERROR or engine ERROR lines. https://github.com/ViViD420/RSGalaxies-/actions/runs/42604113289
+- Responsive HUD code is now CI-validated: two-column toolbar, 34px rows, shrinkable buttons, short Chars caption, viewport-width sizing, and wrapping status/instruction labels.
+- Device-level visual QA remains open; the next core client task is terrain biome/environment variation and richer world presentation, followed by mobile touch ergonomics and deeper movement mechanics.
