@@ -95,6 +95,19 @@ Stoneback Colossus is registered in the public enemy catalog at Verdant Frontier
 
 The Godot client polls authenticated enemy snapshots every 500 ms and treats boss identity, health, phase and active ability as server-owned. It renders the Stoneback model, boss health/phase/ability HUD and ordinary enemy labels from those snapshots; it does not choose abilities or resolve damage. The HUD now remains visible for a zero-health boss snapshot, distinguishes encounter completion from an active telegraph, and explicitly directs players to the Rewards panel after defeat. Active ability warnings instruct players to leave the boss's attack range. A short client-side presentation cue highlights an authoritative phase ID change; it never predicts a phase or drives combat state. The centered HUD uses viewport-relative horizontal margins and a flexible health bar so it can fit narrow mobile viewports. Client Action #137 passed Godot 4.3 import and script validation for the preceding client revision; the subsequent HUD feedback refinement is awaiting its own client workflow.
 
-### Remaining encounter engineering
+### Encounter development status
 
-The next work is player-facing validation and polish rather than persistence scaffolding: inspect telegraph timing and cancellation feedback, phase transition clarity, target loss/reacquisition, defeat and respawn visibility, reward claim discoverability, and desktop/mobile layout. Extend tests for any newly exposed lifecycle edge cases. Preserve the 18-skill roster, profession/equipment restrictions, existing ordinary enemy behavior and multi-item reward system. Party threat, support contributions and group rewards remain future work; do not broaden boss rewards until those policies are designed.
+Boss-specific feature work and roster expansion are paused while the core game experience is improved. Preserve the verified Stoneback implementation and its regression coverage; do not expand boss content unless a core-system dependency requires a focused compatibility fix. Keep the 18-skill roster, profession/equipment restrictions, ordinary enemy behavior and multi-item rewards intact.
+
+### Active core-game architecture priorities
+
+1. Build responsive third-person movement with acceleration, air control, jump buffering/coyote time, smooth facing and consistent touch/keyboard input.
+2. Improve movement authority and reconciliation, including reconnect and remote-player snapshot behavior without trusting client position.
+3. Replace the flat test floor with server-aligned terrain, collision and traversable world geometry.
+4. Establish reusable character animation states and equipment attachment points before layering combat/ability animations on top.
+5. Consolidate responsive HUD and contextual interaction feedback for desktop and mobile.
+6. Introduce a reusable, server-authoritative player ability/action model independent of boss-specific encounters.
+
+### Engineering quality invariant
+
+Never hide or silently bypass an error. Stop, reproduce, diagnose and fix it before moving to unrelated work; add regression coverage, inspect actual CI jobs/logs and document the failure and correction. See docs/DEVELOPMENT_RULES.md.
