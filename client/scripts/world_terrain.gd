@@ -228,10 +228,11 @@ func _build_environment_dressing() -> void:
 	foliage_mesh.radial_segments = 6
 	foliage_mesh.rings = 3
 	var foliage_material := StandardMaterial3D.new()
-	foliage_material.albedo_color = Color(0.16, 0.27, 0.13)
+	foliage_material.albedo_color = Color.WHITE
+	foliage_material.vertex_color_use_as_albedo = true
 	foliage_material.roughness = 1.0
 	foliage_mesh.material = foliage_material
-	_add_dressing_multimesh("Foliage", foliage_mesh, foliage_transforms, GeometryInstance3D.SHADOW_CASTING_SETTING_OFF)
+	_add_dressing_multimesh("Foliage", foliage_mesh, foliage_transforms, GeometryInstance3D.SHADOW_CASTING_SETTING_OFF, true)
 
 	var rock_mesh := SphereMesh.new()
 	rock_mesh.radius = 0.58
@@ -239,10 +240,11 @@ func _build_environment_dressing() -> void:
 	rock_mesh.radial_segments = 5
 	rock_mesh.rings = 2
 	var rock_material := StandardMaterial3D.new()
-	rock_material.albedo_color = Color(0.34, 0.35, 0.32)
+	rock_material.albedo_color = Color.WHITE
+	rock_material.vertex_color_use_as_albedo = true
 	rock_material.roughness = 1.0
 	rock_mesh.material = rock_material
-	_add_dressing_multimesh("Rocks", rock_mesh, rock_transforms, GeometryInstance3D.SHADOW_CASTING_SETTING_ON)
+	_add_dressing_multimesh("Rocks", rock_mesh, rock_transforms, GeometryInstance3D.SHADOW_CASTING_SETTING_ON, false)
 
 
 func _build_dressing_transforms(
@@ -298,17 +300,42 @@ func _add_dressing_multimesh(
 	node_name: String,
 	mesh: Mesh,
 	transforms: Array[Transform3D],
-	shadow_setting: int
+	shadow_setting: int,
+	foliage_palette: bool
 ) -> void:
 	var multimesh := MultiMesh.new()
 	multimesh.transform_format = MultiMesh.TRANSFORM_3D
 	multimesh.mesh = mesh
+	# Instance color storage must be enabled before allocating instance buffers.
+	multimesh.use_colors = true
 	multimesh.instance_count = transforms.size()
 	for index in range(transforms.size()):
-		multimesh.set_instance_transform(index, transforms[index])
+		var instance_transform := transforms[index]
+		multimesh.set_instance_transform(index, instance_transform)
+		multimesh.set_instance_color(index, _dressing_color_at(instance_transform.origin, foliage_palette))
 
 	var instance := MultiMeshInstance3D.new()
 	instance.name = node_name
 	instance.multimesh = multimesh
 	instance.cast_shadow = shadow_setting
 	add_child(instance)
+
+
+
+func _dressing_color_at(position: Vector3, foliage_palette: bool) -> Color:
+	var moisture := _biome_noise.get_noise_2d(position.x, position.z)
+	if foliage_palette:
+		if moisture > 0.28:
+			var moss_weight := clampf((moisture - 0.28) / 0.55, 0.0, 1.0)
+			return Color(0.16, 0.29, 0.14).lerp(Color(0.30, 0.42, 0.22), moss_weight)
+		if moisture < -0.28:
+			var dry_weight := clampf((-moisture - 0.28) / 0.55, 0.0, 1.0)
+			return Color(0.38, 0.34, 0.20).lerp(Color(0.55, 0.46, 0.27), dry_weight)
+		var transition_weight := clampf((moisture + 0.28) / 0.56, 0.0, 1.0)
+		return Color(0.20, 0.32, 0.16).lerp(Color(0.29, 0.39, 0.21), transition_weight)
+
+	var dry_rock_weight := clampf((-moisture + 0.2) / 1.2, 0.0, 1.0) * 0.35
+	var moss_rock_weight := clampf((moisture + 0.2) / 1.2, 0.0, 1.0) * 0.35
+	var rock_color := Color(0.36, 0.37, 0.35)
+	rock_color = rock_color.lerp(Color(0.45, 0.39, 0.31), dry_rock_weight)
+	return rock_color.lerp(Color(0.31, 0.37, 0.31), moss_rock_weight)

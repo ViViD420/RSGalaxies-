@@ -51,6 +51,25 @@ func _run_movement_smoke_test() -> void:
 	if foliage_instance == null or rock_instance == null or foliage_instance.multimesh == null or rock_instance.multimesh == null:
 		_fail("Deterministic environmental foliage and rock MultiMeshes were not created.")
 		return
+	if not foliage_instance.multimesh.is_using_colors() or not rock_instance.multimesh.is_using_colors():
+		_fail("Environmental dressing MultiMeshes must enable per-instance biome color data.")
+		return
+	var prop_palette: Dictionary = {}
+	for sample_x in range(-100, 101, 20):
+		for sample_z in range(-100, 101, 20):
+			var sample_height := float(terrain.call("get_height_at", float(sample_x), float(sample_z)))
+			var sample_color: Color = terrain.call("_dressing_color_at", Vector3(float(sample_x), sample_height, float(sample_z)), true)
+			var color_key := "%.2f|%.2f|%.2f" % [sample_color.r, sample_color.g, sample_color.b]
+			prop_palette[color_key] = true
+	if prop_palette.size() < 3:
+		_fail("Environmental foliage palette did not produce distinct wet, transition and dry-region color variation.")
+		return
+	var color_position := Vector3(18.0, float(terrain.call("get_height_at", 18.0, -42.0)), -42.0)
+	var dressing_color_a: Color = terrain.call("_dressing_color_at", color_position, true)
+	var dressing_color_b: Color = terrain.call("_dressing_color_at", color_position, true)
+	if not is_equal_approx(dressing_color_a.r, dressing_color_b.r) or not is_equal_approx(dressing_color_a.g, dressing_color_b.g) or not is_equal_approx(dressing_color_a.b, dressing_color_b.b):
+		_fail("Environmental per-instance biome color sampling is not deterministic.")
+		return
 	if foliage_instance.multimesh.instance_count < 100 or rock_instance.multimesh.instance_count < 20:
 		_fail("Environmental dressing produced too few valid instances; foliage=%s rocks=%s." % [foliage_instance.multimesh.instance_count, rock_instance.multimesh.instance_count])
 		return
