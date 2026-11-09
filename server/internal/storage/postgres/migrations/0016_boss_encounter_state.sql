@@ -1,6 +1,6 @@
 -- Boss state is isolated by the same encounter-cycle identity used by the
 -- enemy contribution and reward ledgers. Deleting a spawn row cascades its
--- transient boss state; old cycles remain isolated and cannot overwrite a
+-- transient boss state. Old cycles remain isolated and cannot overwrite a
 -- newly respawned boss.
 CREATE TABLE IF NOT EXISTS boss_encounter_states (
     enemy_id TEXT NOT NULL REFERENCES enemy_spawn_state(enemy_id) ON DELETE CASCADE,
