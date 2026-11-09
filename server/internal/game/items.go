@@ -36,6 +36,9 @@ var itemDefinitions = []ItemDefinition{
 	{ID: "wild_herb", Name: "Wild Herb", Description: "A hardy medicinal plant gathered from the frontier.", MaxStack: 100, BuyPrice: 4, SellPrice: 2},
 	{ID: "herbal_bundle", Name: "Herbal Bundle", Description: "A carefully packed bundle of medicinal plants.", MaxStack: 100, BuyPrice: 18, SellPrice: 8},
 	{ID: "herbal_tea", Name: "Herbal Tea", Description: "A warm restorative drink brewed from frontier herbs. Restores up to 15 health.", MaxStack: 10, BuyPrice: 15, SellPrice: 4, Consumable: true, HealAmount: 15},
+	{ID: "stoneback_scale", Name: "Stoneback Scale", Description: "A dense mineralized scale shed by the Stoneback Colossus, useful in advanced armor crafting.", MaxStack: 100, BuyPrice: 0, SellPrice: 8},
+	{ID: "stoneback_plate", Name: "Stoneback Plate", Description: "A broad armored plate prized by frontier armorers for durable protective equipment.", MaxStack: 100, BuyPrice: 0, SellPrice: 18},
+	{ID: "stoneback_core", Name: "Stoneback Core", Description: "A rare hardened core recovered from the Stoneback Colossus and suited to specialized high-tier crafting.", MaxStack: 10, BuyPrice: 0, SellPrice: 75},
 }
 
 func ItemDefinitions() []ItemDefinition {
