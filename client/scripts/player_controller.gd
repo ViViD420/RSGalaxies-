@@ -37,7 +37,9 @@ var _coyote_time_left := 0.0
 var _jump_buffer_left := 0.0
 var _body_mesh_base_y := 0.9
 var _locomotion_clock := 0.0
-var _attack_tween: Tween
+var _attack_animation_active := false
+var _attack_animation_elapsed := 0.0
+var _attack_neutral_y := 0.0
 
 
 func _ready() -> void:
@@ -79,27 +81,22 @@ func _adjust_camera_zoom(amount: float) -> void:
 
 
 func play_attack_animation() -> void:
-	if _attack_tween != null and _attack_tween.is_running():
-		_attack_tween.kill()
-	var neutral_rotation := body_mesh.rotation
-	var swing_rotation := neutral_rotation + Vector3(0.0, attack_swing_radians, 0.0)
-	_attack_tween = create_tween()
-	_attack_tween.set_trans(Tween.TRANS_QUAD)
-	_attack_tween.tween_property(
-		body_mesh, "rotation", swing_rotation, attack_swing_duration * 0.45
-	).set_ease(Tween.EASE_OUT)
-	_attack_tween.tween_property(
-		body_mesh, "rotation", neutral_rotation, attack_swing_duration * 0.55
-	).set_ease(Tween.EASE_IN)
-	_attack_tween.finished.connect(_finish_attack_animation.bind(neutral_rotation))
+	_attack_animation_elapsed = 0.0
+	_attack_neutral_y = body_mesh.rotation.y
+	_attack_animation_active = true
 
 
-func _finish_attack_animation(neutral_rotation: Vector3) -> void:
-	if is_instance_valid(body_mesh):
-		body_mesh.rotation = neutral_rotation
-	# Release the completed Tween immediately so it cannot retain a stale
-	# presentation-node target through scene shutdown.
-	_attack_tween = null
+func _update_attack_animation(delta: float) -> void:
+	if not _attack_animation_active:
+		return
+	_attack_animation_elapsed += delta
+	var duration := maxf(attack_swing_duration, 0.01)
+	var progress := clampf(_attack_animation_elapsed / duration, 0.0, 1.0)
+	# A smooth single-arc swing keeps animation deterministic and allocation-free.
+	body_mesh.rotation.y = _attack_neutral_y + sin(progress * PI) * attack_swing_radians
+	if progress >= 1.0:
+		body_mesh.rotation.y = _attack_neutral_y
+		_attack_animation_active = false
 
 
 func _rotate_camera(relative: Vector2) -> void:
@@ -126,6 +123,7 @@ func _physics_process(delta: float) -> void:
 	_update_horizontal_velocity(move_direction, delta)
 	_update_facing(move_direction, delta)
 	_update_locomotion_presentation(move_direction, delta)
+	_update_attack_animation(delta)
 	move_and_slide()
 
 
