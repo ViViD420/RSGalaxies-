@@ -636,3 +636,23 @@ Next verify latest server tests and Vet. Then add end-to-end Stoneback reward cl
 2. Test the public TickEnemyAI/RunEnemyAITick and authenticated snapshot path after Stoneback registration.
 3. Review the actual group encounter reward policy and ensure the existing top-damage multi-item claim behavior is retained.
 4. Only report the boss as ready after all current-main server/client workflows pass.
+
+## Public registration CI corrections and isolation hardening (2026-11-09)
+
+- Actual server logs for #590–#592 exposed expected follow-on failures from catalog activation:
+  - Existing enemy snapshot integration still expected two zone enemies; it now expects three including Stoneback (commit 45a55571e23a3e139b2a5ffeb8d26a301bb57cc7).
+  - The public API enemy/world catalog assertions were updated to three enemies in aba266e; those checks passed in #592, but the PostgreSQL snapshot assertion remained stale.
+- Server #589/#592 also exposed test isolation/ability timing issues:
+  - No-target interruption used an expired timestamp update that did not reliably remove the presence row; it now deletes the test character's presence before ticking the no-target path.
+  - Boss world tick integration tests now use unique zone IDs so unrelated presence rows from other tests cannot become boss targets.
+  - The lethal Ground Shatter test now seeds Rampage with Stone Fist on cooldown, ensuring Ground Shatter is the only eligible ability, advances beyond the deadline, and includes persisted position/target/telegraph diagnostics if damage does not resolve.
+  - These corrections are in commits 8913d33d and b373dc80.
+- Server #593 adds the Stoneback reward settlement/claim integration test; its run was in progress at the last check.
+- Server #594–#597 are expected to verify no-target isolation, deterministic lethal resolution, public boss snapshots and the updated snapshot count. Inspect actual results before marking the boss green.
+- Client #137 passed Godot import/script validation for the distinctive boss model.
+
+### Next actions
+1. Inspect #593–#597 and fix any new reward/registration/tick failures.
+2. Confirm public TickEnemyAI creates the boss state and authenticated snapshots include boss identity/phase.
+3. Verify Stoneback multi-item reward claim, including XP and idempotent retry.
+4. Only after server and client CI pass, treat the registered boss as a verified playable encounter.
