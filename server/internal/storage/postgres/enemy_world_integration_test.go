@@ -85,4 +85,24 @@ func TestPostgresEnemyWorldTickCommitsAttackExactlyOnce(t *testing.T) {
 		}
 	}
 	if !found { t.Fatal("frontier rat missing from zone enemy snapshots") }
+
+	// Once the presence lease expires, the worker must stop attacking and
+	// return the enemy to its catalogued spawn instead of chasing stale data.
+	if err := accountRepo.TickEnemyAI(ctx, enemyID, now.Add(30*time.Second)); err != nil {
+		t.Fatalf("tick after target presence expires: %v", err)
+	}
+	if err := accountRepo.TickEnemyAI(ctx, enemyID, now.Add(31*time.Second)); err != nil {
+		t.Fatalf("complete enemy leash return: %v", err)
+	}
+	snapshots, err = accountRepo.ListEnemySnapshotsForAccount(ctx, account.ID, playerID, now.Add(31*time.Second))
+	if err != nil { t.Fatalf("list snapshots after leash return: %v", err) }
+	for _, snapshot := range snapshots {
+		if snapshot.EnemyID == enemyID {
+			if snapshot.Behavior != game.EnemyIdle || snapshot.X != 8 || snapshot.Z != 0 {
+				t.Fatalf("enemy did not return to spawn after stale target: %+v", snapshot)
+			}
+			return
+		}
+	}
+	t.Fatal("frontier rat missing after leash return")
 }
