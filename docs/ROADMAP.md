@@ -24,7 +24,7 @@
 
 ## Milestone 3: Skills and progression
 
-- [x] Twenty data-driven ordinary skills (12 combat, 4 gathering, 4 production), level 1–99 progression curve and XP cap; categories and Jedi mastery eligibility remain server-internal.
+- [x] Eighteen active core skills: Melee/Ranged parents, six combat specializations, independent Defense/Strength co-skills, four gathering and four production skills; level 1–99 progression. Legacy Combat/Tactics XP is preserved but inactive.
 - [x] Authenticated live skills panel with per-skill XP progress and next-level thresholds.
 - [x] Tree, stone, copper and wild-herb gathering with range, skill, charge and respawn rules.
 - [x] Godot selects gathering targets and builds resource props from the server node catalog.
@@ -33,10 +33,13 @@
 - [x] Workbench plank, herbal-bundle and herbal-tea recipes plus forge copper smelting/training-sword recipes.
 - [x] Cooking profession progression through crafting a server-defined healing tea consumable.
 - [x] Transactional crafting with ingredient consumption, output capacity and skill XP.
-- [x] Basic PvE enemy definitions, server-calculated damage, cooldowns, retaliation, combat XP, loot and respawns.
+- [x] Basic PvE enemy definitions, server-calculated damage, cooldowns, retaliation, specialization/parent/co-skill XP, starter loot and respawns.
 - [x] Player health, defeated-state action restrictions and safe-spawn recovery.
-- [ ] Enemy movement/AI, combat animations, abilities, target selection and deeper combat progression (including server-derived accuracy from governing skill, ability and equipment; see docs/COMBAT_PROGRESSION.md).
-- [ ] Recipe quality, tool requirements, advanced stations and broader profession progression.
+- [ ] Enemy movement/AI, combat animations, abilities, target selection, weapon-family support and server-derived hit resolution (see docs/COMBAT_PROGRESSION.md).
+- [ ] Boss encounter framework: multi-phase bosses, encounter state, group contribution/eligibility, telegraphs, persistence and reward integration. Build after ordinary enemy/combat foundations.
+- [ ] Dedicated loot framework: server-owned weighted drop tables, guaranteed/conditional rewards, unique drops, contribution rules, anti-duplication and economy safeguards.
+- [ ] Deeper crafting framework: richer recipes, tool/station/skill requirements, material properties, quality, experimentation and crafted-item progression.
+- [ ] Recipe quality, tool requirements, advanced stations and broader profession progression. Advanced non-combat specialization trees remain deferred until core loops are stable.
 
 ## Milestone 4: Inventory, equipment and economy
 
