@@ -132,3 +132,5 @@ Each milestone is a tested, reviewable slice. A feature is not complete because 
 - [ ] Add richer terrain paths, environmental dressing and biome transitions. Four starter-zone trails are integrated into terrain vertex colors (no separate mesh); centerline/color smoke validation passed in Client Action #177.
 - [ ] Improve interaction feedback, combat hit reactions, ability VFX and weapon-family animation sets.
 - [ ] Responsive HUD layout and consistent desktop/mobile interaction playtesting.
+
+- [ ] Validate responsive HUD on narrow mobile, tablet and desktop aspect ratios. Primary action toolbar now uses a responsive two-column grid and status text wraps; CI and device playtesting remain pending.
