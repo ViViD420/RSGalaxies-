@@ -39,6 +39,7 @@ func readEnemyAIState(ctx context.Context, reader enemyStateReader, enemy game.E
 	if err != nil { return 0, false, sql.NullTime{}, game.EnemyAIState{}, fmt.Errorf("read enemy AI state: %w", err) }
 	state := game.EnemyAIState{Behavior: game.EnemyBehaviorState(behavior), Position: enemy.Position}
 	if zoneID.Valid && x.Valid && z.Valid { state.Position = game.WorldPosition{ZoneID: zoneID.String, X: x.Float64, Z: z.Float64} }
+	if targetCharacterID.Valid { state.TargetCharacterID = targetCharacterID.String }
 	if telegraphUntil.Valid { state.TelegraphUntil = telegraphUntil.Time.UTC() }
 	if nextAttackAt.Valid { state.NextAttackAt = nextAttackAt.Time.UTC() }
 	if lastUpdatedAt.Valid { state.LastUpdatedAt = lastUpdatedAt.Time.UTC() }
@@ -50,12 +51,13 @@ func (r *AccountRepository) activeEnemyCandidates(ctx context.Context, enemy gam
 	rows, err := r.db.QueryContext(ctx, `SELECT account_id, character_id FROM zone_presence
 		WHERE zone_id=$1 AND last_seen_at>$2
 		AND position_x BETWEEN $3 AND $4 AND position_z BETWEEN $5 AND $6
-		ORDER BY POWER(position_x-$7,2)+POWER(position_z-$8,2), character_id
-		LIMIT $9`,
+		ORDER BY CASE WHEN character_id=$9 THEN 0 ELSE 1 END,
+		POWER(position_x-$7,2)+POWER(position_z-$8,2), character_id
+		LIMIT $10`,
 		state.Position.ZoneID, now.UTC().Add(-game.PresenceLease),
 		state.Position.X-config.LeashRange, state.Position.X+config.LeashRange,
 		state.Position.Z-config.LeashRange, state.Position.Z+config.LeashRange,
-		state.Position.X, state.Position.Z, game.MaxZonePresence)
+		state.Position.X, state.Position.Z, state.TargetCharacterID, game.MaxZonePresence)
 	if err != nil { return nil, fmt.Errorf("select active enemy targets: %w", err) }
 	defer rows.Close()
 	candidates := make([]enemyTargetCandidate, 0, game.MaxZonePresence)
@@ -109,6 +111,11 @@ func (r *AccountRepository) TickEnemyAI(ctx context.Context, enemyID string, now
 			state = game.EnemyAIState{Behavior: game.EnemyIdle, Position: enemy.Position}
 		}
 		result := game.AdvanceEnemyAI(enemy, enemyAIConfig(enemy), state, player.Position, now)
+		if (result.State.Behavior == game.EnemyChasing || result.State.Behavior == game.EnemyTelegraphing) && player.Health > 0 {
+			result.State.TargetCharacterID = string(player.ID)
+		} else {
+			result.State.TargetCharacterID = ""
+		}
 		if result.AttackRequested {
 			if _, err := player.ReceiveEnemyAttack(enemy, result.State.Position, now); err != nil {
 				_ = tx.Rollback()
@@ -144,6 +151,7 @@ func (r *AccountRepository) TickEnemyAI(ctx context.Context, enemyID string, now
 		state = game.EnemyAIState{Behavior: game.EnemyIdle, Position: enemy.Position}
 	}
 	result := game.AdvanceEnemyAI(enemy, enemyAIConfig(enemy), state, game.WorldPosition{}, now)
+	result.State.TargetCharacterID = ""
 	if err := persistEnemyAIState(ctx, tx, enemyID, health, initialized, respawnAt, result.State); err != nil { return err }
 	if err := tx.Commit(); err != nil { return fmt.Errorf("commit idle enemy tick: %w", err) }
 	return nil
@@ -166,6 +174,7 @@ func readEnemyAIStateForUpdate(ctx context.Context, tx *sql.Tx, enemy game.Enemy
 	if err != nil { return 0, false, sql.NullTime{}, game.EnemyAIState{}, fmt.Errorf("lock enemy AI state: %w", err) }
 	state := game.EnemyAIState{Behavior: game.EnemyBehaviorState(behavior), Position: enemy.Position}
 	if zoneID.Valid && x.Valid && z.Valid { state.Position = game.WorldPosition{ZoneID: zoneID.String, X: x.Float64, Z: z.Float64} }
+	if targetCharacterID.Valid { state.TargetCharacterID = targetCharacterID.String }
 	if telegraphUntil.Valid { state.TelegraphUntil = telegraphUntil.Time.UTC() }
 	if nextAttackAt.Valid { state.NextAttackAt = nextAttackAt.Time.UTC() }
 	if lastUpdatedAt.Valid { state.LastUpdatedAt = lastUpdatedAt.Time.UTC() }
@@ -177,11 +186,11 @@ func persistEnemyAIState(ctx context.Context, tx *sql.Tx, enemyID string, health
 	if respawnAt.Valid { respawnValue = respawnAt.Time.UTC() }
 	_, err := tx.ExecContext(ctx, `UPDATE enemy_spawn_state SET health=$2, initialized=$3,
 		behavior=$4, position_zone_id=$5, position_x=$6, position_z=$7,
-		telegraph_until=$8, next_attack_at=$9, last_ai_updated_at=$10, respawn_at=$11
-		WHERE enemy_id=$1`,
+		telegraph_until=$8, next_attack_at=$9, last_ai_updated_at=$10,
+		target_character_id=$11, respawn_at=$12 WHERE enemy_id=$1`,
 		enemyID, health, initialized, string(state.Behavior), state.Position.ZoneID,
 		state.Position.X, state.Position.Z, nullableTime(state.TelegraphUntil),
-		nullableTime(state.NextAttackAt), state.LastUpdatedAt.UTC(), respawnValue)
+		nullableTime(state.NextAttackAt), state.LastUpdatedAt.UTC(), nullableString(state.TargetCharacterID), respawnValue)
 	if err != nil { return fmt.Errorf("persist enemy AI world state: %w", err) }
 	return nil
 }
