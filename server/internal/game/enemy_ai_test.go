@@ -57,3 +57,25 @@ func TestEnemyAIRejectsCrossZoneChaseAndBoundsLongTick(t *testing.T) {
 	result := AdvanceEnemyAI(enemy, config, state, player, now.Add(time.Hour))
 	if result.State.Behavior != EnemyIdle || !result.ReachedSpawn { t.Fatalf("cross-zone leash result=%+v", result) }
 }
+
+ 
+func TestEnemyAITimestampNeverMovesBackward(t *testing.T) {
+	enemy, config, now := testEnemyAI()
+	player := WorldPosition{ZoneID: DefaultWorldZoneID, X: 10, Z: 0}
+	state := EnemyAIState{
+		Behavior: EnemyChasing,
+		Position: enemy.Position,
+		LastUpdatedAt: now.Add(2 * time.Second),
+	}
+	result := AdvanceEnemyAI(enemy, config, state, player, now.Add(time.Second))
+	if !result.State.LastUpdatedAt.Equal(now.Add(2*time.Second)) {
+		t.Fatalf("simulation clock moved backwards: %s", result.State.LastUpdatedAt)
+	}
+	if result.State.Position.X != 0 {
+		t.Fatalf("stale tick moved enemy: x=%v", result.State.Position.X)
+	}
+	next := AdvanceEnemyAI(enemy, config, result.State, player, now.Add(3*time.Second))
+	if next.State.Position.X != 4 || !next.State.LastUpdatedAt.Equal(now.Add(3*time.Second)) {
+		t.Fatalf("monotonic next tick = %+v", next.State)
+	}
+}
