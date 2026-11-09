@@ -1406,3 +1406,98 @@ Boss development is explicitly paused. Focus heavily on core game mechanics, pla
 - No client workflow is pending from the current biome code: #182 and #183 are completed success. No new runtime code is introduced by the handoff/architecture/roadmap/guide commits. The only explicit manual QA still open is physical desktop/mobile visual and touch testing; movement server-height authority remains a design decision, not a completed feature.
 - Source JSON files have not yet been supplied in this chat. Their exact names, locations, structure and content are unknown. The next chat must discover and read the real files; the example paths/schema in the guide are suggestions only.
 - Current implementation repo remains ViViD420/RSGalaxies- on main. The user intends to create a new ChatGPT project called RS Galaxies with source folders containing the three JSON summaries. The next chat must distinguish that ChatGPT project from a GitHub repository and must not migrate, overwrite or redirect code without checking the user's intended repository.
+
+
+---
+
+## New-project source JSON discovery and design synthesis — 2026-11-09
+
+### Actual source files discovered
+
+The user supplied all three JSON files as attachments in the active RS Galaxies project workspace. Their actual mounted paths are:
+
+1. `/mnt/data/swg_pre_cu_reference_manual.json`
+2. `/mnt/data/osrs_system_reference_manual.json`
+3. `/mnt/data/rs3_system_reference_manual.json`
+
+All three were parsed in full using a JSON parser. All were syntactically valid. The entire structured JSON content was read; there are no embedded Markdown fields in these particular files. The schema is different per source:
+
+- SWG: `metadata`, `section_1_character_engine`, `section_2_skill_point_matrix`, `section_3_sandbox_economy`, `section_4_planetary_colonization`, `section_5_galactic_civil_war`, `section_6_jedi_unlock`.
+- OSRS: `game_metadata`, `core_mechanics`, `stat_and_experience_matrices`, `combat_formulas_and_stat_engine`, `skills_deep_dive`, `economy_and_item_systems`.
+- RS3: `game_engine_architecture`, `combat_evolution_engine_eoc`, `progression_and_economy_metrics`.
+
+The files are currently workspace attachments, not files located under a tracked GitHub `source/` directory. The repository tree was inspected; no raw reference JSON files were present in the tracked project tree. Do not claim they were committed or invent a source-folder path. Their current workspace paths above are exact for this session.
+
+The previous handoff statement that source JSON files had not yet been supplied was correct at the time it was written and is superseded by this dated discovery entry.
+
+### Research artifacts created
+
+- `docs/DESIGN_SYNTHESIS.md` — detailed source-attributed independent reviews of each source section, inferred player motivations, strengths/trade-offs, adopt/adapt/reject/defer decisions, cross-source comparison, implementation mapping, coverage gaps and movement audit.
+- `docs/DESIGN_DECISIONS.md` — 25 explicit design decisions with source attribution and status.
+
+Key conclusions:
+- Preserve broad progression. Do not import SWG's 250-point skill budget or force skill-box dropping.
+- Keep the existing 18-skill catalog and current 1–99 / 200M XP foundation while improving real skill utility.
+- Use equipment, tools, recipes, resources, stations, access and investment for specialization.
+- Resource properties and crafting experimentation are promising future adaptations, but should be compact, meaningful and explainable; do not import exact SWG attribute matrices or destructive failure rules.
+- Player settlements/housing are a long-term pillar, dependent on social, ownership, permission and persistent construction foundations.
+- Do not copy the OSRS/RS3 600 ms tick or tile movement; preserve the current continuous 3D controller.
+- Future ability categories, cooldowns and action resources must be original, server-authoritative and readable; no copied formulas, adrenaline values or exact tick timing.
+- Item salvage/recycling is a promising future crafting loop; defer until component/item foundations exist.
+- Market taxes, death rules, faction PvP and Jedi-like unlocks remain deferred/open rather than being copied.
+- The supplied JSONs do not substantively cover quests, terrain/world geography, mobile controls, accessibility, detailed UI, animation systems or housing decoration. Do not attribute those areas to these sources.
+
+### Repository and CI reinspection
+
+Implementation repository remains `ViViD420/RSGalaxies-`, branch `main`.
+
+At initial inspection:
+- Branch HEAD was `e0b20df070e610d302bb429c0abc184d1f479c35`, a documentation/handoff commit.
+- The latest runtime client commit was `477fec24d8a570dd9d84c2d4c9d0ae220fb3d34f`.
+- Recent documentation commits included source guide `248de4402b0feb4fe31dc1410fce7e88683a5eb8`, architecture `769b1e08d8a1ca3c9126ea90feaa6948cec743d0`, and roadmap `3ae1a006ef629fc7095d6a0b072cb92e9e3a107e`.
+
+Latest verified workflow details:
+- Client Action #183, run `42604378304`, job `godot-check` job ID `129116460464`: passed. Full job log inspected. It shows the movement smoke PASS line, Godot 4.3 headless import and Web export; no Godot `SCRIPT ERROR:` or `ERROR:` lines.
+- Client Action #182, run `42604361140`: passed.
+- Client Action #181, run `42604113289`: passed.
+- Client Action #180, run `42604040649`: passed.
+- Client Actions #178 (`42603926295`) and #179 (`42603956717`) failed because `get_viewport_rect()` is not available on the `main.gd` base object in Godot 4.3, and `viewport_width` then could not infer a type. The code was corrected to `get_viewport().get_visible_rect().size.x`; #180/#181 verified the correction. These failures are preserved, not erased.
+- Server Action #602, run `42598330356`, job ID `129096353486`: passed race-enabled PostgreSQL integration tests and `go vet ./...`. Package output: auth, game, httpapi and postgres all `ok`; command log shows Vet invoked and job passed. PostgreSQL service logs contain ERROR entries for intentional negative-path integration tests exercising unique, foreign-key and check constraints. These are expected only in the context of those tests; keep the logs visible and do not suppress them.
+- The runner logs also include an upstream Node.js 20 deprecation warning for `actions/checkout@v4`. Track as tooling maintenance, not a Go/Godot code failure.
+
+### Movement, terrain and client audit
+
+Inspected:
+- `client/scripts/player_controller.gd`
+- `client/scripts/main.gd`
+- `client/tests/player_controller_smoke_test.gd`
+- `client/scripts/world_terrain.gd`
+- `server/internal/game/movement.go`
+- `server/internal/httpapi/server.go`
+
+Findings:
+- Controller already implements continuous camera-relative movement, ground/air acceleration/deceleration, smooth facing, jump buffering, coyote time, local gravity/fall cap, bounded spring-arm zoom and mesh-only locomotion presentation.
+- Attack swing is an allocation-free sine arc on the visual mesh and should only be triggered after successful server-confirmed combat; collision shape is not animated.
+- Client movement synchronization sends X/Z only on a 200 ms timer and serializes one HTTP request at a time. While a request is pending, later timer events are skipped. The client applies the authoritative position returned by the server.
+- Server movement validates action eligibility, finite X/Z values, world bounds and planar speed. Current values: maximum speed 7.0 units/sec, tolerance 0.15, elapsed-time calculation window capped at 250 ms. It does not validate Y, jump arc, terrain height or collision.
+- Potential issue to test, not yet proven: serialized client requests can have an actual interval longer than 250 ms when network response latency is added to the 200 ms timer. The server caps elapsed time at 250 ms, while the local player may have moved longer, possibly causing avoidable position correction. Add a delayed-response/latency regression and reproduce before changing any server timing/speed constants or protocol.
+- Terrain is a deterministic 240-unit square with 96 subdivisions per side, broad/detail/biome noise, vertex-color biome palette and four integrated trail paths. Terrain visual and collision use the same generated mesh. The smoke test checks trail colors/geometry, deterministic height and biome sampling, collision faces, a physics ray hit, player grounding, movement acceleration/sustained speed/deceleration, jump, camera zoom bounds, visible attack swing and collision/presentation separation.
+- Environmental dressing (vegetation, rocks, landmarks and biome-specific resource placement) remains open. Physical desktop/mobile visual and touch QA remains unperformed.
+
+### Current active priority and next exact task
+
+Boss work remains paused. Preserve Stoneback and existing boss tests, but do not add bosses or boss mechanics.
+
+Next:
+1. Add a deterministic regression that simulates delayed movement acknowledgements / request serialization and measures whether the 250 ms server calculation cap causes a legitimate client correction.
+2. If reproduced, design a server-time-based movement update strategy that preserves maximum speed, zone bounds, action eligibility and anti-teleport guarantees. Do not simply remove the cap or weaken validation.
+3. Run full movement unit tests and PostgreSQL integration tests as appropriate; inspect every log.
+4. Continue with terrain environmental dressing and player presentation/interactions after movement correctness is verified.
+5. Keep `docs/SESSION_HANDOFF.md`, `docs/ARCHITECTURE.md` and `docs/ROADMAP.md` current after every meaningful change.
+
+### Source artifact commits
+
+- Design synthesis creation commit: `f50f0d03d05363a80a3de867666af9ac718606fa`.
+- Design decision log creation commit: `47d076db7bc4f0d33fa87c44c30ab98954ede6b4`.
+
+The architecture, roadmap and this handoff are being updated in follow-up documentation commits; fetch main again after these updates to record the final branch HEAD.
