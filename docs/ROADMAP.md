@@ -133,4 +133,4 @@ Each milestone is a tested, reviewable slice. A feature is not complete because 
 - [ ] Improve interaction feedback, combat hit reactions, ability VFX and weapon-family animation sets.
 - [ ] Responsive HUD layout and consistent desktop/mobile interaction playtesting.
 
-- [ ] Validate responsive HUD on narrow mobile, tablet and desktop aspect ratios. Primary action toolbar now uses a responsive two-column grid and status text wraps; Actions #178/#179 caught an unsupported viewport API; corrected and passed in Client Action #180. Follow-up shrinkable-button refinement awaits #181; device playtesting remains outstanding.
+- [ ] Validate responsive HUD on narrow mobile, tablet and desktop aspect ratios. Primary action toolbar now uses a responsive two-column grid and status text wraps; Actions #178/#179 caught an unsupported viewport API; corrected and passed in Client Action #180. Follow-up shrinkable-button refinement passed in #181; interactive device playtesting remains outstanding.
