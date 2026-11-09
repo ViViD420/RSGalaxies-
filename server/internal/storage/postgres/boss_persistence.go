@@ -106,6 +106,54 @@ func loadBossEncounterStateForUpdate(
 	return state, definitionID, true, nil
 }
 
+// markBossEncounterDefeated records a terminal state in the same transaction
+// as the player attack that reduced the boss to zero health. It also creates a
+// terminal row when the first hit defeats the boss before its first AI tick.
+func markBossEncounterDefeated(
+	ctx context.Context,
+	tx *sql.Tx,
+	enemyID string,
+	definition game.BossEncounterDefinition,
+	encounterID string,
+	now time.Time,
+) error {
+	if err := game.ValidateBossEncounterDefinition(definition); err != nil {
+		return fmt.Errorf("validate defeated boss definition: %w", err)
+	}
+	if now.IsZero() || len(definition.Phases) == 0 {
+		return errors.New("invalid boss defeat timestamp or definition")
+	}
+	state, storedDefinitionID, found, err := loadBossEncounterStateForUpdate(ctx, tx, enemyID, encounterID)
+	if err != nil {
+		return err
+	}
+	if found {
+		if storedDefinitionID != definition.ID || state.DefinitionVersion != definition.Version {
+			return errors.New("boss defeat definition does not match persisted encounter")
+		}
+		if state.Defeated {
+			return nil
+		}
+	} else {
+		state = game.BossEncounterState{
+			EncounterID: encounterID,
+			DefinitionVersion: definition.Version,
+			PhaseID: definition.Phases[0].ID,
+			PhaseStartedAt: now.UTC(),
+			AbilityCooldowns: make(map[string]time.Time),
+		}
+	}
+	state.Defeated = true
+	state.ActiveAbilityID = ""
+	state.TelegraphStartedAt = time.Time{}
+	state.TelegraphUntil = time.Time{}
+	if state.LastUpdatedAt.After(now.UTC()) {
+		now = state.LastUpdatedAt
+	}
+	state.LastUpdatedAt = now.UTC()
+	return persistBossEncounterState(ctx, tx, enemyID, definition.ID, state)
+}
+
 // persistBossEncounterState writes the complete deterministic boss state in
 // the same transaction as enemy/player combat. The parent-cycle lock prevents
 // an old encounter worker from writing into a respawned boss cycle.
