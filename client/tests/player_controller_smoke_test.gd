@@ -38,13 +38,14 @@ func _run_movement_smoke_test() -> void:
 
 	var travelled_forward := starting_z - player.global_position.z
 	var peak_speed := Vector2(player.velocity.x, player.velocity.z).length()
+	var configured_move_speed: float = float(player.get("move_speed"))
 	if travelled_forward < 0.3:
 		_fail("Forward input did not move the character far enough.")
 		return
-	if initial_speed <= 0.0 or initial_speed >= player.move_speed:
+	if initial_speed <= 0.0 or initial_speed >= configured_move_speed:
 		_fail("Ground acceleration did not ramp speed from rest.")
 		return
-	if peak_speed < player.move_speed * 0.8:
+	if peak_speed < configured_move_speed * 0.8:
 		_fail("Sustained movement did not approach the configured movement speed.")
 		return
 
