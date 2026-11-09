@@ -96,3 +96,7 @@ The domain now has a boss-specific damage resolver that accepts the ability's se
 ### Boss snapshot contract
 
 Enemy snapshots now have optional boss identity/version, phase, active ability and telegraph timing fields. The PostgreSQL read joins boss state only for the enemy's currently active encounter-cycle ID, preventing stale-cycle leakage. Optional timestamps are pointer-backed so ordinary enemy snapshots retain their prior JSON shape. This is snapshot plumbing only: no live boss state is currently advanced by the world tick.
+
+### Godot boss HUD boundary
+
+The client now has a passive boss encounter panel that renders health, phase and active ability from the optional authoritative enemy snapshot fields. It does not simulate telegraph timing or select abilities. The panel is hidden when no active boss snapshot is present. This UI is not a playable encounter until the PostgreSQL world tick and player defeat paths persist the boss state atomically.
