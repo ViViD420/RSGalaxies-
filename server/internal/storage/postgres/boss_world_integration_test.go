@@ -448,3 +448,62 @@ func TestPostgresBossAbilityCanDefeatPlayerAndClearsTarget(t *testing.T) {
 	}
 }
 
+func TestPostgresPublicBossTickAppearsInAuthenticatedSnapshots(t *testing.T) {
+	db := integrationDatabase(t)
+	ctx := context.Background()
+	now := time.Now().UTC().Truncate(time.Microsecond)
+	repo := NewAccountRepository(db)
+	enemy, ok := game.FindEnemy("stoneback-colossus")
+	if !ok {
+		t.Fatal("Stoneback Colossus is missing from the public enemy catalog")
+	}
+	account, _, err := repo.Register(ctx,
+		fmt.Sprintf("stoneback-snapshot-%d@example.test", now.UnixNano()),
+		"StrongTestPassword!2026", now)
+	if err != nil {
+		t.Fatal(err)
+	}
+	playerID := game.PlayerID(fmt.Sprintf("stoneback-snapshot-player-%d", now.UnixNano()))
+	player, err := game.NewPlayer(playerID, "StonebackObserver", now)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if err := repo.CreateCharacter(ctx, account.ID, player); err != nil {
+		t.Fatal(err)
+	}
+	_, _ = db.ExecContext(ctx, "DELETE FROM enemy_spawn_state WHERE enemy_id=$1", enemy.ID)
+	t.Cleanup(func() {
+		_, _ = db.ExecContext(context.Background(), "DELETE FROM enemy_spawn_state WHERE enemy_id=$1", enemy.ID)
+		_, _ = db.ExecContext(context.Background(), "DELETE FROM players WHERE id=$1", string(playerID))
+		_, _ = db.ExecContext(context.Background(), "DELETE FROM accounts WHERE id=$1", account.ID)
+	})
+
+	if err := repo.TickEnemyAI(ctx, enemy.ID, now); err != nil {
+		t.Fatalf("tick public Stoneback definition: %v", err)
+	}
+	snapshots, err := repo.ListEnemySnapshotsForAccount(ctx, account.ID, playerID, now)
+	if err != nil {
+		t.Fatalf("list authenticated enemy snapshots: %v", err)
+	}
+	if len(snapshots) != len(game.EnemyDefinitions()) {
+		t.Fatalf("snapshot count=%d, want %d public enemies", len(snapshots), len(game.EnemyDefinitions()))
+	}
+	var bossSnapshot *game.EnemySnapshot
+	for index := range snapshots {
+		if snapshots[index].EnemyID == enemy.ID {
+			bossSnapshot = &snapshots[index]
+			break
+		}
+	}
+	if bossSnapshot == nil {
+		t.Fatal("authenticated snapshots omitted Stoneback Colossus")
+	}
+	if bossSnapshot.BossID != "stoneback-colossus" ||
+		bossSnapshot.BossPhaseID != "guarded" ||
+		bossSnapshot.BossDefinitionVersion != 1 ||
+		bossSnapshot.Health != enemy.MaxHealth ||
+		bossSnapshot.BossPhaseStartedAt == nil {
+		t.Fatalf("public Stoneback snapshot = %+v", *bossSnapshot)
+	}
+}
+
