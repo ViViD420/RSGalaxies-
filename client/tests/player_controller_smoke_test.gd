@@ -23,6 +23,11 @@ func _run_movement_smoke_test() -> void:
 	if terrain_collision == null or terrain_collision.shape == null:
 		_fail("Procedural terrain did not generate collision geometry.")
 		return
+	var collision_mesh := terrain_collision.shape as ConcavePolygonShape3D
+	if collision_mesh == null or collision_mesh.get_faces().is_empty():
+		_fail("Procedural terrain collision has no triangle faces.")
+		return
+	print("Terrain collision face vertices: ", collision_mesh.get_faces().size())
 
 	var spawn_height := float(terrain.call("get_height_at", 0.0, 0.0))
 	var distant_height := float(terrain.call("get_height_at", 24.0, -18.0))
@@ -47,7 +52,8 @@ func _run_movement_smoke_test() -> void:
 		await process_frame
 		initial_ground_frames += 1
 	if not player.is_on_floor():
-		_fail("Player did not settle on generated terrain collision; position=%s velocity=%s." % [player.global_position, player.velocity])
+		var current_ground_height := float(terrain.call("get_height_at", player.global_position.x, player.global_position.z))
+		_fail("Player did not settle on generated terrain collision; position=%s ground_height=%s velocity=%s faces=%s." % [player.global_position, current_ground_height, player.velocity, collision_mesh.get_faces().size()])
 		return
 
 	var starting_z := player.global_position.z
