@@ -1090,3 +1090,10 @@ Core game focus only. The player controller now has smooth ground acceleration/d
 - Replaced separate ribbon geometry with terrain-integrated trail coloration in commit b5b418a: fixed deterministic X/Z centerlines are stored as paths, each terrain vertex measures its distance to the nearest path segment, and a smooth blend paints a distinct packed-dirt color into the existing terrain mesh vertex colors. This removes extra MeshInstance3D and z-fighting risk while keeping the trail conformal to the same terrain surface/collision.
 - Replaced the trail visual-node test with assertions over the existing terrain mesh's vertex-color array, centerline distance at settlement, and separation from a remote point (commit f900678).
 - Actions #174/#175 and #173 must remain recorded; inspect #176+ runs for the redesigned implementation. Do not assume the second mesh was definitively the cause until the new CI logs are clean.
+
+## Integrated trail verification (2026-11-09)
+
+- Client Action #177 (run 42603680438, commit 6d1e970) passed the updated trail-color smoke test plus terrain/collision, deterministic height, movement, camera zoom and attack swing tests. Full job logs contain the PASS line and no Godot SCRIPT ERROR or engine ERROR lines. https://github.com/ViViD420/RSGalaxies-/actions/runs/42603680438
+- Action #176 (run 42603653793, commit b5b418a) failed because it ran after the terrain script redesign but before the matching test rewrite; its old assertion still expected a separate TrailSurface node, which the new design intentionally removed. Matching test commit 6d1e970 corrected the stale assertion; #177 is the passing run.
+- The vertex-color trail implementation is now verified: the existing terrain mesh contains the configured dirt path color, the settlement centerline distance samples to zero, and a distant point remains outside the trail. The terrain collision remains generated from the same base terrain mesh.
+- Earlier #173/#174 failures for separate-mesh shutdown errors remain documented. #175 happened to pass that earlier design, but the final design removes the additional mesh and is verified by #177.
