@@ -803,3 +803,20 @@ Start by checking current main HEAD and client Action #139 for commit 743c5a8. S
 2. Inspect current main HEAD and latest server/client Actions again.
 3. Continue target/telegraph/respawn and reward idempotency review. Do not claim actual mobile viewport testing from headless script-import CI.
 4. Keep the handoff, roadmap and architecture synchronized after meaningful progress.
+
+## Responsive HUD validation and concurrent reward-claim review (2026-11-09)
+
+- Client Action #140 (run 42598227447, commit e810999e6bec24b8646d3c31dc4f14d3f87ea0e4) passed all job steps: Godot 4.3 installation, project import and script validation. This validates the responsive HUD layout revision.
+- Added PostgreSQL regression coverage for two simultaneous Stoneback reward-claim requests against the same character and encounter. The test now launches both calls together and asserts both return a claimed view with the exact same expected Stoneback item count and 500 Blades / 125 Melee XP; a later sequential retry still checks idempotency.
+- Test change commit 639a0f772a57e1a65b0a295216c823b77e0454ff; cleanup commit 96e67caa6af9bf766caeca1483d0817dacb512ed.
+- Server Action #601 (run 42598317321) for the initial test commit was in progress; #602 (run 42598330356) was queued for the cleanup commit. Inspect both run results and individual Test/Vet steps before claiming this new concurrency coverage passed.
+- docs/ROADMAP.md and docs/ARCHITECTURE.md were refreshed in commits 2bae4e2ef879b82457158e00d39dc48123de12b2 and 974a09d67397491093c9ed9a9b19b5dfd64c5eac.
+- Code review confirmed ReceiveBossAttack uses the ability's own server-defined range, same-zone validation, equipment Defense bonus and Defense-skill mitigation; damage is clamped to current player health, and Defense XP is awarded only for positive damage. Existing unit tests cover ability-range/mitigation and invalid/out-of-range non-mutation. The transactional world tick and lethal player-defeat PostgreSQL tests cover actual persistence.
+- Reward settlement inserts a unique (enemy_id, encounter_id) settlement under the locked enemy defeat transaction; claims are unique per participant and item lines are unique per claim. Claim redemption locks the owned player and claim row, then treats an already-claimed row as a no-op. The new concurrent test targets this locking/idempotency boundary directly.
+
+### Immediate next actions
+
+1. Inspect server Actions #601/#602 and their Test/Vet job steps; fix any compile, race or PostgreSQL integration failure.
+2. Verify latest main HEAD after any follow-up fixes and inspect all newest Actions.
+3. Continue reviewing target lifecycle, respawn snapshots and encounter completion UX. Keep client authority limited to rendering server state.
+4. Update this handoff, roadmap and architecture after each meaningful milestone.
