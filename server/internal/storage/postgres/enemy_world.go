@@ -345,10 +345,10 @@ func (r *AccountRepository) ListEnemySnapshotsForAccount(ctx context.Context, ac
 				snapshot.BossID = bossID.String
 				if bossDefinitionVersion.Valid { snapshot.BossDefinitionVersion = int(bossDefinitionVersion.Int64) }
 				if bossPhaseID.Valid { snapshot.BossPhaseID = bossPhaseID.String }
-				if bossPhaseStartedAt.Valid { snapshot.BossPhaseStartedAt = bossPhaseStartedAt.Time.UTC() }
+				if bossPhaseStartedAt.Valid { value := bossPhaseStartedAt.Time.UTC(); snapshot.BossPhaseStartedAt = &value }
 				if bossAbilityID.Valid { snapshot.BossActiveAbilityID = bossAbilityID.String }
-				if bossTelegraphStartedAt.Valid { snapshot.BossTelegraphStartedAt = bossTelegraphStartedAt.Time.UTC() }
-				if bossTelegraphUntil.Valid { snapshot.BossTelegraphUntil = bossTelegraphUntil.Time.UTC() }
+				if bossTelegraphStartedAt.Valid { value := bossTelegraphStartedAt.Time.UTC(); snapshot.BossTelegraphStartedAt = &value }
+				if bossTelegraphUntil.Valid { value := bossTelegraphUntil.Time.UTC(); snapshot.BossTelegraphUntil = &value }
 			}
 			if snapshot.Health <= 0 && snapshot.RespawnAt.IsZero() { snapshot.RespawnAt = now.UTC() }
 		}
