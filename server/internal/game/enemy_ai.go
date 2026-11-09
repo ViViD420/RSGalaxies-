@@ -118,3 +118,20 @@ func moveToward(from *WorldPosition, target WorldPosition, maxDistance float64) 
 	from.X += dx / distance * step
 	from.Z += dz / distance * step
 }
+
+ 
+// EnemySnapshot is the read-only, zone-scoped state clients use to render
+// server-authoritative enemy instances. It contains no account/player secrets.
+type EnemySnapshot struct {
+	EnemyID string `json:"enemyId"`
+	Name string `json:"name"`
+	ZoneID string `json:"zoneId"`
+	X float64 `json:"x"`
+	Z float64 `json:"z"`
+	Health int `json:"health"`
+	MaxHealth int `json:"maxHealth"`
+	Behavior EnemyBehaviorState `json:"behavior"`
+	TelegraphUntil time.Time `json:"telegraphUntil,omitempty"`
+	RespawnAt time.Time `json:"respawnAt,omitempty"`
+	LastUpdatedAt time.Time `json:"lastUpdatedAt,omitempty"`
+}
