@@ -1536,3 +1536,27 @@ New tests:
 ### Next action
 
 Wait for Server Action #603. If it passes, record the run URL and exact package/Vet outcomes. If it fails, stop and fix before proceeding. After verified movement work, resume core world improvements (deterministic environmental dressing, resource placement, player state presentation and interaction feedback). Boss expansion remains paused.
+
+
+## Core world presentation implementation — 2026-11-09
+
+### Change
+
+- Added deterministic environmental foliage and rock placement to client/scripts/world_terrain.gd.
+- Added two batched MultiMeshInstance3D groups using low-poly primitive placeholder meshes; no per-prop scene-node proliferation.
+- Placement uses terrain-seed-derived RNG streams, shared terrain height sampling, spawn/trail/edge clearances and a local steep-slope rejection check.
+- Added smoke-test regression checks in client/tests/player_controller_smoke_test.gd for generated instance counts, deterministic repeated transforms, exclusion validity and height alignment.
+- Decorative meshes are explicitly presentation-only and do not claim collision or server-authoritative obstruction.
+
+### Validation
+
+- Source patch created against main HEAD 8b23ceb40a32530fac04d196fa13f88bc9d29257.
+- Server Action #603 / run 42606055274 completed successfully: go test -race ./... passed all Go packages including PostgreSQL integration tests; go vet ./... passed. PostgreSQL ERROR log entries are intentional negative-path constraint tests (duplicate keys, invalid foreign keys/check constraints and expected referential-integrity rejection); test packages exited successfully. Node.js 20 deprecation warning from upstream GitHub Actions remains informational.
+- Client validation for the environmental-dressing patch is triggered by the commit and must be inspected before the feature is called verified. No local Godot runtime was available through the repository connector, so no local execution is claimed.
+
+### Next steps
+
+1. Inspect the complete client workflow logs and fix every genuine error before unrelated work.
+2. Expand terrain environmental identity with original vegetation/rock variants and biome-aware placement, retaining MultiMesh batching.
+3. Continue movement reconciliation and interaction-state work only after client CI is clean.
+4. Update this handoff, architecture and roadmap after each meaningful tested slice.

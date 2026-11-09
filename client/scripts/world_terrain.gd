@@ -21,6 +21,7 @@ func _ready() -> void:
 	_configure_noise()
 	_configure_trails()
 	_build_terrain()
+	_build_environment_dressing()
 
 
 func get_height_at(x: float, z: float) -> float:
@@ -200,3 +201,114 @@ func _base_color_for_position(position: Vector3) -> Color:
 	if moisture < -0.28:
 		return grass.lerp(dry_grass, clampf((-moisture - 0.28) / 0.55, 0.0, 1.0))
 	return grass.lerp(moss, clampf((position.y + 0.55) / 1.3, 0.0, 1.0))
+
+
+@export_group("Environmental Dressing")
+@export_range(0, 500, 1) var foliage_instance_count := 180
+@export_range(0, 200, 1) var rock_instance_count := 55
+@export var dressing_trail_clearance := 5.0
+@export var dressing_spawn_clearance := 14.0
+
+
+func _build_environment_dressing() -> void:
+	if get_node_or_null("TerrainSurface") == null or get_node_or_null("TerrainCollision") == null:
+		push_error("WorldTerrain cannot place environmental dressing before terrain visuals and collision exist.")
+		return
+
+	var foliage_transforms := _build_dressing_transforms(
+		foliage_instance_count, 3571, 0.72, 1.28, 0.42
+	)
+	var rock_transforms := _build_dressing_transforms(
+		rock_instance_count, 7919, 0.62, 1.34, 0.22
+	)
+
+	var foliage_mesh := SphereMesh.new()
+	foliage_mesh.radius = 0.52
+	foliage_mesh.height = 1.02
+	foliage_mesh.radial_segments = 6
+	foliage_mesh.rings = 3
+	var foliage_material := StandardMaterial3D.new()
+	foliage_material.albedo_color = Color(0.16, 0.27, 0.13)
+	foliage_material.roughness = 1.0
+	foliage_mesh.material = foliage_material
+	_add_dressing_multimesh("Foliage", foliage_mesh, foliage_transforms, GeometryInstance3D.SHADOW_CASTING_SETTING_OFF)
+
+	var rock_mesh := SphereMesh.new()
+	rock_mesh.radius = 0.58
+	rock_mesh.height = 0.78
+	rock_mesh.radial_segments = 5
+	rock_mesh.rings = 2
+	var rock_material := StandardMaterial3D.new()
+	rock_material.albedo_color = Color(0.34, 0.35, 0.32)
+	rock_material.roughness = 1.0
+	rock_mesh.material = rock_material
+	_add_dressing_multimesh("Rocks", rock_mesh, rock_transforms, GeometryInstance3D.SHADOW_CASTING_SETTING_ON)
+
+
+func _build_dressing_transforms(
+	requested_count: int,
+	seed_offset: int,
+	minimum_scale: float,
+	maximum_scale: float,
+	y_offset: float
+) -> Array[Transform3D]:
+	var transforms: Array[Transform3D] = []
+	if requested_count <= 0:
+		return transforms
+
+	var rng := RandomNumberGenerator.new()
+	rng.seed = int(terrain_seed) + seed_offset
+	var half_size := maxf(0.0, world_size * 0.5 - 8.0)
+	var maximum_attempts := requested_count * 80
+	var attempts := 0
+	while transforms.size() < requested_count and attempts < maximum_attempts:
+		attempts += 1
+		var x := rng.randf_range(-half_size, half_size)
+		var z := rng.randf_range(-half_size, half_size)
+		if not _is_valid_dressing_site(x, z):
+			continue
+
+		var scale_x := rng.randf_range(minimum_scale, maximum_scale)
+		var scale_y := rng.randf_range(minimum_scale, maximum_scale)
+		var scale_z := rng.randf_range(minimum_scale, maximum_scale)
+		var yaw := rng.randf_range(0.0, TAU)
+		var basis := Basis(Vector3.UP, yaw).scaled(Vector3(scale_x, scale_y, scale_z))
+		var ground_height := get_height_at(x, z)
+		transforms.append(Transform3D(basis, Vector3(x, ground_height + y_offset, z)))
+	return transforms
+
+
+func _is_valid_dressing_site(x: float, z: float) -> bool:
+	var half_size := world_size * 0.5
+	if absf(x) > half_size - 8.0 or absf(z) > half_size - 8.0:
+		return false
+	if Vector2(x, z).length() < dressing_spawn_clearance:
+		return false
+	if _distance_to_trails(Vector2(x, z)) < dressing_trail_clearance:
+		return false
+
+	# Avoid placing decorative meshes on visibly abrupt terrain transitions.
+	var sample_offset := 1.5
+	var slope_x := get_height_at(x + sample_offset, z) - get_height_at(x - sample_offset, z)
+	var slope_z := get_height_at(x, z + sample_offset) - get_height_at(x, z - sample_offset)
+	return Vector2(slope_x, slope_z).length() <= 1.2
+
+
+func _add_dressing_multimesh(
+	node_name: String,
+	mesh: Mesh,
+	transforms: Array[Transform3D],
+	shadow_setting: int
+) -> void:
+	var multimesh := MultiMesh.new()
+	multimesh.transform_format = MultiMesh.TRANSFORM_3D
+	multimesh.mesh = mesh
+	multimesh.instance_count = transforms.size()
+	for index in range(transforms.size()):
+		multimesh.set_instance_transform(index, transforms[index])
+
+	var instance := MultiMeshInstance3D.new()
+	instance.name = node_name
+	instance.multimesh = multimesh
+	instance.cast_shadow = shadow_setting
+	add_child(instance)

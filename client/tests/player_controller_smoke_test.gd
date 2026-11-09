@@ -46,6 +46,32 @@ func _run_movement_smoke_test() -> void:
 		_fail("Frontier trail centerline sampling is incorrect; center=%s remote=%s." % [settlement_trail_distance, remote_trail_distance])
 		return
 
+	var foliage_instance := terrain.get_node_or_null("Foliage") as MultiMeshInstance3D
+	var rock_instance := terrain.get_node_or_null("Rocks") as MultiMeshInstance3D
+	if foliage_instance == null or rock_instance == null or foliage_instance.multimesh == null or rock_instance.multimesh == null:
+		_fail("Deterministic environmental foliage and rock MultiMeshes were not created.")
+		return
+	if foliage_instance.multimesh.instance_count < 100 or rock_instance.multimesh.instance_count < 20:
+		_fail("Environmental dressing produced too few valid instances; foliage=%s rocks=%s." % [foliage_instance.multimesh.instance_count, rock_instance.multimesh.instance_count])
+		return
+	var repeated_foliage: Array = terrain.call("_build_dressing_transforms", 180, 3571, 0.72, 1.28, 0.42)
+	if repeated_foliage.size() != foliage_instance.multimesh.instance_count:
+		_fail("Environmental foliage placement is not deterministic across identical seeded generation.")
+		return
+	for index in range(repeated_foliage.size()):
+		var generated_transform: Transform3D = foliage_instance.multimesh.get_instance_transform(index)
+		var repeated_transform: Transform3D = repeated_foliage[index]
+		if generated_transform.origin.distance_to(repeated_transform.origin) > 0.0001:
+			_fail("Environmental foliage transform changed for a repeated deterministic seed at instance %s." % index)
+			return
+		if not bool(terrain.call("_is_valid_dressing_site", generated_transform.origin.x, generated_transform.origin.z)):
+			_fail("Environmental dressing was placed inside a protected trail, spawn or steep-slope exclusion.")
+			return
+		var expected_ground_height := float(terrain.call("get_height_at", generated_transform.origin.x, generated_transform.origin.z))
+		if absf(generated_transform.origin.y - (expected_ground_height + 0.42)) > 0.001:
+			_fail("Environmental foliage transform is not aligned to the shared deterministic terrain height sample.")
+			return
+
 	var terrain_body := terrain.get_node_or_null("TerrainCollision") as StaticBody3D
 	var terrain_collision := terrain.get_node_or_null("TerrainCollision/TerrainShape") as CollisionShape3D
 	if terrain_body == null or terrain_collision == null or terrain_collision.shape == null:

@@ -189,3 +189,12 @@ Client Action #183 (run 42604378304) passed; #182 (42604361140) passed. Client #
 - [x] Add a regression for serialized client updates delayed to 400 ms.
 - [x] Add a regression proving a five-second idle interval remains capped to one second.
 - [ ] Server Action #603 / run `42606055274` must complete race-enabled PostgreSQL integration tests and `go vet ./...`; inspect full logs before marking the movement correction complete.
+
+
+### Core world presentation — active
+
+- [x] Add deterministic foliage and rock environmental dressing to the existing terrain root using batched MultiMesh rendering.
+- [x] Keep decorative placement aligned to the shared terrain height sampler and clear of spawn/trail corridors and steep slopes.
+- [x] Add regression coverage for deterministic transforms, minimum generated instance counts, protected-site exclusion and terrain-height alignment.
+- [ ] Replace placeholder primitive prop meshes with original art while preserving batching and deterministic transforms.
+- [ ] Add collision/navigation policy for substantial world obstacles only after a server-authority and pathing design is agreed; current decorative props are intentionally non-colliding.

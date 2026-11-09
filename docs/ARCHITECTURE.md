@@ -195,3 +195,10 @@ Two regression tests were added:
 - A five-second idle interval remains capped to the one-second window and cannot accumulate an unbounded movement distance.
 
 Server Action #603 / run `42606055274` is currently in progress. Do not mark this change verified until the complete race-enabled PostgreSQL test and Vet job logs have been inspected. If it fails, stop unrelated work and diagnose the actual cause.
+
+
+## Deterministic environmental dressing
+
+The starter terrain now creates foliage and rock decoration after the terrain visual and matching collision mesh have been built. Both prop groups use MultiMeshInstance3D batches, deterministic RandomNumberGenerator seeds derived from the terrain seed, and the same get_height_at() sampler used by the terrain surface.
+
+Placement rejects the spawn-clearance radius, the existing integrated trail corridors, the zone edge margin and steep local height transitions. Decorative props are presentation-only in this slice: they do not claim server-authoritative obstruction or collision. Their placement is regression-tested for repeatable transforms, valid-site exclusions and terrain-height alignment. The current implementation intentionally uses low-poly primitive meshes as temporary original placeholder geometry; art replacement must preserve the deterministic placement contract and batching.
