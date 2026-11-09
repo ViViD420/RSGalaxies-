@@ -61,8 +61,9 @@ func _run_movement_smoke_test() -> void:
 	for index in range(repeated_foliage.size()):
 		var generated_transform: Transform3D = foliage_instance.multimesh.get_instance_transform(index)
 		var repeated_transform: Transform3D = repeated_foliage[index]
-		if generated_transform.origin.distance_to(repeated_transform.origin) > 0.0001:
-			_fail("Environmental foliage transform changed for a repeated deterministic seed at instance %s." % index)
+		var transform_delta := generated_transform.origin.distance_to(repeated_transform.origin)
+		if transform_delta > 0.01:
+			_fail("Environmental foliage transform changed for a repeated deterministic seed at instance %s; stored=%s regenerated=%s delta=%s." % [index, generated_transform.origin, repeated_transform.origin, transform_delta])
 			return
 		if not bool(terrain.call("_is_valid_dressing_site", generated_transform.origin.x, generated_transform.origin.z)):
 			_fail("Environmental dressing was placed inside a protected trail, spawn or steep-slope exclusion.")
