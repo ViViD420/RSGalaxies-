@@ -323,8 +323,16 @@ func (r *AccountRepository) tickEnemyAIForDefinition(ctx context.Context, enemy 
 	}
 	encounterID, err := ensureEncounterID(ctx, tx, enemyID, resetEncounter)
 	if err != nil { return err }
-	result := game.AdvanceEnemyAI(enemy, enemyAIConfig(enemy), state, game.WorldPosition{}, now)
+	result := game.AdvanceEnemyAI(enemy, aiConfig, state, game.WorldPosition{}, now)
 	result.State.TargetCharacterID = ""
+	if isBoss {
+		result.State.TelegraphUntil = time.Time{}
+		result.State.NextAttackAt = time.Time{}
+		if err := advanceBossEncounterInTransaction(ctx, tx, enemy, bossDefinition, encounterID,
+			health, &result.State, nil, "", now); err != nil {
+			return err
+		}
+	}
 	if err := persistEnemyAIState(ctx, tx, enemyID, health, initialized, respawnAt, encounterID, result.State); err != nil { return err }
 	if err := tx.Commit(); err != nil { return fmt.Errorf("commit idle enemy tick: %w", err) }
 	return nil
