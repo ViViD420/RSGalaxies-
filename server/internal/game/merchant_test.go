@@ -43,7 +43,7 @@ func TestMerchantSaleRejectsCurrencyOverflowWithoutConsumingItems(t *testing.T) 
 func TestRareLootAndCraftedGearCannotBePurchasedFromStarterMerchant(t *testing.T) {
 	player, err := NewPlayer("rare-material-merchant", "RareMaterialWayfarer", time.Now())
 	if err != nil { t.Fatal(err) }
-	for _, itemID := range []string{"rat_tooth", "boar_tusk", "rat_tooth_blade"} {
+	for _, itemID := range []string{"rat_tooth", "boar_tusk", "rat_tooth_blade", "boar_tusk_spear"} {
 		if _, err := player.BuyItem(itemID, 1); !errors.Is(err, ErrUnknownMerchantItem) {
 			t.Fatalf("buy %s error=%v, want ErrUnknownMerchantItem", itemID, err)
 		}
