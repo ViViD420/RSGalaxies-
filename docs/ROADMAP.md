@@ -32,7 +32,8 @@
 - [x] Godot builds and selects workbench/forge stations from the server crafting-station catalog.
 - [x] Workbench plank, herbal-bundle and herbal-tea recipes plus forge copper smelting/training-sword recipes.
 - [x] Cooking profession progression through crafting a server-defined healing tea consumable.
-- [ ] First rare enemy material sink: Rat Tooth + Copper Bars + Plank → Smithing level 2 Rat-Tooth Blade, equippable only at Blades level 2 (CI pending).
+- [x] First rare enemy material sink: Rat Tooth + Copper Bars + Plank → Smithing level 2 Rat-Tooth Blade, equippable only at Blades level 2 (implementation and tests committed; latest Actions verification pending).
+- [x] Second rare enemy material sink: Boar Tusks + Copper Bars + Plank → Smithing level 3 Boar-Tusk Spear, equippable only at Polearms level 2 (implementation and tests committed; GitHub Actions verification pending).
 - [x] Transactional crafting with ingredient consumption, output capacity and skill XP.
 - [x] Basic PvE enemy definitions, server-calculated damage, cooldowns, retaliation, specialization/parent/co-skill XP, starter loot and respawns.
 - [x] Player health, defeated-state action restrictions and safe-spawn recovery.
@@ -49,7 +50,7 @@
 - [ ] Final HTTP API ownership/success-path tests (#498–#503) and Godot Rewards panel follow-up CI (#129–#132); client panel is implemented.
 - [ ] Bounded pathfinding, party aggro, combat animations, enemy abilities, weapon-family expansion and server-derived hit/miss outcomes (see docs/COMBAT_PROGRESSION.md).
 - [ ] Boss encounter framework: multi-phase bosses, encounter state, group contribution/eligibility, telegraphs, persistence and reward integration. Build after ordinary enemy/combat foundations.
-- [x] Initial server-owned weighted ordinary-enemy loot tables with cryptographically secure rolls, weighted common materials and no-drop outcomes; settlement assigns one result to the top eligible contributor (CI pending).
+- [x] Initial server-owned weighted ordinary-enemy loot tables with cryptographically secure rolls, weighted common materials and no-drop outcomes; settlement assigns one result to the top eligible contributor (server Actions #518 passed).
 - [ ] Expand loot tables with multiple drops, guaranteed/conditional rewards, rarity tiers, boss-exclusive materials, unique item instances, versioned tuning and economy safeguards.
 - [ ] Deeper crafting framework: richer recipes, tool/station/skill requirements, material properties, quality, experimentation and crafted-item progression.
 - [ ] Recipe quality, tool requirements, advanced stations and broader profession progression. Advanced non-combat specialization trees remain deferred until core loops are stable.
