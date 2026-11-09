@@ -84,3 +84,7 @@ The Go service selects PostgreSQL repositories when `RS_GALAXIES_DATABASE_URL` i
 4. Add an append-only economy ledger before expanding player-to-player exchange.
 5. Introduce item instances only when durability, binding or per-item modifiers require them.
 6. Split presence/cache and zone simulation only when load tests demonstrate PostgreSQL/HTTP polling is insufficient.
+
+### Boss encounter state validation
+
+Persisted boss telegraphs are now validated as a strict two-state invariant: an inactive ability has no telegraph timestamps; an active ability has both a start and deadline, with the deadline not preceding the start. Partial timestamp combinations are rejected at both database load and save boundaries. The helper is covered by table-driven regression cases. This validation hardening is not yet CI-verified and does not mean boss combat is live.
