@@ -102,6 +102,18 @@ func FindBossEncounter(id string) (BossEncounterDefinition, bool) {
 	return BossEncounterDefinition{}, false
 }
 
+// FindBossEncounterForEnemy resolves the server-owned encounter definition
+// by its enemy spawn ID. Enemy IDs and definition IDs are intentionally
+// separate fields so content can be renamed without changing spawn identity.
+func FindBossEncounterForEnemy(enemyID string) (BossEncounterDefinition, bool) {
+	for _, definition := range bossEncounterDefinitions {
+		if definition.EnemyID == enemyID {
+			return cloneBossEncounterDefinition(definition), true
+		}
+	}
+	return BossEncounterDefinition{}, false
+}
+
 func cloneBossEncounterDefinition(definition BossEncounterDefinition) BossEncounterDefinition {
 	copy := definition
 	copy.Phases = make([]BossPhaseDefinition, len(definition.Phases))
