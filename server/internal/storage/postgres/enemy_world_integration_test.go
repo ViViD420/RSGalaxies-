@@ -249,4 +249,11 @@ func TestPostgresEnemyAITargetRemainsStickyWhilePresenceIsActive(t *testing.T) {
 	if math.Abs(x-wantX) > 0.001 || math.Abs(z-wantZ) > 0.001 {
 		t.Fatalf("enemy moved toward a different target: position=(%v,%v), want=(%v,%v)", x,z,wantX,wantZ)
 	}
+
+	// If the sticky target's lease disappears, the next eligible character
+	// can acquire the enemy rather than leaving it bound to stale identity.
+	if _, err := db.ExecContext(ctx, "DELETE FROM zone_presence WHERE character_id=$1", string(stickyID)); err != nil { t.Fatal(err) }
+	if err := accountRepo.TickEnemyAI(ctx, enemyID, now.Add(3*time.Second)); err != nil { t.Fatalf("switch after sticky target disappears: %v", err) }
+	if err := db.QueryRowContext(ctx, "SELECT target_character_id FROM enemy_spawn_state WHERE enemy_id=$1", enemyID).Scan(&targetID); err != nil { t.Fatal(err) }
+	if targetID != string(firstID) { t.Fatalf("target after previous lease expires = %s, want %s", targetID, firstID) }
 }
