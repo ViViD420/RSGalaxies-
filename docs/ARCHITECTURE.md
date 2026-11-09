@@ -118,3 +118,7 @@ A further PostgreSQL integration case covers a lethal Ground Shatter resolution:
 ### Stoneback reward preparation
 
 Three Stoneback crafting materials and a versioned harvest table have been added to the existing item/loot catalogs. The table guarantees 2–4 scales and independently rolls a rare core and an armor plate. It uses the same cryptographic server rolls and multi-item encounter reward claims as existing enemies. The table is not assigned to a live enemy until the boss world tick and full reward settlement are verified.
+
+### Stoneback client model
+
+The client can render the Stoneback Colossus with a larger stone-colored body, layered armor plates, oversized fists and an encounter-scale name label. All model meshes hide together when the authoritative snapshot reports zero health. This model remains dormant until the server enemy catalog exposes the boss.
