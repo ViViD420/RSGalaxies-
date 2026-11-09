@@ -1,6 +1,6 @@
 # RS Galaxies — Session Handoff
 
-Last updated: 2026-11-09 (boss snapshot and Godot HUD groundwork; CI pending)
+Last updated: 2026-11-09 (migration splitter defect corrected; server CI pending)
 
 ## Project identity
 
@@ -385,3 +385,21 @@ Continue the existing boss vertical slice: integrate cycle-scoped boss persisten
 2. Add PostgreSQL integration tests for exactly-once ability damage under concurrent workers, range interruption, stale-cycle rejection, death and respawn.
 3. Verify the server and Godot client workflows and inspect their individual test/import steps.
 4. Register the live Stoneback Colossus only after the complete server/client path passes.
+
+## CI failure diagnosis and migration correction (2026-11-09)
+
+- Actual GitHub Actions runs for the new server changes were retrieved. Server runs #552–#564 failed at the race-enabled PostgreSQL test step before Vet could run. Job logs identify the common root cause: migration 0016 contained a semicolon inside a SQL comment ("...state; old cycles..."). The existing migration runner splits the migration source on semicolons, so the comment tail was submitted to PostgreSQL as a statement and produced repeated "syntax error at or near old".
+- Corrected the migration comment to remove the embedded delimiter:
+  - f098eda062a40e44bd01a4e94260a66fd9640ea4 — fix migration comment delimiter for SQL splitter.
+- This is a migration-runner compatibility fix, not a database-schema redesign. The migration file was rechecked: remaining semicolons are only the SQL statement terminators. The new server workflow for f098eda must be checked before marking this corrected.
+- Client CI results:
+  - Client run #135, run ID 42591342570, commit e254800c: success; Godot 4.3 project import and script validation passed.
+  - Client run #136, run ID 42591405867, commit 8894a339: success; Godot 4.3 project import and script validation passed.
+- Server failure history for transparency: #552 (42590035780), #553 (42590082401), #554 (42590104727), #555 (42590134395), #556 (42590938003), #557 (42590948163), #558 (42591086151), #559 (42591110434), #560 (42591194728), #561 (42591212660), #562 (42591239181), #563 (42591247962) and #564 (42591263561) all failed on the PostgreSQL test step because the same migration-comment splitter issue was present. The latest source fix is f098eda; do not call the server green until a later run confirms both race-enabled PostgreSQL tests and Vet.
+- Latest client HUD change is committed, but the boss is not live. TickEnemyAI and player-initiated boss defeat still need transactional integration.
+
+### Immediate next actions
+1. Fetch the Actions run list again and inspect the server run for f098eda. Read job logs if it fails.
+2. Correct any newly exposed compile, migration, test or query issues and rerun.
+3. Once the persistence and snapshot code is green, integrate the boss state machine into the existing transaction paths and add concurrent exactly-once coverage.
+4. Keep the live encounter disabled until server and client CI both pass the full vertical slice.
