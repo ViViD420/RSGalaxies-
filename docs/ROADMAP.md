@@ -104,3 +104,7 @@ Each milestone is a tested, reviewable slice. A feature is not complete because 
 
 - [x] Add a boss ability damage resolver with ability-specific range checks and existing Defense/armor mitigation (domain primitive; not yet connected to the world tick).
 - [ ] Connect the boss damage resolver to transactional world-tick and player-defeat paths; persist terminal boss state atomically.
+
+- [x] Add optional authoritative boss identity, phase, active ability and telegraph fields to enemy snapshots; query only the active encounter-cycle row.
+- [x] Preserve ordinary enemy JSON by omitting absent boss fields and add serialization regression tests.
+- [ ] Render boss phase and telegraph feedback in Godot after transactional boss state integration.
