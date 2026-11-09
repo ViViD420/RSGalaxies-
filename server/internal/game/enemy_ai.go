@@ -106,6 +106,7 @@ func AdvanceEnemyAI(definition EnemyDefinition, config EnemyAIConfig, state Enem
 			state.TelegraphUntil = time.Time{}
 		} else if !now.Before(state.TelegraphUntil) {
 			state.Behavior = EnemyChasing
+			state.TelegraphUntil = time.Time{}
 			state.NextAttackAt = now.Add(config.AttackCooldown)
 			return EnemyAIResult{State: state, StateChanged: previous != state.Behavior, AttackRequested: true}
 		}
