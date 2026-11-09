@@ -144,6 +144,12 @@ The current implementation is a first ordinary-enemy policy, not the final party
 - This policy is intentionally limited: no party membership, support/healing contribution types, multi-drop weighted loot tables, unique item instances, loot rolls or boss-specific distribution rules. Do not treat it as the final group-boss policy.
 
 
+## Multi-drop loot resolver foundation (implementation committed; persistence integration pending)
+
+The domain catalog now supports versioned loot tables with guaranteed drops and multiple independent weighted bonus rolls. Each bonus roll has its own 10,000-point range; a total weight below 10,000 creates an explicit no-drop interval. Quantity ranges are independently resolved for each guaranteed or selected bonus result, and duplicate item results are aggregated with stack-cap validation. Existing one-roll tables remain supported through a compatibility adapter.
+
+Two version-1 prototype tables demonstrate the intended shape: Frontier Rat guarantees one Rat Pelt and independently rolls a 20% chance of 1–2 Rat Teeth; Wild Boar guarantees one Boar Hide and independently rolls a 15% chance of 1–2 Boar Tusks. These are domain/catalog examples only and are not yet assigned to live enemy definitions. The live settlement and claim schema still stores a single loot item/quantity per character claim, so do not switch live enemies to these tables until the persistence migration, claim DTO/API, atomic redemption and Godot Rewards panel support multiple item lines. The next persistence slice must preserve the existing one-settlement idempotency boundary and full-inventory retry semantics across every item in a claim.
+
 ## Initial weighted loot-table implementation (server Actions #518 passed)
 
 The first data-driven tables are server-owned and use a 10,000-point roll range:
@@ -152,7 +158,7 @@ The first data-driven tables are server-owned and use a 10,000-point roll range:
 - Wild Boar: 75% Boar Hide, 15% Boar Tusk, 10% no drop.
 - The world server generates independent cryptographically secure drop and quantity rolls. The pure game resolver is deterministic and boundary-tested.
 - The single result (or no-drop result) is resolved once during the unique encounter settlement and attached only to the highest-damage eligible participant's pending claim. XP distribution remains contribution-weighted.
-- This is the first loot-table slice: one selected item per encounter, fixed quantity ranges, no per-player multiple rolls, rarity modifiers, boss tables or unique item instances yet.
+- This is the live settlement slice: one selected item per encounter, with the multi-drop domain resolver implemented separately but not yet wired to persistence. Rarity modifiers, boss tables, unique item instances and per-player roll policy remain future work.
 
 
 ## First rare-material crafting sink
