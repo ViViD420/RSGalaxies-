@@ -10,6 +10,7 @@ type EncounterParticipant struct {
 	AccountID string
 	CharacterID PlayerID
 	DamageDealt int64
+	ExperienceSkillID string
 	DamageReceived int64
 	ActionCount int64
 	FirstContributionAt time.Time
