@@ -85,52 +85,16 @@ The Go service selects PostgreSQL repositories when `RS_GALAXIES_DATABASE_URL` i
 5. Introduce item instances only when durability, binding or per-item modifiers require them.
 6. Split presence/cache and zone simulation only when load tests demonstrate PostgreSQL/HTTP polling is insufficient.
 
-### Boss encounter state validation
+### Boss encounter lifecycle and client contract
 
-Persisted boss telegraphs are now validated as a strict two-state invariant: an inactive ability has no telegraph timestamps; an active ability has both a start and deadline, with the deadline not preceding the start. Partial timestamp combinations are rejected at both database load and save boundaries. The helper is covered by table-driven regression cases. This validation hardening is not yet CI-verified and does not mean boss combat is live.
+Migration 0016 stores boss encounter state by the active (enemy_id, encounter_id) spawn life. It records the versioned definition, phase and phase start, active ability and complete telegraph interval, JSONB ability cooldowns, ability cursor, last update time and terminal defeat flag. Load/save helpers lock the parent enemy spawn row first, reject stale encounter-cycle writes and reject stale timestamp updates. The active-cycle join in authenticated enemy snapshots prevents a prior life from leaking phase or telegraph data into a respawned boss.
 
-### Boss damage resolution boundary
+The account-owned enemy world tick resolves a boss definition from the server catalog and disables the ordinary enemy attack channel while retaining shared target acquisition, movement, leash and respawn behavior. It locks the target character before the enemy spawn, advances the boss state machine, validates the ability's own range, and applies equipment/Defense mitigation. Player health, Defense XP, encounter contribution counters, boss state and enemy AI state commit in the same PostgreSQL transaction. Empty-target and out-of-range ticks interrupt telegraphs; a lethal ability clears the sticky target. Player-initiated lethal attacks persist terminal boss state in the same combat/reward transaction, including first-hit defeats before an AI tick.
 
-The domain now has a boss-specific damage resolver that accepts the ability's server-defined range rather than reusing ordinary enemy melee range. It applies the same equipment Defense and Defense-skill mitigation as ordinary incoming attacks and awards Defense XP only for positive damage. This is currently a domain primitive; the PostgreSQL world tick and player-initiated boss defeat transaction must call it and persist its player mutation atomically with the boss/AI state before any boss is made live.
+Stoneback Colossus is registered in the public enemy catalog at Verdant Frontier (32,32), with 100 health, 2 Defense, no ordinary attack, 500 encounter XP and a 300-second respawn. It uses the stoneback-colossus-harvest multi-item table through the normal encounter settlement and account-owned claim APIs. The PostgreSQL integration suite covers concurrent exactly-once ability resolution, out-of-range/no-target interruption, lethal player defeat, respawn-cycle isolation, public authenticated snapshots and multi-item claim idempotency. Server Actions #599 and #600 passed race-enabled PostgreSQL integration tests and Vet at the last verified checkpoint.
 
-### Boss snapshot contract
+The Godot client polls authenticated enemy snapshots every 500 ms and treats boss identity, health, phase and active ability as server-owned. It renders the Stoneback model, boss health/phase/ability HUD and ordinary enemy labels from those snapshots; it does not choose abilities or resolve damage. The HUD now remains visible for a zero-health boss snapshot, distinguishes encounter completion from an active telegraph, and explicitly directs players to the Rewards panel after defeat. Active ability warnings instruct players to leave the boss's attack range. Client Action #137 passed Godot 4.3 import and script validation for the preceding client revision; the subsequent HUD feedback refinement is awaiting its own client workflow.
 
-Enemy snapshots now have optional boss identity/version, phase, active ability and telegraph timing fields. The PostgreSQL read joins boss state only for the enemy's currently active encounter-cycle ID, preventing stale-cycle leakage. Optional timestamps are pointer-backed so ordinary enemy snapshots retain their prior JSON shape. This is snapshot plumbing only: no live boss state is currently advanced by the world tick.
+### Remaining encounter engineering
 
-### Godot boss HUD boundary
-
-The client now has a passive boss encounter panel that renders health, phase and active ability from the optional authoritative enemy snapshot fields. It does not simulate telegraph timing or select abilities. The panel is hidden when no active boss snapshot is present. This UI is not a playable encounter until the PostgreSQL world tick and player defeat paths persist the boss state atomically.
-
-Migration 0016's initial server workflow exposed an existing migration-runner constraint: migration source is split on semicolons, including delimiters inside comments. The comment was corrected so only SQL statement terminators contain semicolons. The corrective commit is awaiting a fresh server Actions run; do not consider the migration validated until that run succeeds.
-
-### Boss defeat transaction
-
-Player-initiated boss defeats now have a transaction-scoped terminal-state helper. It locks the active spawn cycle, validates the stored definition/version, clears pending telegraphs and persists the defeated flag in the same transaction as player combat and reward settlement. If the first attack defeats a boss before any AI tick, the helper creates a valid terminal state instead of leaving the cycle without a boss record. The helper is connected to the player attack path but remains dormant until a boss is registered as an enemy. Autonomous boss ability advancement is still outstanding.
-
-### Transactional boss world tick
-
-The account-owned world tick now has a boss-specific path. It retains the established player-then-enemy lock order, disables ordinary enemy attacks for boss definitions, advances the versioned boss phase/telegraph engine from server-owned state, and resolves completed abilities with the ability's own range and Defense mitigation. Player health/Defense XP, encounter contribution counters, boss state and enemy AI state are written in the same PostgreSQL transaction. Empty-target ticks interrupt active telegraphs. This code is awaiting its own Actions verification and is not live until the boss is registered in the enemy catalog and world tick loop.
-
-The boss world-tick integration test suite now covers exactly-once concurrent ability resolution, telegraph interruption after the target leaves the ability range, and encounter-cycle reset after the respawn deadline. The tests exercise the transaction coordinator with an injected test definition without adding Stoneback Colossus to the public enemy catalog. Their Actions verification is still pending.
-
-A further PostgreSQL integration case covers a lethal Ground Shatter resolution: player health and Defense XP are updated once, the enemy's sticky target is cleared, and the boss's active telegraph is removed in the same transaction. The new case is awaiting Actions verification.
-
-### Stoneback reward preparation
-
-Three Stoneback crafting materials and a versioned harvest table have been added to the existing item/loot catalogs. The table guarantees 2–4 scales and independently rolls a rare core and an armor plate. It uses the same cryptographic server rolls and multi-item encounter reward claims as existing enemies. The table is not assigned to a live enemy until the boss world tick and full reward settlement are verified.
-
-### Stoneback client model
-
-The client can render the Stoneback Colossus with a larger stone-colored body, layered armor plates, oversized fists and an encounter-scale name label. All model meshes hide together when the authoritative snapshot reports zero health. This model remains dormant until the server enemy catalog exposes the boss.
-
-Recent CI runs caught two test-maintenance issues rather than schema defects: the lethal Ground Shatter test did not account for the boss's movement step when selecting an ability, and public catalog tests retained old item/loot counts. The integration test now seeds a deterministic chase state, and catalog assertions reflect 22 items and five loot tables. Corrective server runs are pending.
-
-The integration suite now also covers the no-target path: after a target's presence lease expires, the world tick advances the boss with an empty target, interrupts any active telegraph, and applies no damage. This complements out-of-range interruption and respawn-cycle reset coverage.
-
-### Stoneback world registration
-
-Stoneback Colossus is now registered as a public enemy definition at Verdant Frontier coordinates (32,32), with 100 health, 2 Defense, no ordinary attack, 500 encounter XP and a 300-second respawn. The world tick loop and authenticated snapshot enumeration consume the same enemy catalog, so the existing boss-specific transaction and client HUD/model paths now have a live definition to resolve. Its multi-item harvest table is assigned through the normal encounter reward settlement. This registration is awaiting the newest server Actions validation and should not be described as deployed or production-ready yet.
-
-The Stoneback reward integration test now exercises the real account-owned combat defeat path, terminal boss persistence, encounter settlement, multi-item claim listing, claim application and idempotent retry. It verifies the guaranteed scale drop and 500 Blades / 125 Melee XP while accepting the table's independent random bonus material outcomes. The test uses the existing reward claim system rather than adding a boss-specific reward path.
-
-The public catalog expansion required updating an existing PostgreSQL snapshot-count assertion from two to three. Boss integration tests now use isolated per-test zones, and the no-target path removes the presence row rather than relying on a timestamp update. The lethal Ground Shatter test seeds the intended phase/cooldown and advances beyond its deadline. These corrections are awaiting the latest server workflow results.
+The next work is player-facing validation and polish rather than persistence scaffolding: inspect telegraph timing and cancellation feedback, phase transition clarity, target loss/reacquisition, defeat and respawn visibility, reward claim discoverability, and desktop/mobile layout. Extend tests for any newly exposed lifecycle edge cases. Preserve the 18-skill roster, profession/equipment restrictions, existing ordinary enemy behavior and multi-item reward system. Party threat, support contributions and group rewards remain future work; do not broaden boss rewards until those policies are designed.
