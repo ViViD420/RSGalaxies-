@@ -20,7 +20,7 @@ func TestPlayerCombatDefeatsEnemyAwardsXPAndLoot(t *testing.T) {
 		state=next
 		if hit<2&&result.EnemyDefeated{t.Fatalf("enemy defeated too early on hit %d",hit+1)}
 		if hit==2{
-			if !result.EnemyDefeated||result.Experience!=25||result.LootItemID!="rat_pelt"||player.Inventory["rat_pelt"]!=1{t.Fatalf("combat result=%+v player=%+v",result,player)}
+			if !result.EnemyDefeated||result.Experience!=25||result.SkillID!="blades"||result.ParentSkillID!="melee"||result.ParentExperience!=6||result.LootItemID!="rat_pelt"||player.Inventory["rat_pelt"]!=1{t.Fatalf("combat result=%+v player=%+v",result,player)}
 			if player.Skills["blades"].Experience != 25 || player.Skills["melee"].Experience != 6 || player.Skills["strength"].Experience != 3 || player.Skills["defense"].Experience != 2 || state.RespawnAt.IsZero() { t.Fatalf("combat progression/state blades=%+v melee=%+v strength=%+v defense=%+v state=%+v", player.Skills["blades"], player.Skills["melee"], player.Skills["strength"], player.Skills["defense"], state) }
 		}
 	}
