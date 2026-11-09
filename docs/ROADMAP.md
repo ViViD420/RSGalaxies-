@@ -129,3 +129,5 @@ Each milestone is a tested, reviewable slice. A feature is not complete because 
 
 - [x] Prepare Stoneback-specific crafting materials and a guaranteed-plus-independent-bonus multi-item loot table using the existing claim pipeline.
 - [ ] Assign the table to the live boss enemy definition and verify reward settlement end-to-end.
+
+- [x] Add a distinctive armored Stoneback world model and boss-scale label in Godot (client CI pending).
