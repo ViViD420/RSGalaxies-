@@ -13,7 +13,7 @@
 - Defeating an enemy awards its configured starter loot when the corresponding inventory stack has capacity. Dedicated loot tables, durable overflow claims, contribution eligibility and reward audit records are not implemented yet; these are explicit prerequisites for boss rewards.
 - Enemy health, initialization and respawn timestamps are shared world state stored in the enemy_spawn_state table. The enemy row and character row are locked and updated in one transaction.
 - A defeated character cannot perform gameplay actions. Resting while alive is restricted to the starter safe spawn; a defeated character is restored at that spawn.
-- Combat is currently a single-target action loop. Enemies are stationary and have no aggro, pathfinding, telegraphs, abilities or multi-phase behavior.
+- Combat is currently a single-target action loop. The pure server-side AI domain layer now models idle, aggro/chase, attack telegraph/interruption and leash/return behavior with bounded timestamp-based movement. However, this state machine is not yet connected to persisted enemy instances, a server tick scheduler, transactional attack damage or Godot movement replication; live enemies therefore remain stationary in the current playable loop. Enemies still have no pathfinding, abilities or multi-phase behavior.
 
 ## Starter enemies
 
@@ -24,10 +24,10 @@
 
 ## Next combat foundation
 
-1. Introduce server-owned weapon-family and ability definitions, beginning with the existing melee families.
-2. Resolve hit outcomes and damage from validated ability, weapon, skill, equipment and target state; inject deterministic randomness for tests.
-3. Add enemy aggro, leash, movement and simple behavior state before complex boss phases.
-4. Add combat telemetry and encounter participation records that can later support fair group rewards.
+1. Persist and orchestrate the new enemy AI state per spawn, including concurrency-safe tick advancement and transactional player damage.
+2. Replicate authoritative enemy positions and behavior snapshots to Godot.
+3. Introduce server-owned weapon-family and ability definitions, beginning with the existing melee families; resolve hit outcomes from validated ability, weapon, skill, equipment and target state with injectable randomness.
+4. Add durable combat telemetry and encounter participation records that can later support fair group rewards.
 5. Add a reusable boss encounter state machine only after ordinary enemy behavior and reward settlement are reliable.
 
 ## Current limitations
