@@ -1588,3 +1588,15 @@ The procedural placement algorithm is deterministic by design and now has direct
 - Client #184 / 42619189823 and #185 / 42619400395 remain recorded as historical failures and are not erased.
 - Non-headless visual/GPU placement and actual-device review remain outstanding.
 - Documentation-only follow-up commit: this handoff update, architecture verification boundary and roadmap status; no client code changed after the #186 validated commit.
+
+
+## Biome-aware environmental prop colors — 2026-11-09
+
+- Commit 8a5fddac140b92783458b92ab79d43a8a75b14d8 adds deterministic per-instance color variation to the batched foliage and rock MultiMeshes.
+- Foliage tint is derived from the existing deterministic moisture noise and transitions among wet/moss, transitional grass and dry scrub palettes.
+- Rock tint receives moisture-influenced cool/warm variation.
+- MultiMesh.use_colors is enabled before instance_count allocation, then per-instance colors are assigned alongside each deterministic transform. Materials use vertex color as albedo.
+- Environmental Dressing exports were moved beside the other top-level terrain exports for consistent class layout.
+- Smoke test now verifies both MultiMeshes enable per-instance colors, the foliage palette produces at least three distinct deterministic colors across the starter zone, and repeated sampling at one coordinate is stable.
+- Client Action #187 / run 42619776488 was triggered by this code commit. At this documentation checkpoint it is still in progress; inspect full logs and do not mark this color feature verified until it completes.
+- Latest documented passing client run remains #186 / 42619558244, which validates the previous deterministic prop-placement slice, not this new color variation.

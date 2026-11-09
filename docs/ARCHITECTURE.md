@@ -212,3 +212,8 @@ The deterministic placement generator is validated independently of RenderingSer
 ### Verification update
 
 Client Action #186 passed the revised headless regression, editor import and Web export. The complete job log contained no Godot SCRIPT ERROR or ERROR output. The prior dummy mesh-storage cleanup message did not recur after the failing assertion was removed. This confirms automated headless validation, not actual rendered visual quality; a non-headless renderer and physical-device review remain outstanding.
+
+
+### Biome-aware prop tinting
+
+Foliage and rock MultiMeshes now use per-instance color data derived from the same deterministic moisture field that drives terrain surface palettes. This preserves the shared biome signal across ground and environmental dressing while keeping batched rendering. Per-instance color storage is enabled before allocating MultiMesh buffers, as required by the engine API. Verification is pending Client Action #187.

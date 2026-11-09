@@ -209,3 +209,11 @@ Client Action #183 (run 42604378304) passed; #182 (42604361140) passed. Client #
 
 - [x] Client Action #186 (run 42619558244) passed deterministic environmental placement generator checks, terrain collision/movement smoke, Godot import and Web export with no Godot errors.
 - [ ] Verify MultiMesh appearance and GPU placement in a non-headless rendered client and on desktop/mobile hardware.
+
+
+### Biome-aware prop presentation — active
+
+- [x] Implement moisture-derived wet/moss, transition and dry foliage tint sampling plus rock tint variation.
+- [x] Add deterministic palette diversity and color-data configuration regression coverage.
+- [ ] Verify biome-aware MultiMesh tinting through Client Action #187 (42619776488).
+- [ ] Review the result in a non-headless rendered client and on physical desktop/mobile devices.
