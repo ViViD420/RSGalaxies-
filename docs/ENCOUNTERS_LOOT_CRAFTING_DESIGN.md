@@ -12,12 +12,12 @@ A boss should not be valuable only because it drops a finished weapon. Bosses sh
 
 The ordinary enemy foundation now includes persistent per-spawn idle/chase/telegraph/return state, fresh-presence targeting, sticky single-target selection, bounded movement, server-side attack timing, telegraph interruption, leash return, shared cooldowns, respawn reset, transactional player damage/Defense XP and authenticated Godot snapshots/interpolation. Player attacks use the persisted live enemy position. This is a first-zone prototype, not the final encounter framework.
 
-Still outstanding before boss rewards: durable encounter-cycle identity, contribution records, threat scoring/party rules, idempotent reward settlement, inventory-full claim policy, and a dedicated loot-table service. Current ordinary enemies still use fixed starter drops. The next prerequisite is an auditable encounter-participation and reward-settlement foundation; do not jump directly to high-value boss loot.
+The server now assigns a unique encounter-cycle ID to each enemy spawn life and records server-authoritative damage dealt, damage received and action counts for characters who engage. Autonomous incoming damage updates an existing participant record without making an unengaged bystander eligible. Still outstanding before boss rewards: threat scoring/party rules, eligibility windows and anti-leech policy, idempotent reward settlement, inventory-full claim policy, and a dedicated loot-table service. Current ordinary enemies still use fixed starter drops. Do not jump directly to high-value boss loot.
 
 ## Implementation order
 
 1. Finish the ordinary character and world foundations: stable skill progression, authoritative combat actions, equipment requirements, inventory capacity, player health/death/recovery, movement and persistence.
-2. Complete ordinary enemy behavior and persistence: the single-target AI/telegraph/movement/return vertical slice is implemented; add threat/party contribution, durable encounter cycles and reliable reward settlement.
+2. Complete ordinary enemy behavior and persistence: the single-target AI/telegraph/movement/return vertical slice, durable spawn-cycle IDs and per-character contribution ledger are implemented; add threat/party contribution rules and reliable reward settlement.
 3. Introduce the reusable boss encounter framework and implement one modest first boss as a vertical slice.
 4. Add a dedicated loot-table and reward service, then migrate ordinary enemies and the first boss from direct fixed drops.
 5. Expand crafting from simple recipes into a profession-driven production loop using tools, stations, skill requirements, material families and quality.
