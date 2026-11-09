@@ -9,7 +9,7 @@
 - Damage currently uses a deterministic prototype formula based on the selected specialization, Melee parent level, Strength, equipment attack bonus and enemy Defense. Accuracy is not a skill and is not yet rolled as a separate hit/miss outcome.
 - Successful hits award Strength XP. Defeating an enemy awards the selected specialization XP and one-quarter parent XP (minimum one where applicable). Taking positive damage awards Defense XP.
 - Strength contributes to melee damage; Defense reduces incoming damage. Defense also governs armor eligibility through server-owned item requirements.
-- In the current click-to-attack loop, a surviving enemy retaliates in the same player/enemy transaction. The domain layer now also exposes `Player.ReceiveEnemyAttack`, which resolves a completed enemy telegraph against the persisted live enemy position, applies equipment/Defense mitigation, awards Defense XP for positive damage and reports defeat. This method is unit-tested but is not yet wired into the autonomous AI transaction.
+- In the current click-to-attack loop, a surviving enemy retaliates in the same player/enemy transaction. `Player.ReceiveEnemyAttack` also resolves completed AI telegraphs against the persisted live enemy position, applies equipment/Defense mitigation, awards Defense XP for positive damage and reports defeat. The world tick calls this method and commits it atomically with enemy AI state.
 - Defeating an enemy awards its configured starter loot when the corresponding inventory stack has capacity. Dedicated loot tables, durable overflow claims, contribution eligibility and reward audit records are not implemented yet; these are explicit prerequisites for boss rewards.
 - Enemy health, initialization and respawn timestamps are shared world state stored in `enemy_spawn_state`. Migration 0010 adds persisted AI behavior, position, telegraph deadline, cooldown and last-update fields. `PlayerRepository.AdvanceEnemyAIForPlayer` locks and persists a spawn tick; its PostgreSQL restart test covers recovery. The current click-to-attack operation still locks and updates the player and enemy rows in one transaction.
 - A defeated character cannot perform gameplay actions. Resting while alive is restricted to the starter safe spawn; a defeated character is restored at that spawn.
@@ -24,7 +24,7 @@
 
 ## Next combat foundation
 
-1. Finish CI verification for enemy tick, moving-target combat and monotonic simulation clock tests; add zone-change and defeated-target cases.
+1. Finish CI verification for the shared retaliation cooldown and respawn-reset integration tests.
 2. Improve target stickiness/threat selection and add pathfinding before introducing party aggro.
 3. Introduce server-owned weapon-family and ability definitions, beginning with the existing melee families; resolve hit outcomes from validated ability, weapon, skill, equipment and target state with injectable randomness.
 4. Add durable combat telemetry and encounter participation records that can later support fair group rewards.
