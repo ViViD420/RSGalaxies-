@@ -2,13 +2,31 @@ package postgres
 
 import (
 	"context"
+	cryptorand "crypto/rand"
 	"database/sql"
 	"errors"
 	"fmt"
+	"math/big"
 	"time"
 
 	"github.com/ViViD420/RSGalaxies-/server/internal/game"
 )
+
+
+func rollEncounterLoot(enemy game.EnemyDefinition) (string, int, error) {
+	if enemy.LootTableID == "" {
+		return enemy.LootItemID, enemy.LootQuantity, nil
+	}
+	limit := big.NewInt(game.LootRollRange)
+	roll, err := cryptorand.Int(cryptorand.Reader, limit)
+	if err != nil { return "", 0, fmt.Errorf("generate encounter loot roll: %w", err) }
+	quantityRoll, err := cryptorand.Int(cryptorand.Reader, limit)
+	if err != nil { return "", 0, fmt.Errorf("generate encounter loot quantity roll: %w", err) }
+	drop, ok, err := game.RollLootTable(enemy.LootTableID, int(roll.Int64()), int(quantityRoll.Int64()))
+	if err != nil { return "", 0, fmt.Errorf("resolve encounter loot table %s: %w", enemy.LootTableID, err) }
+	if !ok { return "", 0, nil }
+	return drop.ItemID, drop.Quantity, nil
+}
 
 // settleEncounterRewards creates one durable, idempotent settlement and
 // character-owned claims inside the caller's enemy-defeat transaction. The
@@ -76,7 +94,9 @@ func settleEncounterRewards(ctx context.Context, tx *sql.Tx, enemy game.EnemyDef
 	}
 
 	// The first participant is the deterministic highest-damage contributor.
-	// One enemy drop is assigned once; XP is split proportionally by damage.
+	// One server-rolled loot-table result is assigned once; XP is split by damage.
+	lootItemID, lootQuantity, err := rollEncounterLoot(enemy)
+	if err != nil { return err }
 	shares := make([]int64, len(eligible))
 		var distributed int64
 		for index, participant := range eligible {
@@ -98,9 +118,9 @@ func settleEncounterRewards(ctx context.Context, tx *sql.Tx, enemy game.EnemyDef
 			parentXP = int(xp / 4)
 			if parentXP < 1 { parentXP = 1 }
 		}
-		lootItemID, lootQuantity := "", 0
-		if index == 0 && enemy.LootItemID != "" && enemy.LootQuantity > 0 {
-			lootItemID, lootQuantity = enemy.LootItemID, enemy.LootQuantity
+		claimLootItemID, claimLootQuantity := "", 0
+		if index == 0 && lootItemID != "" && lootQuantity > 0 {
+			claimLootItemID, claimLootQuantity = lootItemID, lootQuantity
 		}
 		_, err := tx.ExecContext(ctx, `INSERT INTO enemy_encounter_reward_claims(
 			enemy_id,encounter_id,account_id,character_id,experience_skill_id,
@@ -110,7 +130,7 @@ func settleEncounterRewards(ctx context.Context, tx *sql.Tx, enemy game.EnemyDef
 			ON CONFLICT(enemy_id,encounter_id,character_id) DO NOTHING`,
 			enemy.ID, encounterID, participant.AccountID, string(participant.CharacterID),
 			participant.ExperienceSkillID, int(xp), nullableString(parentSkillID),
-			parentXP, nullableString(lootItemID), lootQuantity, now.UTC())
+			parentXP, nullableString(claimLootItemID), claimLootQuantity, now.UTC())
 		if err != nil {
 			return fmt.Errorf("create encounter reward claim for %s: %w", participant.CharacterID, err)
 		}
