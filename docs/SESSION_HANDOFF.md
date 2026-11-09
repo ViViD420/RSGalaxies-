@@ -1134,3 +1134,10 @@ Core game focus only. The player controller now has smooth ground acceleration/d
 - Client Action #181 (run 42604113289, commit dd32e8a) passed strict client CI after the shrinkable-button refinement. The headless movement/terrain/camera/attack smoke test passed, editor import passed, and Web export passed; full logs contained no Godot SCRIPT ERROR or engine ERROR lines. https://github.com/ViViD420/RSGalaxies-/actions/runs/42604113289
 - Responsive HUD code is now CI-validated: two-column toolbar, 34px rows, shrinkable buttons, short Chars caption, viewport-width sizing, and wrapping status/instruction labels.
 - Device-level visual QA remains open; the next core client task is terrain biome/environment variation and richer world presentation, followed by mobile touch ergonomics and deeper movement mechanics.
+
+## Terrain biome palette foundation (2026-11-09)
+
+- Added a third fixed-seed FastNoiseLite field for broad moisture variation in commit 9744dc2.
+- Terrain vertex colors now distinguish lush moss/grass, drier scrub and elevated rocky soil while preserving the existing elevation palette and integrated dirt trails. No extra render mesh or collision surface is introduced.
+- Expanded the headless test in commit 477fec2 to sample biome colors repeatedly at the same coordinates, require deterministic output, and confirm at least three distinct surface palettes across the zone.
+- Client Actions for commits 9744dc2/477fec2 are pending. Validate color array, import, Web export and all prior terrain/movement/camera/attack assertions. Fix any failure before further world dressing.
