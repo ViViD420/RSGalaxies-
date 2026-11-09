@@ -454,7 +454,7 @@ func TestPostgresBossAbilityCanDefeatPlayerAndClearsTarget(t *testing.T) {
 	}
 }
 
-func TestPostgresPublicBossTickAppearsInAuthenticatedSnapshots(t *testing.T) {
+func TestPostgresPublicWorldTickIncludesBossAndAuthenticatedSnapshots(t *testing.T) {
 	db := integrationDatabase(t)
 	ctx := context.Background()
 	now := time.Now().UTC().Truncate(time.Microsecond)
@@ -487,8 +487,8 @@ func TestPostgresPublicBossTickAppearsInAuthenticatedSnapshots(t *testing.T) {
 		t.Fatalf("isolate public boss snapshot test presence: %v", err)
 	}
 
-	if err := repo.TickEnemyAI(ctx, enemy.ID, now); err != nil {
-		t.Fatalf("tick public Stoneback definition: %v", err)
+	if err := repo.RunEnemyAITick(ctx, now); err != nil {
+		t.Fatalf("run public enemy world tick including Stoneback: %v", err)
 	}
 	snapshots, err := repo.ListEnemySnapshotsForAccount(ctx, account.ID, playerID, now)
 	if err != nil {
