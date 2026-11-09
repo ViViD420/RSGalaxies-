@@ -45,7 +45,7 @@ func TestRollLootTableRejectsUnknownTablesAndOutOfRangeRolls(t *testing.T) {
 func TestLootTableCatalogIsValidAndDefensivelyCopied(t *testing.T) {
 	tables := LootTableDefinitions()
 	if len(tables) != 5 {
-		t.Fatalf("loot table count=%d, want 4", len(tables))
+		t.Fatalf("loot table count=%d, want 5", len(tables))
 	}
 	for _, table := range tables {
 		if table.ID == "" || table.Version < 1 {
@@ -150,7 +150,7 @@ func TestRollLootTableDropsValidatesRollCountAndBounds(t *testing.T) {
 
 func TestLootTableCatalogCopiesNestedMultiDropSlices(t *testing.T) {
 	tables:=LootTableDefinitions()
-	if len(tables)!=5{t.Fatalf("loot table count=%d, want 4",len(tables))}
+	if len(tables)!=5{t.Fatalf("loot table count=%d, want 5",len(tables))}
 	for index := range tables {
 		if tables[index].ID == "frontier-rat-harvest" {
 			tables[index].GuaranteedDrops[0].ItemID = "corrupted"
