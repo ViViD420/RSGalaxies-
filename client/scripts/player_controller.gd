@@ -91,10 +91,15 @@ func play_attack_animation() -> void:
 	_attack_tween.tween_property(
 		body_mesh, "rotation", neutral_rotation, attack_swing_duration * 0.55
 	).set_ease(Tween.EASE_IN)
-	_attack_tween.finished.connect(func() -> void:
-		if is_instance_valid(body_mesh):
-			body_mesh.rotation = neutral_rotation
-	)
+	_attack_tween.finished.connect(_finish_attack_animation.bind(neutral_rotation))
+
+
+func _finish_attack_animation(neutral_rotation: Vector3) -> void:
+	if is_instance_valid(body_mesh):
+		body_mesh.rotation = neutral_rotation
+	# Release the completed Tween immediately so it cannot retain a stale
+	# presentation-node target through scene shutdown.
+	_attack_tween = null
 
 
 func _rotate_camera(relative: Vector2) -> void:
