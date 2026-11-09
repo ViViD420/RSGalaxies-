@@ -44,30 +44,63 @@ func TestRollLootTableRejectsUnknownTablesAndOutOfRangeRolls(t *testing.T) {
 
 func TestLootTableCatalogIsValidAndDefensivelyCopied(t *testing.T) {
 	tables := LootTableDefinitions()
-	if len(tables) != 2 {
-		t.Fatalf("loot table count=%d, want 2", len(tables))
+	if len(tables) != 4 {
+		t.Fatalf("loot table count=%d, want 4", len(tables))
 	}
 	for _, table := range tables {
-		total := 0
+		if table.ID == "" || table.Version < 1 {
+			t.Fatalf("loot table has invalid identity/version: %+v", table)
+		}
 		seen := map[string]bool{}
-		for _, drop := range table.Drops {
+		validate := func(drop LootTableDrop, weighted bool) {
+			t.Helper()
 			if seen[drop.ItemID] {
 				t.Fatalf("duplicate item %s in %s", drop.ItemID, table.ID)
 			}
 			seen[drop.ItemID] = true
-			total += drop.Weight
-			if _, ok := FindItem(drop.ItemID); !ok {
-				t.Fatalf("unknown item %s in %s", drop.ItemID, table.ID)
+			item, ok := FindItem(drop.ItemID)
+			if !ok || drop.MinQuantity <= 0 || drop.MaxQuantity < drop.MinQuantity ||
+				drop.MaxQuantity > item.MaxStack || (weighted && drop.Weight <= 0) {
+				t.Fatalf("invalid loot drop %+v in %s", drop, table.ID)
 			}
 		}
-		if total <= 0 || total > LootRollRange {
-			t.Fatalf("table %s weights=%d, want 1..%d", table.ID, total, LootRollRange)
+		for _, drop := range table.GuaranteedDrops {
+			validate(drop, false)
+		}
+		weightedRolls := table.BonusRolls
+		if len(table.Drops) > 0 {
+			if len(table.GuaranteedDrops) > 0 || len(table.BonusRolls) > 0 {
+				t.Fatalf("legacy and multi-drop formats mixed in %s", table.ID)
+			}
+			weightedRolls = []LootTableRoll{{Drops: table.Drops}}
+		}
+		for _, roll := range weightedRolls {
+			total := 0
+			for _, drop := range roll.Drops {
+				validate(drop, true)
+				if total > LootRollRange-drop.Weight {
+					t.Fatalf("weight overflow in %s", table.ID)
+				}
+				total += drop.Weight
+			}
+			if total <= 0 || total > LootRollRange {
+				t.Fatalf("table %s weighted roll=%d, want 1..%d", table.ID, total, LootRollRange)
+			}
+		}
+		if len(table.Drops) == 0 && len(table.GuaranteedDrops)+len(table.BonusRolls) == 0 {
+			t.Fatalf("table %s has no outcomes", table.ID)
 		}
 	}
 	tables[0].Drops[0].ItemID = "corrupted"
 	again, _ := FindLootTable("frontier-rat-common")
 	if again.Drops[0].ItemID != "rat_pelt" {
-		t.Fatal("loot table catalog exposed mutable internal slices")
+		t.Fatal("legacy loot table catalog exposed mutable internal slices")
+	}
+	tables[2].GuaranteedDrops[0].ItemID = "corrupted"
+	tables[2].BonusRolls[0].Drops[0].ItemID = "corrupted"
+	again, _ = FindLootTable("frontier-rat-harvest")
+	if again.GuaranteedDrops[0].ItemID != "rat_pelt" || again.BonusRolls[0].Drops[0].ItemID != "rat_tooth" {
+		t.Fatal("multi-drop loot table catalog exposed mutable nested slices")
 	}
 }
 
@@ -94,7 +127,7 @@ func TestRollLootTableDropsSupportsIndependentNoDropOutcomes(t *testing.T) {
 	}
 }
 
-func TestRollLootTableDropsValidatesRollCountAndAggregatedStackLimit(t *testing.T) {
+func TestRollLootTableDropsValidatesRollCountAndBounds(t *testing.T) {
 	if _,err:=RollLootTableDrops("frontier-rat-harvest",nil);!errors.Is(err,ErrInvalidLootRoll){
 		t.Fatalf("missing rolls error=%v, want ErrInvalidLootRoll",err)
 	}
