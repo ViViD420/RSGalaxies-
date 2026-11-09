@@ -48,6 +48,8 @@ func TestPostgresBossWorldTickResolvesAbilityExactlyOnce(t *testing.T) {
 	}
 
 	now := time.Now().UTC().Truncate(time.Microsecond)
+	testZoneID := fmt.Sprintf("boss-world-zone-%d", now.UnixNano())
+	enemy.Position.ZoneID = testZoneID
 	accountRepo := NewAccountRepository(db)
 	account, _, err := accountRepo.Register(ctx,
 		fmt.Sprintf("boss-world-%d@example.test", now.UnixNano()),
@@ -60,7 +62,7 @@ func TestPostgresBossWorldTickResolvesAbilityExactlyOnce(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	player.Position = game.WorldPosition{ZoneID: game.DefaultWorldZoneID, X: 22, Z: 0}
+	player.Position = game.WorldPosition{ZoneID: testZoneID, X: 22, Z: 0}
 	if err := accountRepo.CreateCharacter(ctx, account.ID, player); err != nil {
 		t.Fatalf("create boss test character: %v", err)
 	}
@@ -170,6 +172,8 @@ func TestPostgresBossWorldTickInterruptsAndResetsEncounterCycle(t *testing.T) {
 		RespawnSeconds: 120,
 	}
 	now := time.Now().UTC().Truncate(time.Microsecond)
+	testZoneID := fmt.Sprintf("boss-world-zone-%d", now.UnixNano())
+	enemy.Position.ZoneID = testZoneID
 	accountRepo := NewAccountRepository(db)
 	account, _, err := accountRepo.Register(ctx,
 		fmt.Sprintf("boss-reset-%d@example.test", now.UnixNano()),
@@ -182,7 +186,7 @@ func TestPostgresBossWorldTickInterruptsAndResetsEncounterCycle(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	player.Position = game.WorldPosition{ZoneID: game.DefaultWorldZoneID, X: 22, Z: 0}
+	player.Position = game.WorldPosition{ZoneID: testZoneID, X: 22, Z: 0}
 	if err := accountRepo.CreateCharacter(ctx, account.ID, player); err != nil {
 		t.Fatal(err)
 	}
@@ -340,6 +344,8 @@ func TestPostgresBossAbilityCanDefeatPlayerAndClearsTarget(t *testing.T) {
 		RespawnSeconds: 120,
 	}
 	now := time.Now().UTC().Truncate(time.Microsecond)
+	testZoneID := fmt.Sprintf("boss-world-zone-%d", now.UnixNano())
+	enemy.Position.ZoneID = testZoneID
 	accountRepo := NewAccountRepository(db)
 	account, _, err := accountRepo.Register(ctx,
 		fmt.Sprintf("boss-player-defeat-%d@example.test", now.UnixNano()),
@@ -352,7 +358,7 @@ func TestPostgresBossAbilityCanDefeatPlayerAndClearsTarget(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	player.Position = game.WorldPosition{ZoneID: game.DefaultWorldZoneID, X: 28, Z: 0}
+	player.Position = game.WorldPosition{ZoneID: testZoneID, X: 28, Z: 0}
 	player.Health = 5
 	if err := accountRepo.CreateCharacter(ctx, account.ID, player); err != nil {
 		t.Fatal(err)
