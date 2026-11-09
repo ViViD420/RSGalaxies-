@@ -182,6 +182,11 @@ func bossPhaseIndexForHealth(definition BossEncounterDefinition, health, maxHeal
 	return selected
 }
 
+// FindBossAbility returns a copy of one server-owned ability definition.
+func FindBossAbility(definition BossEncounterDefinition, id string) (BossAbilityDefinition, bool) {
+	return bossAbilityByID(definition, id)
+}
+
 func bossAbilityByID(definition BossEncounterDefinition, id string) (BossAbilityDefinition, bool) {
 	for _, ability := range definition.Abilities {
 		if ability.ID == id {
