@@ -768,3 +768,19 @@ Latest client refinement commit: e38043cc10c87737f4c1b820de9f0a80fb05f7fd. It ke
 
 Continue deep player-facing Stoneback review: phase transition and telegraph interruption feedback, target lifecycle, defeat/respawn presentation, mitigation, settlement and reward idempotency. Preserve all 18 skills, professions/equipment restrictions, crafting, ordinary enemies and the existing multi-item reward pipeline. Enhance existing code, commit meaningful progress, and always update the handoff, roadmap and architecture. Do not restart or recreate the project.
 ```
+
+## Stoneback phase-transition HUD cue (2026-11-09)
+
+- Client Action #138 (run 42597884482, commit e38043c) passed Godot 4.3 setup, import and script validation for the defeat/telegraph feedback change.
+- Added a small follow-on client improvement in commit 743c5a8e7afb51e128a2636a1c481ae4c3732d5f:
+  - Detects a change between consecutive authoritative boss phase IDs.
+  - Displays a bounded 2.5-second phase-shift cue in the existing HUD status line.
+  - Resets the cached phase when the authoritative boss snapshot reports defeat, avoiding a false transition message on the next spawn life.
+  - Keeps ability warning priority above the phase cue and does not simulate phase thresholds or combat.
+- Client Action #139 (run 42598099029) was queued at the time this handoff update was written; inspect its final job result before claiming this follow-on change is CI-verified.
+- Refreshed docs/ROADMAP.md and docs/ARCHITECTURE.md to record the phase transition cue in commits a4a2f4f0eea112a55378331030f844648d40c97f and aa078869d50f4bfc1b71df703fedf8076959cb8c.
+- Current next code-review target remains the encounter target lifecycle, telegraph cancellation/resolution feedback boundaries, respawn snapshot continuity and repeated reward-claim safety. Do not label a telegraph as interrupted based solely on the active-ability field becoming empty: that same state can follow successful resolution, so an explicit server event would be required to distinguish them truthfully.
+
+### Continuation update
+
+Start by checking current main HEAD and client Action #139 for commit 743c5a8. Server Actions #599/#600 remain the latest verified server runs for the current server code; inspect any newer server workflow if present. Continue the Stoneback player-facing review and keep all three documentation files current.
