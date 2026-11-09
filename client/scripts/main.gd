@@ -483,10 +483,12 @@ func _on_enemy_snapshots_completed(result: int, response_code: int, _headers: Pa
 		return
 	if result != HTTPRequest.RESULT_SUCCESS or response_code != 200:
 		return
-	var payload: Variant = JSON.parse_string(body.get_string_from_utf8())
-	if not payload is Dictionary:
+	var response_json := JSON.new()
+	var parse_error := response_json.parse(body.get_string_from_utf8())
+	if parse_error != OK or not response_json.data is Dictionary:
 		status_label.text = "Interaction: invalid server response"
 		return
+	var payload: Dictionary = response_json.data
 	var snapshots: Variant = payload.get("enemies", [])
 	if not snapshots is Array:
 		return
