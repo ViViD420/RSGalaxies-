@@ -207,13 +207,12 @@ func AdvanceBossEncounter(definition BossEncounterDefinition, state BossEncounte
 		return BossEncounterResult{}, ErrInvalidBossEncounterDefinition
 	}
 
-	state.AbilityCooldowns = cloneAbilityCooldowns(state.AbilityCooldowns)
+	reset := state.EncounterID != input.EncounterID || state.DefinitionVersion != definition.Version
 	now := input.Now.UTC()
-	if !state.LastUpdatedAt.IsZero() && now.Before(state.LastUpdatedAt) {
+	if !reset && !state.LastUpdatedAt.IsZero() && now.Before(state.LastUpdatedAt) {
 		now = state.LastUpdatedAt.UTC()
 	}
-
-	reset := state.EncounterID != input.EncounterID || state.DefinitionVersion != definition.Version
+	state.AbilityCooldowns = cloneAbilityCooldowns(state.AbilityCooldowns)
 	if reset {
 		state = BossEncounterState{
 			EncounterID: input.EncounterID,
