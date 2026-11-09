@@ -13,6 +13,19 @@ import (
 
 var ErrBossEncounterCycleMismatch = errors.New("boss encounter cycle does not match active enemy cycle")
 
+// validBossTelegraphState rejects partial telegraphs as well as inverted time
+// ranges. An ability is either fully inactive (both timestamps zero) or has
+// both server-owned timestamps populated.
+func validBossTelegraphState(state game.BossEncounterState) bool {
+	started := !state.TelegraphStartedAt.IsZero()
+	until := !state.TelegraphUntil.IsZero()
+	if state.ActiveAbilityID == "" {
+		return !started && !until
+	}
+	return started && until && !state.TelegraphUntil.Before(state.TelegraphStartedAt)
+}
+
+
 // loadBossEncounterStateForUpdate must run inside the caller's combat
 // transaction. Locking the parent spawn row first gives boss ticks the same
 // serialization point as enemy AI, player attacks and encounter-cycle changes.
@@ -86,8 +99,7 @@ func loadBossEncounterStateForUpdate(
 	if state.DefinitionVersion <= 0 || state.PhaseID == "" ||
 		state.PhaseStartedAt.IsZero() || state.LastUpdatedAt.IsZero() ||
 		state.NextAbilityIndex < 0 ||
-		(state.ActiveAbilityID == "") != (state.TelegraphStartedAt.IsZero() && state.TelegraphUntil.IsZero()) ||
-		(!state.TelegraphStartedAt.IsZero() && state.TelegraphUntil.Before(state.TelegraphStartedAt)) ||
+		!validBossTelegraphState(state) ||
 		(state.Defeated && state.ActiveAbilityID != "") {
 		return game.BossEncounterState{}, "", false, errors.New("invalid persisted boss encounter state")
 	}
@@ -108,8 +120,7 @@ func persistBossEncounterState(
 		state.DefinitionVersion <= 0 || state.PhaseID == "" ||
 		state.PhaseStartedAt.IsZero() || state.LastUpdatedAt.IsZero() ||
 		state.NextAbilityIndex < 0 ||
-		(state.ActiveAbilityID == "") != (state.TelegraphStartedAt.IsZero() && state.TelegraphUntil.IsZero()) ||
-		(!state.TelegraphStartedAt.IsZero() && state.TelegraphUntil.Before(state.TelegraphStartedAt)) ||
+		!validBossTelegraphState(state) ||
 		(state.Defeated && state.ActiveAbilityID != "") {
 		return errors.New("invalid boss encounter state")
 	}
