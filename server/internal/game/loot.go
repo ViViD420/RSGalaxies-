@@ -46,11 +46,11 @@ var lootTableDefinitions = []LootTableDefinition{
 	},BonusRolls:[]LootTableRoll{
 		{Drops:[]LootTableDrop{{ItemID:"boar_tusk",Weight:1500,MinQuantity:1,MaxQuantity:2}}},
 	}},
-	{ID:"frontier-rat-common",Drops:[]LootTableDrop{
+	{ID:"frontier-rat-common",Version:1,Drops:[]LootTableDrop{
 		{ItemID:"rat_pelt",Weight:7000,MinQuantity:1,MaxQuantity:1},
 		{ItemID:"rat_tooth",Weight:2000,MinQuantity:1,MaxQuantity:1},
 	}},
-	{ID:"frontier-boar-common",Drops:[]LootTableDrop{
+	{ID:"frontier-boar-common",Version:1,Drops:[]LootTableDrop{
 		{ItemID:"boar_hide",Weight:7500,MinQuantity:1,MaxQuantity:1},
 		{ItemID:"boar_tusk",Weight:1500,MinQuantity:1,MaxQuantity:1},
 	}},
