@@ -221,9 +221,9 @@ func TestPostgresCombatPersistsEnemyPlayerLootAndRestState(t *testing.T) {
  var last game.Player
  var final game.CombatResult
  for hit:=0;hit<3;hit++{last,final,err=repo.AttackEnemyForAccount(ctx,account.ID,player.ID,"frontier-rat-001",now.Add(time.Duration(hit)*time.Second));if err!=nil{t.Fatalf("combat hit %d: %v",hit,err)}}
- if !final.EnemyDefeated||final.Experience!=25||final.LootItemID!="rat_pelt"||last.Inventory["rat_pelt"]!=1||last.Skills["combat"].Experience!=25{t.Fatalf("combat defeat result=%+v player=%+v",final,last)}
+ if !final.EnemyDefeated||final.Experience!=25||final.LootItemID!="rat_pelt"||last.Inventory["rat_pelt"]!=1||last.Skills["blades"].Experience!=25||last.Skills["melee"].Experience!=6||last.Skills["strength"].Experience!=3||last.Skills["defense"].Experience!=2{t.Fatalf("combat defeat result=%+v player=%+v",final,last)}
  persisted,err:=repo.GetCharacter(ctx,account.ID,player.ID);if err!=nil{t.Fatal(err)}
- if persisted.Health!=96||persisted.Inventory["rat_pelt"]!=1||persisted.Skills["combat"].Experience!=25{t.Fatalf("combat player state not persisted: %+v",persisted)}
+ if persisted.Health!=96||persisted.Inventory["rat_pelt"]!=1||persisted.Skills["blades"].Experience!=25||persisted.Skills["melee"].Experience!=6||persisted.Skills["strength"].Experience!=3||persisted.Skills["defense"].Experience!=2{t.Fatalf("combat player state not persisted: %+v",persisted)}
  if _,err:=repo.RestForAccount(ctx,account.ID,player.ID);!errors.Is(err,game.ErrRestOutOfRange){t.Fatalf("rest outside safe zone error=%v",err)}
  if _,err:=db.ExecContext(ctx,"UPDATE players SET position_x=0,position_z=0 WHERE id=$1",string(player.ID));err!=nil{t.Fatal(err)}
  rested,err:=repo.RestForAccount(ctx,account.ID,player.ID);if err!=nil{t.Fatalf("safe-zone rest: %v",err)}
