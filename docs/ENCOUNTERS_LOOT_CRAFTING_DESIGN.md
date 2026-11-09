@@ -18,10 +18,18 @@ The server assigns a unique encounter-cycle ID to each enemy spawn life and reco
 
 1. Finish the ordinary character and world foundations: stable skill progression, authoritative combat actions, equipment requirements, inventory capacity, player health/death/recovery, movement and persistence.
 2. Complete ordinary enemy behavior and persistence: AI/telegraphs, durable spawn-cycle IDs, threat selection, damage-based anti-leech, atomic reward settlement/claims and initial weighted loot tables are implemented; add party and support contribution rules.
-3. Introduce the reusable server-owned boss encounter framework and implement one modest first boss as a vertical slice, reusing durable settlement/claim infrastructure.
-4. Expand loot tables with multiple/guaranteed/rare drops, quantity bands, versioned tuning and boss-exclusive materials.
+3. Build the reusable server-owned boss encounter framework. The pure domain phase/ability engine is now implemented; next persist phase state, integrate authoritative damage/snapshots and ship one modest first boss vertical slice using the durable multi-item reward pipeline.
+4. Add party membership and verified damage/healing/support contribution before enabling group-boss rewards.
 5. Expand crafting into a profession-driven production loop using tools, stations, skill requirements, material families and quality.
 6. Add more bosses, regions, resources, recipe chains, markets and player services only after the first end-to-end loop is reliable.
+
+## Boss phase engine foundation (domain-only; persistence integration pending)
+
+A reusable, server-owned domain engine now exists in `server/internal/game/boss.go`. Boss definitions are versioned and validated independently of enemy execution code. The prototype Stoneback Colossus definition demonstrates two phases: Guarded uses Stone Fist; at 50% health the encounter transitions to Rampage and unlocks Ground Shatter. Ability data defines telegraph duration, cooldown, min/max range and server-calculated damage.
+
+`AdvanceBossEncounter` is a deterministic state transition function. It resets state on a new encounter-cycle ID or definition version, keeps clocks monotonic within a cycle, selects phase by health threshold without phase regression, starts abilities only when their cooldown and range permit, interrupts telegraphs when the target leaves range, and emits a damage intent only after the telegraph completes in range. Interrupted abilities retain their cooldown. Defeat is terminal for that encounter cycle. Returned cooldown maps are defensive copies, and malformed persisted telegraph state is rejected.
+
+Unit coverage checks catalog immutability, invalid phase/ability definitions, threshold transitions, telegraph timing, range interruption/cooldown, new-cycle reset, monotonic clocks, terminal defeat, corrupt state and map-copy behavior. This is a domain foundation only: Stoneback Colossus is not yet a live enemy, and no boss phase state is persisted or exposed to Godot yet. The next slice must persist phase/ability state under the existing encounter-cycle ID and apply resolved ability damage in the same transaction as AI state and player health before adding the first live boss.
 
 ## Boss encounter framework
 
