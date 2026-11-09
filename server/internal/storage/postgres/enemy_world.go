@@ -318,11 +318,21 @@ func (r *AccountRepository) ListEnemySnapshotsForAccount(ctx context.Context, ac
 		var storedZone sql.NullString
 		var x, z sql.NullFloat64
 		var telegraphUntil, respawnAt, lastUpdatedAt sql.NullTime
-		err := r.db.QueryRowContext(ctx, `SELECT health, initialized, behavior, position_zone_id,
-			position_x, position_z, telegraph_until, respawn_at, last_ai_updated_at
-			FROM enemy_spawn_state WHERE enemy_id=$1`, enemy.ID).Scan(
+		var bossID, bossPhaseID, bossAbilityID sql.NullString
+		var bossPhaseStartedAt, bossTelegraphStartedAt, bossTelegraphUntil sql.NullTime
+		var bossDefinitionVersion sql.NullInt64
+		err := r.db.QueryRowContext(ctx, `SELECT s.health, s.initialized, s.behavior, s.position_zone_id,
+			s.position_x, s.position_z, s.telegraph_until, s.respawn_at, s.last_ai_updated_at,
+			b.definition_id, b.definition_version, b.phase_id, b.phase_started_at,
+			b.active_ability_id, b.telegraph_started_at, b.telegraph_until
+			FROM enemy_spawn_state s
+			LEFT JOIN boss_encounter_states b
+				ON b.enemy_id=s.enemy_id AND b.encounter_id=s.encounter_id
+			WHERE s.enemy_id=$1`, enemy.ID).Scan(
 			&health, &initialized, &behavior, &storedZone, &x, &z,
-			&telegraphUntil, &respawnAt, &lastUpdatedAt)
+			&telegraphUntil, &respawnAt, &lastUpdatedAt,
+			&bossID, &bossDefinitionVersion, &bossPhaseID, &bossPhaseStartedAt,
+			&bossAbilityID, &bossTelegraphStartedAt, &bossTelegraphUntil)
 		if err != nil && !errors.Is(err, sql.ErrNoRows) { return nil, fmt.Errorf("load enemy snapshot %s: %w", enemy.ID, err) }
 		if err == nil {
 			if initialized { snapshot.Health = health }
@@ -331,6 +341,15 @@ func (r *AccountRepository) ListEnemySnapshotsForAccount(ctx context.Context, ac
 			if telegraphUntil.Valid { snapshot.TelegraphUntil = telegraphUntil.Time.UTC() }
 			if respawnAt.Valid { snapshot.RespawnAt = respawnAt.Time.UTC() }
 			if lastUpdatedAt.Valid { snapshot.LastUpdatedAt = lastUpdatedAt.Time.UTC() }
+			if bossID.Valid {
+				snapshot.BossID = bossID.String
+				if bossDefinitionVersion.Valid { snapshot.BossDefinitionVersion = int(bossDefinitionVersion.Int64) }
+				if bossPhaseID.Valid { snapshot.BossPhaseID = bossPhaseID.String }
+				if bossPhaseStartedAt.Valid { snapshot.BossPhaseStartedAt = bossPhaseStartedAt.Time.UTC() }
+				if bossAbilityID.Valid { snapshot.BossActiveAbilityID = bossAbilityID.String }
+				if bossTelegraphStartedAt.Valid { snapshot.BossTelegraphStartedAt = bossTelegraphStartedAt.Time.UTC() }
+				if bossTelegraphUntil.Valid { snapshot.BossTelegraphUntil = bossTelegraphUntil.Time.UTC() }
+			}
 			if snapshot.Health <= 0 && snapshot.RespawnAt.IsZero() { snapshot.RespawnAt = now.UTC() }
 		}
 		snapshots = append(snapshots, snapshot)
