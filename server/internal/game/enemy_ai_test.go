@@ -1,6 +1,7 @@
 package game
 
 import (
+	"encoding/json"
 	"testing"
 	"time"
 )
@@ -79,3 +80,61 @@ func TestEnemyAITimestampNeverMovesBackward(t *testing.T) {
 		t.Fatalf("monotonic next tick = %+v", next.State)
 	}
 }
+
+func TestEnemySnapshotBossFieldsAreOptionalAndAuthoritative(t *testing.T) {
+	ordinary := EnemySnapshot{
+		EnemyID: "frontier-rat-001",
+		Name: "Frontier Rat",
+		ZoneID: DefaultWorldZoneID,
+		Health: 12,
+		MaxHealth: 12,
+		Behavior: EnemyIdle,
+	}
+	ordinaryJSON, err := json.Marshal(ordinary)
+	if err != nil {
+		t.Fatal(err)
+	}
+	var ordinaryPayload map[string]any
+	if err := json.Unmarshal(ordinaryJSON, &ordinaryPayload); err != nil {
+		t.Fatal(err)
+	}
+	for _, key := range []string{
+		"bossId", "bossDefinitionVersion", "bossPhaseId",
+		"bossPhaseStartedAt", "bossActiveAbilityId",
+		"bossTelegraphStartedAt", "bossTelegraphUntil",
+	} {
+		if _, exists := ordinaryPayload[key]; exists {
+			t.Fatalf("ordinary enemy snapshot unexpectedly includes %s: %s", key, ordinaryJSON)
+		}
+	}
+
+	now := time.Date(2026, 11, 9, 12, 0, 0, 0, time.UTC)
+	deadline := now.Add(2 * time.Second)
+	boss := ordinary
+	boss.BossID = "stoneback-colossus"
+	boss.BossDefinitionVersion = 1
+	boss.BossPhaseID = "rampage"
+	boss.BossPhaseStartedAt = &now
+	boss.BossActiveAbilityID = "ground-shatter"
+	boss.BossTelegraphStartedAt = &now
+	boss.BossTelegraphUntil = &deadline
+	bossJSON, err := json.Marshal(boss)
+	if err != nil {
+		t.Fatal(err)
+	}
+	var bossPayload map[string]any
+	if err := json.Unmarshal(bossJSON, &bossPayload); err != nil {
+		t.Fatal(err)
+	}
+	if bossPayload["bossId"] != "stoneback-colossus" ||
+		bossPayload["bossDefinitionVersion"] != float64(1) ||
+		bossPayload["bossPhaseId"] != "rampage" ||
+		bossPayload["bossActiveAbilityId"] != "ground-shatter" {
+		t.Fatalf("boss snapshot fields missing or incorrect: %s", bossJSON)
+	}
+	if bossPayload["bossTelegraphStartedAt"] != now.Format(time.RFC3339Nano) ||
+		bossPayload["bossTelegraphUntil"] != deadline.Format(time.RFC3339Nano) {
+		t.Fatalf("boss telegraph timestamps incorrect: %s", bossJSON)
+	}
+}
+
