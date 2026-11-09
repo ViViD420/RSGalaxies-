@@ -483,6 +483,9 @@ func TestPostgresPublicBossTickAppearsInAuthenticatedSnapshots(t *testing.T) {
 		_, _ = db.ExecContext(context.Background(), "DELETE FROM players WHERE id=$1", string(playerID))
 		_, _ = db.ExecContext(context.Background(), "DELETE FROM accounts WHERE id=$1", account.ID)
 	})
+	if _, err := db.ExecContext(ctx, "DELETE FROM zone_presence WHERE zone_id=$1", game.DefaultWorldZoneID); err != nil {
+		t.Fatalf("isolate public boss snapshot test presence: %v", err)
+	}
 
 	if err := repo.TickEnemyAI(ctx, enemy.ID, now); err != nil {
 		t.Fatalf("tick public Stoneback definition: %v", err)
