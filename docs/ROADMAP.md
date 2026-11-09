@@ -91,3 +91,13 @@
 ## Working rule
 
 Each milestone is a tested, reviewable slice. A feature is not complete because a placeholder or interface exists: completion requires server rules, persistence where applicable, tests, and a usable client path. Keep production registration disabled until the documented security launch gates are met.
+
+## Boss encounter vertical slice
+
+- [x] Persist boss phase, ability telegraph, cooldown and defeat state under the existing per-spawn encounter-cycle ID (migration 0016).
+- [x] Reject stale-cycle boss state reads/writes and stale timestamp upserts.
+- [x] Validate complete telegraph state on load/save; reject partial timestamps and inverted intervals.
+- [ ] Integrate boss phase advancement and ability damage atomically into the enemy world tick.
+- [ ] Add exactly-once concurrent tick/retry tests and verify migration 0016 against PostgreSQL CI.
+- [ ] Expose authoritative boss phase/telegraph snapshots and render the Godot boss HUD.
+- [ ] Activate Stoneback Colossus only after the server, persistence, snapshots and client path pass CI; use the existing multi-item reward claim pipeline.
