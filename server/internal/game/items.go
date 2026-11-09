@@ -28,6 +28,7 @@ var itemDefinitions = []ItemDefinition{
 	{ID: "copper_bar", Name: "Copper Bar", Description: "A refined copper ingot ready for smithing.", MaxStack: 100, BuyPrice: 10, SellPrice: 4},
 	{ID: "rat_pelt", Name: "Rat Pelt", Description: "A small hide recovered from a frontier rat.", MaxStack: 100, BuyPrice: 6, SellPrice: 2},
 	{ID: "rat_tooth", Name: "Rat Tooth", Description: "A sharp tooth salvaged from a frontier rat.", MaxStack: 100, BuyPrice: 0, SellPrice: 1},
+	{ID: "rat_tooth_blade", Name: "Rat-Tooth Blade", Description: "A forged frontier blade reinforced with sharpened rat tooth.", MaxStack: 1, BuyPrice: 0, SellPrice: 35, EquipmentSlot: "main_hand", RequiredSkillID: "blades", RequiredSkillLevel: 2, AttackBonus: 3},
 	{ID: "boar_hide", Name: "Boar Hide", Description: "A tough hide taken from a wild boar.", MaxStack: 100, BuyPrice: 15, SellPrice: 5},
 	{ID: "boar_tusk", Name: "Boar Tusk", Description: "A heavy tusk recovered from a wild boar.", MaxStack: 100, BuyPrice: 0, SellPrice: 4},
 	{ID: "minor_healing_potion", Name: "Minor Healing Potion", Description: "Restores up to 25 health when used.", MaxStack: 10, BuyPrice: 20, SellPrice: 5, Consumable: true, HealAmount: 25},
