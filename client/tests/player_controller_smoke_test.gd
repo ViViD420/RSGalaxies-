@@ -16,12 +16,24 @@ func _run_movement_smoke_test() -> void:
 	var terrain := WORLD_TERRAIN_SCRIPT.new() as Node3D
 	root.add_child(terrain)
 	var terrain_surface := terrain.get_node_or_null("TerrainSurface") as MeshInstance3D
-	var terrain_collision := terrain.get_node_or_null("TerrainCollision/TerrainShape") as CollisionShape3D
-	if terrain_surface == null or terrain_surface.mesh == null or terrain_surface.mesh.get_surface_count() == 0:
-		_fail("Procedural terrain surface did not generate a renderable mesh.")
+	if terrain_surface == null:
+		_fail("Procedural terrain did not create its TerrainSurface node.")
 		return
-	if terrain_collision == null or terrain_collision.shape == null:
-		_fail("Procedural terrain did not generate collision geometry.")
+	var generated_mesh := terrain_surface.mesh
+	if generated_mesh == null:
+		_fail("Procedural terrain TerrainSurface has no generated mesh resource.")
+		return
+	if generated_mesh.get_surface_count() == 0:
+		_fail("Procedural terrain mesh has no renderable surfaces.")
+		return
+
+	var terrain_body := terrain.get_node_or_null("TerrainCollision") as StaticBody3D
+	var terrain_collision := terrain.get_node_or_null("TerrainCollision/TerrainShape") as CollisionShape3D
+	if terrain_body == null or terrain_collision == null or terrain_collision.shape == null:
+		_fail("Procedural terrain did not create collision geometry.")
+		return
+	if terrain_body.collision_layer == 0 or terrain_collision.disabled:
+		_fail("Procedural terrain collision is disabled or has no collision layer.")
 		return
 	var collision_mesh := terrain_collision.shape as ConcavePolygonShape3D
 	if collision_mesh == null or collision_mesh.get_faces().is_empty():
@@ -42,8 +54,23 @@ func _run_movement_smoke_test() -> void:
 		_fail("Terrain heightmap did not produce any elevation variation.")
 		return
 
+	# Wait for the physics server to register the generated static trimesh.
+	await physics_frame
+	var ray_from := Vector3(0.0, spawn_height + 10.0, 0.0)
+	var ray_to := Vector3(0.0, spawn_height - 10.0, 0.0)
+	var ray_query := PhysicsRayQueryParameters3D.create(ray_from, ray_to, 1)
+	var terrain_hit := root.world_3d.direct_space_state.intersect_ray(ray_query)
+	if terrain_hit.is_empty():
+		_fail("Physics ray could not hit generated terrain at the spawn point; spawn_height=%s faces=%s." % [spawn_height, collision_mesh.get_faces().size()])
+		return
+	if absf(float(terrain_hit.position.y) - spawn_height) > 0.15:
+		_fail("Terrain collision ray hit does not match deterministic height sample; hit=%s expected=%s." % [terrain_hit.position.y, spawn_height])
+		return
+
 	var player := PLAYER_SCENE.instantiate() as CharacterBody3D
-	player.position = Vector3(0.0, spawn_height + 0.05, 0.0)
+	player.collision_layer = 1
+	player.collision_mask = 1
+	player.position = Vector3(0.0, spawn_height + 0.1, 0.0)
 	root.add_child(player)
 
 	var initial_ground_frames := 0
