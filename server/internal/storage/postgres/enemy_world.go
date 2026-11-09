@@ -18,6 +18,20 @@ func newEncounterID() (string, error) {
 	return hex.EncodeToString(raw[:]), nil
 }
 
+func ensureEncounterID(ctx context.Context, tx *sql.Tx, enemyID string, resetCycle bool) (string, error) {
+	var current sql.NullString
+	if err := tx.QueryRowContext(ctx, "SELECT encounter_id FROM enemy_spawn_state WHERE enemy_id=$1", enemyID).Scan(&current); err != nil {
+		return "", fmt.Errorf("read encounter cycle id: %w", err)
+	}
+	if !resetCycle && current.Valid && current.String != "" { return current.String, nil }
+	id, err := newEncounterID()
+	if err != nil { return "", err }
+	if _, err := tx.ExecContext(ctx, "UPDATE enemy_spawn_state SET encounter_id=$2 WHERE enemy_id=$1", enemyID, id); err != nil {
+		return "", fmt.Errorf("persist encounter cycle id: %w", err)
+	}
+	return id, nil
+}
+
 func recordEncounterContribution(ctx context.Context, tx *sql.Tx, encounterID, enemyID, accountID string, characterID game.PlayerID, damageDealt, damageReceived int, now time.Time) error {
 	_, err := tx.ExecContext(ctx, `INSERT INTO enemy_encounter_participants(
 		encounter_id,enemy_id,account_id,character_id,damage_dealt,damage_received,action_count,first_contribution_at,last_contribution_at)
@@ -138,12 +152,15 @@ func (r *AccountRepository) TickEnemyAI(ctx context.Context, enemyID string, now
 		health, initialized, respawnAt, state, err := readEnemyAIStateForUpdate(ctx, tx, enemy)
 		if err != nil { _ = tx.Rollback(); return err }
 
+		resetEncounter := !initialized || health <= 0
 		if !initialized { health, initialized = enemy.MaxHealth, true }
 		if health <= 0 {
 			if respawnAt.Valid && now.Before(respawnAt.Time) { _ = tx.Rollback(); return nil }
 			health, respawnAt = enemy.MaxHealth, sql.NullTime{}
 			state = game.EnemyAIState{Behavior: game.EnemyIdle, Position: enemy.Position}
 		}
+		encounterID, err := ensureEncounterID(ctx, tx, enemyID, resetEncounter)
+		if err != nil { _ = tx.Rollback(); return err }
 		if state.TargetCharacterID != "" && state.TargetCharacterID != string(candidate.characterID) &&
 			(state.Behavior == game.EnemyChasing || state.Behavior == game.EnemyTelegraphing) {
 			var stickyTargetStillActive bool
@@ -167,17 +184,21 @@ func (r *AccountRepository) TickEnemyAI(ctx context.Context, enemyID string, now
 			result.State.TargetCharacterID = ""
 		}
 		if result.AttackRequested {
-			if _, err := player.ReceiveEnemyAttack(enemy, result.State.Position, now); err != nil {
+			attackResult, err := player.ReceiveEnemyAttack(enemy, result.State.Position, now)
+			if err != nil {
 				_ = tx.Rollback()
 				if errors.Is(err, game.ErrEnemyOutOfRange) || errors.Is(err, game.ErrPlayerDefeated) { return nil }
 				return fmt.Errorf("resolve telegraphed enemy attack: %w", err)
 			}
 			if player.Health <= 0 { result.State.TargetCharacterID = "" }
+			if err := recordEncounterDamageReceived(ctx, tx, encounterID, enemyID, player.ID, attackResult.DamageReceived, now); err != nil {
+				_ = tx.Rollback(); return err
+			}
 			if err := updateOwnedPlayer(ctx, tx, candidate.accountID, player); err != nil {
 				_ = tx.Rollback(); return fmt.Errorf("persist enemy attack target: %w", err)
 			}
 		}
-		if err := persistEnemyAIState(ctx, tx, enemyID, health, initialized, respawnAt, result.State); err != nil {
+		if err := persistEnemyAIState(ctx, tx, enemyID, health, initialized, respawnAt, encounterID, result.State); err != nil {
 			_ = tx.Rollback(); return err
 		}
 		if err := tx.Commit(); err != nil { return fmt.Errorf("commit enemy world tick: %w", err) }
@@ -195,15 +216,18 @@ func (r *AccountRepository) TickEnemyAI(ctx context.Context, enemyID string, now
 	}
 	health, initialized, respawnAt, state, err := readEnemyAIStateForUpdate(ctx, tx, enemy)
 	if err != nil { return err }
+	resetEncounter := !initialized || health <= 0
 	if !initialized { health, initialized = enemy.MaxHealth, true }
 	if health <= 0 {
 		if respawnAt.Valid && now.Before(respawnAt.Time) { return nil }
 		health, respawnAt = enemy.MaxHealth, sql.NullTime{}
 		state = game.EnemyAIState{Behavior: game.EnemyIdle, Position: enemy.Position}
 	}
+	encounterID, err := ensureEncounterID(ctx, tx, enemyID, resetEncounter)
+	if err != nil { return err }
 	result := game.AdvanceEnemyAI(enemy, enemyAIConfig(enemy), state, game.WorldPosition{}, now)
 	result.State.TargetCharacterID = ""
-	if err := persistEnemyAIState(ctx, tx, enemyID, health, initialized, respawnAt, result.State); err != nil { return err }
+	if err := persistEnemyAIState(ctx, tx, enemyID, health, initialized, respawnAt, encounterID, result.State); err != nil { return err }
 	if err := tx.Commit(); err != nil { return fmt.Errorf("commit idle enemy tick: %w", err) }
 	return nil
 }
@@ -238,16 +262,16 @@ func nullableString(value string) any {
 	return value
 }
 
-func persistEnemyAIState(ctx context.Context, tx *sql.Tx, enemyID string, health int, initialized bool, respawnAt sql.NullTime, state game.EnemyAIState) error {
+func persistEnemyAIState(ctx context.Context, tx *sql.Tx, enemyID string, health int, initialized bool, respawnAt sql.NullTime, encounterID string, state game.EnemyAIState) error {
 	var respawnValue any
 	if respawnAt.Valid { respawnValue = respawnAt.Time.UTC() }
 	_, err := tx.ExecContext(ctx, `UPDATE enemy_spawn_state SET health=$2, initialized=$3,
 		behavior=$4, position_zone_id=$5, position_x=$6, position_z=$7,
 		telegraph_until=$8, next_attack_at=$9, last_ai_updated_at=$10,
-		target_character_id=$11, respawn_at=$12 WHERE enemy_id=$1`,
+		target_character_id=$11, respawn_at=$12, encounter_id=$13 WHERE enemy_id=$1`,
 		enemyID, health, initialized, string(state.Behavior), state.Position.ZoneID,
 		state.Position.X, state.Position.Z, nullableTime(state.TelegraphUntil),
-		nullableTime(state.NextAttackAt), state.LastUpdatedAt.UTC(), nullableString(state.TargetCharacterID), respawnValue)
+		nullableTime(state.NextAttackAt), state.LastUpdatedAt.UTC(), nullableString(state.TargetCharacterID), respawnValue, encounterID)
 	if err != nil { return fmt.Errorf("persist enemy AI world state: %w", err) }
 	return nil
 }
