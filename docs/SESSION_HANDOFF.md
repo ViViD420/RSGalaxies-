@@ -82,9 +82,9 @@ An original sandbox MMORPG combining long-form skill progression and item gamepl
 ## Latest verified repository state
 
 - Server CI runs #413–#421 all passed, including migration 0010, restart recovery, enemy damage, transactional tick coordinator and snapshot model/repository.
-- Server runs #422–#424 failed because the HTTP test double had not yet implemented the newly extended enemy-snapshot interface. This was a test-adapter compile failure, not a production-code failure; commit `97c5d41` added the fake implementation and run #425 passed. Run #426 passed the stale-presence leash-return integration test; #427 passed dynamic live-position combat. Runs #428 (combined concurrency/moving-target integration), #429 (snapshot health assertion), #430 (monotonic simulation clock) and #431 (clock regression test) were still in progress at the latest check. Verify Actions before claiming them green.
+- Server runs #422–#424 failed because the HTTP test double had not yet implemented the newly extended enemy-snapshot interface. This was a test-adapter compile failure; commit `97c5d41` added the fake implementation and #425 passed. #426 passed stale-presence leash-return coverage; #427 passed dynamic live-position combat. #428 failed because its integration assertion still expected the pre-player-attack enemy health; #429 corrected the expected value and passed. Runs #430 (monotonic simulation clock) and #431 (clock regression test) remained in progress at the latest check. Verify Actions before claiming them green.
 - Client runs #125–#127 all passed. They validate snapshot polling/interpolation code and the respawn-label/type-cast refinements.
-- Latest documentation update `28c86c8` records Godot enemy visualization and live-position combat. API docs update `ad6b6e5` documents the authenticated snapshot endpoint and server tick.
+- Latest documentation updates `28c86c8` (combat), `77b8195` (architecture) and `662df6b` (roadmap) record the transactional enemy simulation and Godot integration. API docs update `ad6b6e5` documents the authenticated snapshot endpoint and server tick.
 
 ## Enemy AI foundation, transactional world and Godot integration (current milestone)
 
@@ -96,7 +96,7 @@ An original sandbox MMORPG combining long-form skill progression and item gamepl
 - The world worker runs only with PostgreSQL-backed account storage and advances catalogued spawns every 250 ms. No-player ticks cause pursuing enemies to return to spawn. Enemy snapshots are authenticated and limited to the requesting character's current zone.
 - Godot commits: `401e1e5` adds 0.5-second authenticated snapshot polling, health/behavior labels, telegraph warnings and interpolation; `424415e` keeps the respawn label visible when the creature mesh is hidden; `816147a` uses safe typed mesh casts. Client runs #125–#127 passed.
 - PostgreSQL player-initiated attacks now read the persisted enemy position (`a13b0b9`), so the client can attack a moving enemy rather than the static catalog spawn. `6f4369c` adds integration coverage; `4e403d9` updates expected snapshot health.
-- Monotonic simulation time: `0a0cbe2` prevents a delayed tick from moving persisted simulation time backwards across server replicas; `9a64f8d` tests clock regression.
+- Monotonic simulation time: `0a0cbe2` prevents a delayed tick from moving persisted simulation time backwards across server replicas; `9a64f8d` tests clock regression. Runs #430/#431 were pending at last verification.
 - Remaining AI limitations: nearest-active-target selection is simple and not sticky; no threat table, pathfinding, party aggro, enemy abilities or boss phases. No client-authoritative AI ticks or damage are permitted.
 
 
