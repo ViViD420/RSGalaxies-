@@ -1,6 +1,7 @@
 extends Node3D
 
 const PLAYER_SCENE := preload("res://scenes/player.tscn")
+const CORE_SKILL_IDS := ["blades", "cooking", "crafting", "defense", "farming", "foraging", "magic", "melee", "mining", "pistols", "polearms", "ranged", "rifles", "scavenging", "smithing", "strength", "unarmed", "woodcutting"]
 
 var status_label: Label
 var presence_label: Label
@@ -1006,7 +1007,7 @@ func _on_gather_completed(result: int, response_code: int, _headers: PackedStrin
 		_update_inventory(player_data.get("inventory", {}), player_data.get("bank", {}), player_data.get("coins", current_coins), player_data.get("equipment", {}), player_data.get("health", current_health))
 		var combat_message := "Hit for " + str(combat.get("damageDealt", 0)) + " • Enemy HP " + str(combat.get("enemyHealth", 0)) + " • Your HP " + str(current_health)
 		if bool(combat.get("enemyDefeated", false)):
-			combat_message = "Enemy defeated • +" + str(combat.get("experience", 0)) + " Combat XP"
+			combat_message = "Enemy defeated • +" + str(combat.get("experience", 0)) + " " + str(combat.get("skillId", "combat")).capitalize() + " XP"
 			if not str(combat.get("lootItemId", "")).is_empty():
 				combat_message += " • Loot: " + str(combat.get("lootItemId", "")).replace("_", " ")
 		if bool(combat.get("playerDefeated", false)):
@@ -2715,9 +2716,9 @@ func _on_skills_completed(result: int, response_code: int, _headers: PackedStrin
 		return
 	for child in skills_list.get_children():
 		child.queue_free()
-	var skill_ids: Array = skills.keys()
-	skill_ids.sort()
-	for skill_id in skill_ids:
+	for skill_id in CORE_SKILL_IDS:
+		if not skills.has(skill_id):
+			continue
 		var progress: Variant = skills[skill_id]
 		if not progress is Dictionary:
 			continue
@@ -2752,7 +2753,7 @@ func _on_skills_completed(result: int, response_code: int, _headers: PackedStrin
 		detail.add_theme_font_size_override("font_size", 11)
 		skill_column.add_child(detail)
 		skills_list.add_child(skill_column)
-	skills_status_label.text = str(skills.size()) + " skills • progression updates after server actions"
+	skills_status_label.text = str(CORE_SKILL_IDS.size()) + " core skills • progression updates after server actions"
 
 
 func _experience_for_level(level: int) -> int:
