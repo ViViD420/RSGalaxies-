@@ -5,6 +5,7 @@ import (
 	"errors"
 	"database/sql"
 	"fmt"
+	"math"
 	"os"
 	"sync"
 	"testing"
@@ -182,5 +183,63 @@ func TestPostgresEnemyWorldTickCommitsAttackExactlyOnce(t *testing.T) {
 	if spawnX != 8 || telegraph.Valid || !lastUpdated.Valid || !lastUpdated.Time.Equal(now.Add(36*time.Second)) ||
 		!nextAttack.Valid || !nextAttack.Time.Equal(now.Add(39*time.Second)) {
 		t.Fatalf("respawn did not reset AI position/timers: x=%v telegraph=%v updated=%v nextAttack=%v", spawnX, telegraph, lastUpdated, nextAttack)
+	}
+}
+
+ 
+func TestPostgresEnemyAITargetRemainsStickyWhilePresenceIsActive(t *testing.T) {
+	databaseURL := os.Getenv("RS_GALAXIES_TEST_DATABASE_URL")
+	if databaseURL == "" { t.Skip("RS_GALAXIES_TEST_DATABASE_URL is not configured") }
+	ctx := context.Background()
+	db, err := sql.Open("pgx", databaseURL)
+	if err != nil { t.Fatal(err) }
+	defer db.Close()
+	db.SetMaxOpenConns(8)
+	if err := db.PingContext(ctx); err != nil { t.Fatalf("connect test database: %v", err) }
+	if err := Migrate(ctx, db); err != nil { t.Fatalf("migrate test database: %v", err) }
+
+	now := time.Now().UTC().Truncate(time.Second)
+	accountRepo := NewAccountRepository(db)
+	email := fmt.Sprintf("enemy-sticky-%d@example.test", now.UnixNano())
+	account, _, err := accountRepo.Register(ctx, email, "StrongTestPassword!2026", now)
+	if err != nil { t.Fatalf("register test account: %v", err) }
+	firstID := game.PlayerID(fmt.Sprintf("enemy-sticky-first-%d", now.UnixNano()))
+	stickyID := game.PlayerID(fmt.Sprintf("enemy-sticky-current-%d", now.UnixNano()))
+	first, err := game.NewPlayer(firstID, "FirstTarget", now)
+	if err != nil { t.Fatal(err) }
+	sticky, err := game.NewPlayer(stickyID, "StickyTarget", now)
+	if err != nil { t.Fatal(err) }
+	sticky.Position.X = 2
+	sticky.Position.Z = 4
+	if err := accountRepo.CreateCharacter(ctx, account.ID, first); err != nil { t.Fatalf("create first character: %v", err) }
+	if err := accountRepo.CreateCharacter(ctx, account.ID, sticky); err != nil { t.Fatalf("create sticky character: %v", err) }
+	const enemyID = "frontier-rat-001"
+	if _, err := db.ExecContext(ctx, "DELETE FROM enemy_spawn_state WHERE enemy_id=$1", enemyID); err != nil { t.Fatal(err) }
+	t.Cleanup(func() {
+		_, _ = db.ExecContext(context.Background(), "DELETE FROM zone_presence WHERE character_id IN ($1,$2)", string(firstID), string(stickyID))
+		_, _ = db.ExecContext(context.Background(), "DELETE FROM enemy_spawn_state WHERE enemy_id=$1", enemyID)
+		_, _ = db.ExecContext(context.Background(), "DELETE FROM players WHERE id IN ($1,$2)", string(firstID), string(stickyID))
+		_, _ = db.ExecContext(context.Background(), "DELETE FROM accounts WHERE id=$1", account.ID)
+	})
+	if err := accountRepo.HeartbeatPresenceForAccount(ctx, account.ID, firstID, now); err != nil { t.Fatal(err) }
+	if err := accountRepo.HeartbeatPresenceForAccount(ctx, account.ID, stickyID, now); err != nil { t.Fatal(err) }
+
+	if err := accountRepo.TickEnemyAI(ctx, enemyID, now); err != nil { t.Fatalf("initial target selection: %v", err) }
+	var targetID string
+	if err := db.QueryRowContext(ctx, "SELECT target_character_id FROM enemy_spawn_state WHERE enemy_id=$1", enemyID).Scan(&targetID); err != nil { t.Fatal(err) }
+	if targetID != string(stickyID) { t.Fatalf("initial target = %s, want nearest %s", targetID, stickyID) }
+
+	// The first character moves closer, but the enemy must keep its existing
+	// live target rather than oscillating between nearby players each tick.
+	if _, err := db.ExecContext(ctx, "UPDATE players SET position_x=7,last_move_at=$2 WHERE id=$1", string(firstID), now.Add(time.Second)); err != nil { t.Fatal(err) }
+	if err := accountRepo.HeartbeatPresenceForAccount(ctx, account.ID, firstID, now.Add(time.Second)); err != nil { t.Fatal(err) }
+	if err := accountRepo.TickEnemyAI(ctx, enemyID, now.Add(2*time.Second)); err != nil { t.Fatalf("sticky target tick: %v", err) }
+	var x, z float64
+	if err := db.QueryRowContext(ctx, "SELECT target_character_id,position_x,position_z FROM enemy_spawn_state WHERE enemy_id=$1", enemyID).Scan(&targetID,&x,&z); err != nil { t.Fatal(err) }
+	if targetID != string(stickyID) { t.Fatalf("target switched to %s, want sticky target %s", targetID, stickyID) }
+	wantX := 8.0 - 4.0*6.0/math.Sqrt(52.0)
+	wantZ := 4.0*4.0/math.Sqrt(52.0)
+	if math.Abs(x-wantX) > 0.001 || math.Abs(z-wantZ) > 0.001 {
+		t.Fatalf("enemy moved toward a different target: position=(%v,%v), want=(%v,%v)", x,z,wantX,wantZ)
 	}
 }
