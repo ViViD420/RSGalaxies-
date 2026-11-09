@@ -77,6 +77,7 @@ var remote_player_names: Dictionary = {}
 var enemy_nodes: Dictionary = {}
 var enemy_targets: Dictionary = {}
 var enemy_labels: Dictionary = {}
+var enemy_available: Dictionary = {}
 var enemy_snapshot_request: HTTPRequest
 var enemy_snapshot_timer: Timer
 var enemy_snapshot_pending := false
@@ -397,6 +398,7 @@ func _add_enemy_visual(enemy_id: String, at: Vector3, enemy_name: String, max_he
 	enemy_nodes[enemy_id] = creature
 	enemy_targets[enemy_id] = at
 	enemy_labels[enemy_id] = label
+	enemy_available[enemy_id] = true
 
 func _start_enemy_snapshot_polling() -> void:
 	_stop_enemy_snapshot_polling()
@@ -460,6 +462,7 @@ func _on_enemy_snapshots_completed(result: int, response_code: int, _headers: Pa
 		enemy_targets[enemy_id] = target
 		var health := int(snapshot.get("health", 0))
 		var maximum := int(snapshot.get("maxHealth", 1))
+		enemy_available[enemy_id] = health > 0
 		var behavior := str(snapshot.get("behavior", "idle"))
 		var creature: Node3D = enemy_nodes[enemy_id]
 		if creature.get_child_count() >= 2:
@@ -984,6 +987,8 @@ func _request_interaction() -> void:
 	for enemy in enemy_catalog:
 		if enemy is Dictionary:
 			var enemy_id := str(enemy.get("id", ""))
+			if not bool(enemy_available.get(enemy_id, true)):
+				continue
 			var enemy_position: Variant = enemy.get("position", {})
 			if enemy_position is Dictionary:
 				var target_position: Vector3 = enemy_targets.get(enemy_id, Vector3(float(enemy_position.get("x", 0.0)), 0.0, float(enemy_position.get("z", 0.0))))
