@@ -847,7 +847,7 @@ func _create_action_button(parent: GridContainer, caption: String, action: Calla
 func _update_hud_layout() -> void:
 	if hud_info_panel == null or action_toolbar == null:
 		return
-	var viewport_width := get_viewport_rect().size.x
+	var viewport_width: float = get_viewport().get_visible_rect().size.x
 	var info_width := minf(390.0, maxf(140.0, viewport_width * 0.42))
 	var toolbar_width := minf(224.0, maxf(164.0, viewport_width * 0.46))
 	hud_info_panel.custom_minimum_size.x = info_width
