@@ -64,11 +64,17 @@ func _run_movement_smoke_test() -> void:
 		_fail("Player did not settle onto the test floor before jump validation; position=%s velocity=%s." % [player.global_position, player.velocity])
 		return
 
-	Input.action_press("jump")
-	await process_frame
+	var jump_binding := InputEventKey.new()
+	jump_binding.physical_keycode = KEY_SPACE
+	InputMap.action_add_event("jump", jump_binding)
+	var jump_press := InputEventKey.new()
+	jump_press.physical_keycode = KEY_SPACE
+	jump_press.pressed = true
+	Input.parse_input_event(jump_press)
 	await physics_frame
 	var jump_speed := player.velocity.y
-	Input.action_release("jump")
+	jump_press.pressed = false
+	Input.parse_input_event(jump_press)
 	if jump_speed <= 0.0:
 		_fail("Jump input did not produce upward velocity while grounded; on_floor=%s position=%s velocity=%s action_pressed=%s." % [player.is_on_floor(), player.global_position, player.velocity, Input.is_action_pressed("jump")])
 		return
