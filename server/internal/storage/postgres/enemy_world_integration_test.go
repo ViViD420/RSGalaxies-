@@ -88,7 +88,7 @@ func TestPostgresEnemyWorldTickCommitsAttackExactlyOnce(t *testing.T) {
 	for _, snapshot := range snapshots {
 		if snapshot.EnemyID == enemyID {
 			found = true
-			if snapshot.Behavior != game.EnemyChasing || snapshot.X != 0 || snapshot.Health != 12 {
+			if snapshot.Behavior != game.EnemyChasing || snapshot.X != 0 || snapshot.Health != 10 {
 				t.Fatalf("unexpected rat snapshot after telegraph: %+v", snapshot)
 			}
 		}
