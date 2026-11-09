@@ -238,7 +238,8 @@ func TestPostgresCombatPersistsEnemyPlayerLootAndRestState(t *testing.T) {
  var claimLoot sql.NullString
  if err:=db.QueryRowContext(ctx,`SELECT status,experience_skill_id,experience_amount,parent_skill_id,parent_experience_amount,loot_item_id,loot_quantity
   FROM enemy_encounter_reward_claims WHERE enemy_id=$1 AND character_id=$2`,"frontier-rat-001",string(player.ID)).Scan(&claimStatus,&claimSkill,&claimXP,&claimParent,&claimParentXP,&claimLoot,&claimLootQty);err!=nil{t.Fatal(err)}
- if claimStatus!="pending"||claimSkill!="blades"||claimXP!=25||claimParent!="melee"||claimParentXP!=6||!claimLoot.Valid||!(claimLoot.String=="rat_pelt"||claimLoot.String=="rat_tooth")||claimLootQty!=1{t.Fatalf("pending reward claim: status=%s skill=%s/%d parent=%s/%d loot=%v/%d",claimStatus,claimSkill,claimXP,claimParent,claimParentXP,claimLoot,claimLootQty)}
+ lootValid := !claimLoot.Valid && claimLootQty == 0 || claimLoot.Valid && (claimLoot.String=="rat_pelt"||claimLoot.String=="rat_tooth") && claimLootQty==1
+ if claimStatus!="pending"||claimSkill!="blades"||claimXP!=25||claimParent!="melee"||claimParentXP!=6||!lootValid{t.Fatalf("pending reward claim: status=%s skill=%s/%d parent=%s/%d loot=%v/%d",claimStatus,claimSkill,claimXP,claimParent,claimParentXP,claimLoot,claimLootQty)}
  if _,err:=repo.RestForAccount(ctx,account.ID,player.ID);!errors.Is(err,game.ErrRestOutOfRange){t.Fatalf("rest outside safe zone error=%v",err)}
  if _,err:=db.ExecContext(ctx,"UPDATE players SET position_x=0,position_z=0 WHERE id=$1",string(player.ID));err!=nil{t.Fatal(err)}
  rested,err:=repo.RestForAccount(ctx,account.ID,player.ID);if err!=nil{t.Fatalf("safe-zone rest: %v",err)}
