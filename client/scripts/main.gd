@@ -905,7 +905,7 @@ func _build_boss_hud(layer: CanvasLayer) -> void:
 	column.add_child(boss_hud_status_label)
 	layer.add_child(boss_hud_panel)
 
-func _add_hold_button(parent: Control, caption: String, action: String, left: float, top: float, right: float, bottom: float, anchor_right: bool = false) -> void:
+func _add_hold_button(parent: Node, caption: String, action: String, left: float, top: float, right: float, bottom: float, anchor_right: bool = false) -> void:
 	var button := Button.new()
 	button.text = caption
 	button.custom_minimum_size = Vector2(70, 70)
@@ -1552,6 +1552,13 @@ func _activate_character(character_data: Dictionary) -> void:
 	_start_gathering()
 	_start_chat()
 	_start_presence()
+
+func _set_account_status(message: String) -> void:
+	if auth_status_label != null:
+		auth_status_label.text = message
+	if status_label != null:
+		status_label.text = message
+
 
 func _request_character_list() -> void:
 	api_stage = "list_characters"
@@ -2223,7 +2230,7 @@ func _build_trade_panel() -> void:
 func _layout_trade_panel() -> void:
 	if trade_panel == null:
 		return
-	var viewport_width := get_viewport_rect().size.x
+	var viewport_width: float = get_viewport().get_visible_rect().size.x
 	var panel_width := minf(410.0, maxf(240.0, viewport_width - 24.0))
 	trade_panel.offset_left = -panel_width / 2.0
 	trade_panel.offset_right = panel_width / 2.0
