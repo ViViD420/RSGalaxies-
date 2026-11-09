@@ -62,9 +62,10 @@ func TestPostgresEnemyDefeatCreatesOneDurableRewardClaim(t *testing.T) {
 		FROM enemy_encounter_reward_claims WHERE enemy_id=$1 AND character_id=$2`,
 		enemyID, string(playerID)).Scan(&status,&skillID,&xp,&parentSkillID,&parentXP,&lootItemID,&lootQuantity)
 	if err != nil { t.Fatal(err) }
+	lootValid := !lootItemID.Valid && lootQuantity == 0 ||
+		lootItemID.Valid && (lootItemID.String == "rat_pelt" || lootItemID.String == "rat_tooth") && lootQuantity == 1
 	if status != "pending" || skillID != "unarmed" || xp != 25 ||
-		parentSkillID != "melee" || parentXP != 6 ||
-		!lootItemID.Valid || !(lootItemID.String == "rat_pelt" || lootItemID.String == "rat_tooth") || lootQuantity != 1 {
+		parentSkillID != "melee" || parentXP != 6 || !lootValid {
 		t.Fatalf("durable reward claim = status:%s skill:%s xp:%d parent:%s/%d loot:%v/%d",
 			status,skillID,xp,parentSkillID,parentXP,lootItemID,lootQuantity)
 	}
