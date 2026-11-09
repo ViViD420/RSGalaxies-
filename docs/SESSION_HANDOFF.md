@@ -1,6 +1,6 @@
 # RS Galaxies — Session Handoff
 
-Last updated: 2026-11-09 (CI test corrections committed; server verification pending)
+Last updated: 2026-11-09 (Stoneback registered in public enemy catalog; CI pending)
 
 ## Project identity
 
@@ -590,3 +590,34 @@ Next add boss interruption/player death/respawn-cycle integration coverage, veri
   - Server #582–#584 failed because public catalog and loot tests still expected 19 items/4 loot tables. Assertions were updated to 22 items/5 tables in #586–#587.
   - Server #585–#588 were in progress at the last check. #588 includes the new no-target interruption test.
 - Do not register Stoneback in the public catalog until #585–#588 (or later latest-main runs) complete successfully and both race-enabled PostgreSQL tests and Vet are verified.
+
+## Stoneback Colossus public registration (2026-11-09)
+
+- Registered Stoneback Colossus in the public enemy catalog, so the existing RunEnemyAITick loop, TickEnemyAI API entry point, authenticated enemy snapshots and client spawn builder now include it.
+- Server-owned enemy tuning:
+  - 100 health, 2 defense, 0 ordinary attack (all boss damage comes from the boss ability engine), 500 encounter XP.
+  - Spawn position Verdant Frontier (32, 32), 3-unit player melee interaction range, 300-second respawn.
+  - Uses the versioned stoneback-colossus-harvest table with guaranteed scales and independent core/plate bonus rolls.
+- Added a catalog regression test verifying enemy/boss/reward definitions resolve together and updated public catalog expectations to 3 enemies and 22 items.
+- Commits:
+  - 7f555a986eda25b7b56ad258a9b44ecac37b6188 — register Stoneback in enemy catalog.
+  - 4a40a028ca12481572882fbf72d41cbc0e63ebe1 — test boss/enemy/reward registration.
+  - aba266e70290dcf85b0ccb6543d9f86714baf655 — update public catalog expectations.
+- This is code registration on main, not a claim of production deployment or a fully verified playable release. The latest server runs #589–#592 were in progress at the last check and must pass before the boss milestone is called green.
+- Client #137 passed Godot 4.3 import/script validation for the distinct boss model. The earlier HUD validation also passed #135/#136.
+
+### Remaining validation and polish
+1. Verify server #589–#592, including the deterministic Ground Shatter test, item/loot catalog tests, and all PostgreSQL world-tick tests. Inspect each job's Test and Vet steps.
+2. Add an end-to-end reward settlement/claim integration test for the Stoneback multi-item bundle, proving the existing reward claim UI receives the guaranteed scale line and any bonus lines.
+3. Test the public TickEnemyAI/RunEnemyAITick path and authenticated snapshot endpoint with the catalogued boss, not only the injected test seam.
+4. If CI remains green, review encounter tuning and Godot HUD behavior in the actual client; do not alter the 18-skill system or existing rewards policy.
+5. Update this handoff after every meaningful change and keep the latest continuation prompt below.
+
+### Continuation prompt
+~~~text
+RS GALAXIES — RESUME DEVELOPMENT. Work only in ViViD420/RSGalaxies- on main. Read docs/SESSION_HANDOFF.md completely; inspect latest HEAD, commits and GitHub Actions runs/jobs first. Boss persistence, telegraph validation, ability-specific damage, transactional world tick, player-initiated terminal defeat, snapshot fields, passive Godot boss HUD and distinct Stoneback model are implemented. The boss has now been registered in the public enemy catalog at Verdant Frontier (32,32), with 100 HP, 2 Defense, no ordinary attack, 500 XP, 300-second respawn and stoneback-colossus-harvest multi-item rewards.
+
+Latest catalog commits: 7f555a986eda25b7b56ad258a9b44ecac37b6188, 4a40a028ca12481572882fbf72d41cbc0e63ebe1, aba266e70290dcf85b0ccb6543d9f86714baf655. Server Actions #589–#592 were in progress at the last check; #589 contains the explicit Stone Fist cooldown setup to make the lethal Ground Shatter test deterministic; #590–#592 include public catalog registration/count tests. Earlier server #579/#580 passed exactly-once concurrent damage, out-of-range interruption and respawn reset. Client #137 passed Godot import/script validation.
+
+Next verify latest server tests and Vet. Then add end-to-end Stoneback reward claim coverage and test the public TickEnemyAI/RunEnemyAITick and authenticated snapshot path. Keep existing multi-item claims and 18 skills. Do not claim production-ready until full CI evidence. Never modify GalaxyMMO or reuse proprietary code. Always update this handoff after meaningful progress.
+~~~
