@@ -138,7 +138,7 @@ func persistBossEncounterState(
 		return ErrBossEncounterCycleMismatch
 	}
 
-	_, err = tx.ExecContext(ctx, `INSERT INTO boss_encounter_states (
+	result, err := tx.ExecContext(ctx, `INSERT INTO boss_encounter_states (
 		enemy_id, encounter_id, definition_id, definition_version, phase_id,
 		phase_started_at, active_ability_id, telegraph_started_at, telegraph_until,
 		ability_cooldowns, next_ability_index, last_updated_at, defeated
@@ -163,6 +163,13 @@ func persistBossEncounterState(
 	)
 	if err != nil {
 		return fmt.Errorf("persist boss encounter state: %w", err)
+	}
+	rowsAffected, err := result.RowsAffected()
+	if err != nil {
+		return fmt.Errorf("inspect boss encounter persistence result: %w", err)
+	}
+	if rowsAffected != 1 {
+		return errors.New("stale boss encounter state was not persisted")
 	}
 	return nil
 }
