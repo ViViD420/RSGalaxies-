@@ -1,6 +1,14 @@
 package game
 
-import "time"
+import (
+	"errors"
+	"time"
+)
+
+var (
+	ErrRewardClaimNotFound = errors.New("encounter reward claim not found")
+	ErrRewardInventoryFull = errors.New("inventory stack cannot accept encounter reward")
+)
 
 // EncounterParticipant is the server-recorded contribution summary for one
 // character during one spawn life. Client-reported contribution is never used.
