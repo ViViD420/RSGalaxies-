@@ -21,16 +21,16 @@ This is a design relationship, not a final numeric formula. Do not implement arb
 ## Skill and weapon selection
 
 - The server resolves the selected ability ID and equipped weapon; the client cannot nominate a different governing skill.
-- A weapon family maps to its appropriate skill: blades, polearms, unarmed, bows/thrown weapons, pistols or rifles.
-- Magic abilities use Magic, with ability-specific requirements and effects.
-- Melee, Strength, Defense and Tactics can contribute to defined combat actions, but their contribution must be explicit per ability/action rather than silently stacking every skill into every roll.
-- The legacy Combat skill remains a broad baseline during the initial core phase. As specialized combat styles arrive, migrate combat formulas deliberately and preserve existing character progression.
+- A weapon family maps to its appropriate specialization: Blades, Polearms, Unarmed, Pistols or Rifles. Magic abilities use Magic and their own ability-specific requirements and effects.
+- Melee and Ranged are broad parent skills. Specialized actions award the governing specialization XP and a smaller share of the matching parent XP.
+- Strength and Defense are independent co-skills. Strength contributes to maximum melee damage; Defense contributes to damage mitigation and item-defined armor eligibility. Their effects are explicit and server-owned.
+- Combat and Tactics are not active skills. Legacy progress records are preserved but inactive; they are neither displayed as active skills nor eligible for Jedi mastery.
 - Equipment modifiers are server-owned item data. Client visuals and local stats never determine hit outcomes.
 - NPC and player defenses are resolved server-side. Random rolls, if used, are generated server-side and are reproducible in tests through injected deterministic randomness.
 
 ## Implementation sequence
 
-1. Keep the current simple PvE loop stable while adding skill metadata and the expanded roster.
+1. Keep the simple PvE loop stable while routing XP through the agreed parent, specialization and co-skill structure.
 2. Introduce a server-owned ability definition model with explicit governing skill, range, cooldown, resource cost and modifiers.
 3. Add weapon-family definitions and equipment compatibility rules.
 4. Add hit resolution with bounded chance, deterministic unit tests and server-side random source.
