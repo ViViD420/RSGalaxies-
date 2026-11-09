@@ -204,10 +204,6 @@ func TestPostgresEnemyAITargetRemainsStickyWhilePresenceIsActive(t *testing.T) {
 	db.SetMaxOpenConns(8)
 	if err := db.PingContext(ctx); err != nil { t.Fatalf("connect test database: %v", err) }
 	if err := Migrate(ctx, db); err != nil { t.Fatalf("migrate test database: %v", err) }
-	// Other PostgreSQL integration tests may leave active starter-zone presence
-	// rows. Isolate this target-selection test from unrelated characters.
-	if _, err := db.ExecContext(ctx, "DELETE FROM zone_presence WHERE zone_id=$1", game.DefaultWorldZoneID); err != nil { t.Fatal(err) }
-
 	now := time.Now().UTC().Truncate(time.Second)
 	accountRepo := NewAccountRepository(db)
 	email := fmt.Sprintf("enemy-sticky-%d@example.test", now.UnixNano())
@@ -224,7 +220,13 @@ func TestPostgresEnemyAITargetRemainsStickyWhilePresenceIsActive(t *testing.T) {
 	if err := accountRepo.CreateCharacter(ctx, account.ID, first); err != nil { t.Fatalf("create first character: %v", err) }
 	if err := accountRepo.CreateCharacter(ctx, account.ID, sticky); err != nil { t.Fatalf("create sticky character: %v", err) }
 	const enemyID = "frontier-rat-001"
-	if _, err := db.ExecContext(ctx, "DELETE FROM enemy_spawn_state WHERE enemy_id=$1", enemyID); err != nil { t.Fatal(err) }
+	const testZoneID = "sticky-target-test-zone"
+	if _, err := db.ExecContext(ctx, "UPDATE players SET zone_id=$3 WHERE id IN ($1,$2)", string(firstID), string(stickyID), testZoneID); err != nil { t.Fatal(err) }
+	if _, err := db.ExecContext(ctx, `INSERT INTO enemy_spawn_state(enemy_id,health,initialized,behavior,position_zone_id,position_x,position_z)
+		VALUES($1,12,TRUE,'idle',$2,8,0)
+		ON CONFLICT(enemy_id) DO UPDATE SET health=12,initialized=TRUE,respawn_at=NULL,behavior='idle',
+		position_zone_id=$2,position_x=8,position_z=0,target_character_id=NULL,
+		telegraph_until=NULL,next_attack_at=NULL,last_ai_updated_at=NULL`, enemyID, testZoneID); err != nil { t.Fatal(err) }
 	t.Cleanup(func() {
 		_, _ = db.ExecContext(context.Background(), "DELETE FROM zone_presence WHERE character_id IN ($1,$2)", string(firstID), string(stickyID))
 		_, _ = db.ExecContext(context.Background(), "DELETE FROM enemy_spawn_state WHERE enemy_id=$1", enemyID)
