@@ -1,6 +1,6 @@
 # RS Galaxies — Session Handoff
 
-Last updated: 2026-11-09 (Stoneback materials and multi-item loot table added; CI pending)
+Last updated: 2026-11-09 (CI test corrections committed; server verification pending)
 
 ## Project identity
 
@@ -558,3 +558,19 @@ Next add boss interruption/player death/respawn-cycle integration coverage, veri
 - Server #579 passed exactly-once concurrent damage.
 - Server #581 (lethal player defeat) and #582–#584 (boss items/loot) were still in progress at the last check.
 - Client #135/#136 passed earlier boss HUD validation; new model change awaits its own client run.
+
+## Latest CI failure analysis and corrections (2026-11-09)
+
+- Server #581 (run 42592448344, commit c48d57e) failed only in the lethal Ground Shatter test. The seeded AI movement placed the boss close enough that Stone Fist was also in range, so the test's expected ability selection was not deterministic. Corrected in commit 6e8cc997c25f90aecbc3748702d24caf46d7dbd4 by seeding a chasing AI state with a known prior update time and moving the player to eight units; the first movement step places the boss four units away, where only Ground Shatter is valid. New server run #585 must verify this correction.
+- Server #582–#584 exposed stale hardcoded public-catalog counts after adding three Stoneback items and one loot table:
+  - item catalog is now 22 (previously 19);
+  - loot table catalog is now 5 (previously 4).
+  Updated HTTP API catalog tests and loot catalog assertions in commits 8f5b873e226e754fcb85ee69d3b6b066213b5757 and cd63ba77593b18ab2239674769f89ffee6ea09bd. These fixes are awaiting Actions.
+- Server #580 passed the interruption/respawn-cycle PostgreSQL tests and Vet; #579 passed exactly-once concurrent ability damage; #574–#578 also passed.
+- Client #137 (run 42592975125, commit bae81fb) passed Godot 4.3 import and script validation for the distinctive Stoneback model.
+- At the last check, server #585–#587 were in progress/queued for the deterministic lethal test and public catalog/loot assertion corrections. The boss remains out of the public enemy catalog until all these pass.
+
+### Next actions
+1. Verify server #585, #586 and #587, inspecting job logs and fixing any remaining failure.
+2. Verify the newest server run after all three test corrections, including both race-enabled PostgreSQL tests and Vet.
+3. Once green, add the Stoneback enemy definition to the public catalog and run loop, then verify public snapshots, world model, boss HUD and multi-item reward claims.
