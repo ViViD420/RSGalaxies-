@@ -622,6 +622,21 @@ func (s *testCharacterStore) HeartbeatPresenceForAccount(_ context.Context,accou
 	s.presence[id]=game.RemotePlayer{CharacterID:id,Name:player.Name,ZoneID:player.Position.ZoneID,X:player.Position.X,Z:player.Position.Z,LastSeenAt:now}
 	return nil
 }
+func (s *testCharacterStore) ListEnemySnapshotsForAccount(_ context.Context, accountID string, id game.PlayerID, _ time.Time) ([]game.EnemySnapshot, error) {
+	player, ok := s.players[accountID][id]
+	if !ok { return nil, game.ErrPlayerNotFound }
+	snapshots := make([]game.EnemySnapshot, 0)
+	for _, enemy := range game.EnemyDefinitions() {
+		if enemy.Position.ZoneID != player.Position.ZoneID { continue }
+		snapshots = append(snapshots, game.EnemySnapshot{
+			EnemyID: enemy.ID, Name: enemy.Name, ZoneID: enemy.Position.ZoneID,
+			X: enemy.Position.X, Z: enemy.Position.Z, Health: enemy.MaxHealth,
+			MaxHealth: enemy.MaxHealth, Behavior: game.EnemyIdle,
+		})
+	}
+	return snapshots, nil
+}
+
 func (s *testCharacterStore) ListZonePresenceForAccount(_ context.Context,accountID string,id game.PlayerID,now time.Time)([]game.RemotePlayer,error) {
 	player,ok:=s.players[accountID][id];if !ok{return nil,game.ErrPlayerNotFound}
 	result:=make([]game.RemotePlayer,0)
@@ -863,3 +878,41 @@ func TestAuthenticatedTradeInvitationAcceptanceAndPrivacy(t *testing.T) {
 	if self.Code!=http.StatusConflict{t.Fatalf("self invite status=%d body=%s",self.Code,self.Body.String())}
 }
 
+
+ 
+func TestAuthenticatedEnemySnapshotsAreZoneAndOwnershipScoped(t *testing.T) {
+	t.Setenv("RS_GALAXIES_ENV", "production")
+	t.Setenv("RS_GALAXIES_ENABLE_REGISTRATION", "true")
+	characters := newTestCharacterStore()
+	handler := NewWithAccounts(game.NewMemoryPlayerRepository(), newTestAccountStore(), characters).Routes()
+	register := httptest.NewRecorder()
+	handler.ServeHTTP(register, httptest.NewRequest(http.MethodPost, "/api/v1/auth/register", bytes.NewBufferString(`{"email":"enemy-snapshot@example.test","password":"long-enough-password"}`)))
+	if register.Code != http.StatusCreated { t.Fatalf("register status=%d body=%s", register.Code, register.Body.String()) }
+	var registration struct { AccessToken string `json:"accessToken"`; Account auth.Account `json:"account"` }
+	if err := json.Unmarshal(register.Body.Bytes(), &registration); err != nil { t.Fatal(err) }
+	create := httptest.NewRecorder()
+	createRequest := httptest.NewRequest(http.MethodPost, "/api/v1/account/characters", bytes.NewBufferString(`{"name":"SnapshotWayfarer"}`))
+	createRequest.Header.Set("Authorization", "Bearer "+registration.AccessToken)
+	handler.ServeHTTP(create, createRequest)
+	if create.Code != http.StatusCreated { t.Fatalf("create character status=%d body=%s", create.Code, create.Body.String()) }
+	var player game.Player
+	if err := json.Unmarshal(create.Body.Bytes(), &player); err != nil { t.Fatal(err) }
+
+	request := httptest.NewRequest(http.MethodGet, "/api/v1/account/characters/"+string(player.ID)+"/world/enemies", nil)
+	request.Header.Set("Authorization", "Bearer "+registration.AccessToken)
+	response := httptest.NewRecorder()
+	handler.ServeHTTP(response, request)
+	if response.Code != http.StatusOK { t.Fatalf("enemy snapshots status=%d body=%s", response.Code, response.Body.String()) }
+	if !strings.Contains(response.Body.String(), "frontier-rat-001") || !strings.Contains(response.Body.String(), "serverTime") {
+		t.Fatalf("enemy snapshot response missing zone enemies or server time: %s", response.Body.String())
+	}
+
+	unauthorized := httptest.NewRecorder()
+	handler.ServeHTTP(unauthorized, httptest.NewRequest(http.MethodGet, "/api/v1/account/characters/"+string(player.ID)+"/world/enemies", nil))
+	if unauthorized.Code != http.StatusUnauthorized { t.Fatalf("unauthorized snapshot status=%d", unauthorized.Code) }
+	foreign := httptest.NewRecorder()
+	foreignRequest := httptest.NewRequest(http.MethodGet, "/api/v1/account/characters/not-owned/world/enemies", nil)
+	foreignRequest.Header.Set("Authorization", "Bearer "+registration.AccessToken)
+	handler.ServeHTTP(foreign, foreignRequest)
+	if foreign.Code != http.StatusNotFound { t.Fatalf("foreign character snapshot status=%d body=%s", foreign.Code, foreign.Body.String()) }
+}
