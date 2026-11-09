@@ -84,18 +84,32 @@ func (p *Player) AttackEnemy(enemy EnemyDefinition,state EnemyState,now time.Tim
 		state.RespawnAt=time.Time{}
 	}
 	attackBonus,_:=p.EquipmentBonuses()
-	combatLevel:=p.Skills["combat"].Level
-	damage:=2+attackBonus+(combatLevel-1)/10-enemy.Defense
+	styleSkillID := "unarmed"
+	if weaponID := p.Equipment["main_hand"]; weaponID != "" {
+		if weapon, exists := FindItem(weaponID); exists && skillDefinition(weapon.RequiredSkillID).ID != "" && skillParentID(weapon.RequiredSkillID) != "" {
+			styleSkillID = weapon.RequiredSkillID
+		}
+	}
+	parentSkillID := skillParentID(styleSkillID)
+	styleLevel := p.Skills[styleSkillID].Level
+	meleeLevel := p.Skills["melee"].Level
+	strengthLevel := p.Skills["strength"].Level
+	defenseLevel := p.Skills["defense"].Level
+	damage := 2 + attackBonus + (strengthLevel-1)/10 + (styleLevel-1)/20 + (meleeLevel-1)/20 - enemy.Defense
 	if damage<1{damage=1}
 	if damage>state.Health{damage=state.Health}
+	if _, err := p.AwardExperience("strength", 1); err != nil && !errors.Is(err, ErrExperienceOverflow) { return CombatResult{}, state, err }
 	state.Health-=damage
 	result:=CombatResult{EnemyID:enemy.ID,EnemyHealth:state.Health,DamageDealt:damage}
 	if state.Health==0{
 		state.RespawnAt=now.Add(time.Duration(enemy.RespawnSeconds)*time.Second)
 		result.EnemyDefeated=true
 		result.Experience=enemy.Experience
-		if _,err:=p.AwardExperience("combat",enemy.Experience);err!=nil {
-			if errors.Is(err,ErrExperienceOverflow) { result.Experience=0 } else { return CombatResult{},state,err }
+		if _, err := p.AwardExperience(styleSkillID, enemy.Experience); err != nil && !errors.Is(err, ErrExperienceOverflow) { return CombatResult{}, state, err }
+		if parentSkillID != "" {
+			parentXP := enemy.Experience / 4
+			if parentXP < 1 { parentXP = 1 }
+			if _, err := p.AwardExperience(parentSkillID, parentXP); err != nil && !errors.Is(err, ErrExperienceOverflow) { return CombatResult{}, state, err }
 		}
 		if enemy.LootItemID!=""&&enemy.LootQuantity>0{
 			item,ok:=FindItem(enemy.LootItemID)
@@ -108,9 +122,10 @@ func (p *Player) AttackEnemy(enemy EnemyDefinition,state EnemyState,now time.Tim
 		}
 	}else{
 		_,defenseBonus:=p.EquipmentBonuses()
-		incoming:=enemy.Attack-defenseBonus-(combatLevel-1)/10
+		incoming:=enemy.Attack-defenseBonus-(defenseLevel-1)/10
 		if incoming<0{incoming=0}
 		if incoming>p.Health{incoming=p.Health}
+		if incoming > 0 { if _, err := p.AwardExperience("defense", 1); err != nil && !errors.Is(err, ErrExperienceOverflow) { return CombatResult{}, state, err } }
 		p.Health-=incoming
 		result.DamageReceived=incoming
 		result.PlayerDefeated=p.Health==0
