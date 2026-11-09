@@ -234,3 +234,6 @@ Client Action #183 (run 42604378304) passed; #182 (42604361140) passed. Client #
 
 - [ ] Correct Client Action #188 test harness: add the test CharacterBody3D to SceneTree before reading global_position, assert only the guaranteed out-of-range state, and free temporary nodes on all paths.
 - [ ] Re-run client CI and inspect complete logs for global-transform errors, RID/resource leaks and all later validation steps.
+
+
+- [ ] Verify corrected interaction-hint smoke harness in Client Action #189 (42620203463), including absence of global-transform errors and RID/resource leaks.

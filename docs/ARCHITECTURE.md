@@ -232,3 +232,8 @@ The HUD now presents a live nearest-interaction prompt for the existing interact
 ### Interaction hint test lifecycle correction
 
 Client run #188 exposed errors in the new test harness: it queried global_position on a CharacterBody3D outside the SceneTree, asserted the wrong nearest candidate (the fixed trader was actually closer), and failed to release temporary objects on failure. These are test-harness defects, but their engine errors and RID leak diagnostics are recorded and must be fixed. The production interaction resolver remains unchanged until the test is corrected and CI re-run.
+
+
+### Test harness correction
+
+The interaction-hint smoke test now places its CharacterBody3D test actor inside the SceneTree before global-transform access, validates only the guaranteed out-of-range prompt state, and queues temporary tree children for cleanup on failure. Client Action #189 is pending; no verification claim is made until all client workflow phases and full logs pass.

@@ -1631,3 +1631,10 @@ The procedural placement algorithm is deterministic by design and now has direct
 - Failed-test teardown then emitted RID/resource leak diagnostics because the test's failure path did not free its temporary scene objects. These are real test cleanup errors and must be eliminated, not filtered.
 - Root cause: test harness lifecycle and an incorrect expected target, not a demonstrated runtime interaction prompt defect. Fix by placing a plain CharacterBody3D test actor inside the SceneTree, use an assertion on the move-closer state rather than an incorrect target identity, and ensure every success/failure path frees all created objects before quitting.
 - Preserve run #188 as a historical failure. The interaction hint feature remains unverified until a complete clean client run passes all phases with no Godot ERROR output.
+
+
+### Interaction hint smoke-test correction — verification pending
+
+- Commit 32b10aa89f93602ef1d3710af4c6ad0f6a1daa66 corrects the test harness identified in Client #188.
+- The test now uses a plain CharacterBody3D added to the SceneTree before reading/updating its global transform; it asserts the guaranteed move-closer state without assuming which farther candidate wins; and it queues SceneTree children for cleanup on failure.
+- Client Action #189 / run 42620203463 was triggered for the correction. It is still in progress at this checkpoint. Do not mark interaction guidance verified until the new focused smoke test, existing movement/terrain smoke, editor import and Web export all complete with no Godot errors or RID leaks.
