@@ -67,6 +67,8 @@ Send `Authorization: Bearer <accessToken>`:
 - `POST /api/v1/account/characters/{characterId}/presence/heartbeat` — refresh this owned character's 20-second zone-presence lease; returns 204.
 - `GET /api/v1/account/characters/{characterId}/presence` — list up to 100 other active characters in the same zone, exposing only character ID, display name, zone and position.
 - `GET /api/v1/account/characters/{characterId}/world/enemies` — list authoritative enemy instance positions, health, behavior and telegraph/respawn timestamps for the character's current zone. Requires account ownership.
+- `GET /api/v1/account/characters/{characterId}/rewards` — list up to 100 durable encounter reward claims owned by this character.
+- `POST /api/v1/account/characters/{characterId}/rewards/{enemyId}/{encounterId}/claim` — atomically claim the stored XP and loot. Retries are idempotent; a full item stack returns `409 reward_inventory_full` and leaves the claim pending.
 - `POST /api/v1/account/characters/{characterId}/trades/invite/{targetCharacterId}` with `{"offer":{"items":{"softwood_log":2},"coins":10}}` — create a nearby-player invitation and escrow the initiator's offer.
 - `POST /api/v1/account/characters/{characterId}/trades/accept/{tradeId}` with `{"offer":{"items":{"rough_stone":1},"coins":5}}` — accept and escrow the target's offer.
 - `GET /api/v1/account/characters/{characterId}/trades/active` — recover the character's current trade after reconnect.
@@ -90,3 +92,8 @@ New characters start with 100 coins; starter merchant prices are part of the pub
 - Legacy unscoped `/api/v1/players` routes remain disabled in production.
 
 The application adds a small per-process IP/path throttle for registration and login. It is not a substitute for distributed rate limiting at the trusted edge. Account recovery, email verification, MFA and administrative account-disable tooling are not implemented yet.
+
+
+## Encounter rewards
+
+Enemy defeat settlement is server-authoritative and occurs in the same PostgreSQL transaction as the killing attack. The settlement key is the enemy spawn ID plus encounter-cycle ID, so duplicate defeat processing cannot create duplicate claims. A character qualifies only after dealing at least 10% of the enemy's maximum health and dealing damage within the preceding two minutes. Incoming enemy damage and proximity alone do not qualify. XP is split proportionally to eligible damage; the single enemy loot drop is assigned to the highest-damage eligible contributor. Rewards remain pending until claimed. Claiming locks the character and claim rows, applies XP and inventory changes together, and marks the claim claimed in the same transaction. A full loot stack leaves both XP and loot pending for a later retry.
