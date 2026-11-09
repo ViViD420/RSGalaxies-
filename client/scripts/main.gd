@@ -74,6 +74,12 @@ var presence_roster_pending := false
 var remote_player_nodes: Dictionary = {}
 var remote_player_targets: Dictionary = {}
 var remote_player_names: Dictionary = {}
+var enemy_nodes: Dictionary = {}
+var enemy_targets: Dictionary = {}
+var enemy_labels: Dictionary = {}
+var enemy_snapshot_request: HTTPRequest
+var enemy_snapshot_timer: Timer
+var enemy_snapshot_pending := false
 var trade_button: Button
 var trade_panel: PanelContainer
 var trade_target_select: OptionButton
@@ -132,6 +138,7 @@ func _ready() -> void:
 
 func _process(delta: float) -> void:
 	_update_remote_player_visuals(delta)
+	_update_enemy_visuals(delta)
 	if Input.is_action_just_pressed("interact") and not player_id.is_empty() and not interaction_pending:
 		_request_interaction()
 
@@ -352,14 +359,15 @@ func _build_enemy_spawns() -> void:
 		var position_data: Variant = enemy.get("position", {})
 		if not position_data is Dictionary:
 			continue
-		_add_enemy_visual(
-			Vector3(float(position_data.get("x", 0.0)), 0.0, float(position_data.get("z", 0.0))),
-			str(enemy.get("name", "Frontier Creature")),
-			int(enemy.get("maxHealth", 10))
-		)
+		var enemy_id := str(enemy.get("id", ""))
+		if enemy_id.is_empty():
+			continue
+		var at := Vector3(float(position_data.get("x", 0.0)), 0.0, float(position_data.get("z", 0.0)))
+		_add_enemy_visual(enemy_id, at, str(enemy.get("name", "Frontier Creature")), int(enemy.get("maxHealth", 10)))
 
-func _add_enemy_visual(at: Vector3, enemy_name: String, max_health: int) -> void:
+func _add_enemy_visual(enemy_id: String, at: Vector3, enemy_name: String, max_health: int) -> void:
 	var creature := Node3D.new()
+	creature.name = "Enemy_" + enemy_id
 	creature.position = at
 	var hide_material := StandardMaterial3D.new()
 	hide_material.albedo_color = Color(0.48, 0.30, 0.18) if max_health < 20 else Color(0.32, 0.25, 0.18)
@@ -380,12 +388,100 @@ func _add_enemy_visual(at: Vector3, enemy_name: String, max_health: int) -> void
 	head.material_override = hide_material
 	creature.add_child(head)
 	var label := Label3D.new()
-	label.text = enemy_name
+	label.text = enemy_name + "\n" + str(max_health) + "/" + str(max_health) + " • Idle"
 	label.position.y = body_mesh.height + 0.45
 	label.billboard = BaseMaterial3D.BILLBOARD_ENABLED
-	label.font_size = 32
+	label.font_size = 24
 	creature.add_child(label)
 	add_child(creature)
+	enemy_nodes[enemy_id] = creature
+	enemy_targets[enemy_id] = at
+	enemy_labels[enemy_id] = label
+
+func _start_enemy_snapshot_polling() -> void:
+	_stop_enemy_snapshot_polling()
+	if player_id.is_empty() or auth_token.is_empty():
+		return
+	enemy_snapshot_request = _new_api_request(5.0)
+	add_child(enemy_snapshot_request)
+	enemy_snapshot_request.request_completed.connect(_on_enemy_snapshots_completed)
+	enemy_snapshot_timer = Timer.new()
+	enemy_snapshot_timer.wait_time = 0.5
+	enemy_snapshot_timer.timeout.connect(_poll_enemy_snapshots)
+	add_child(enemy_snapshot_timer)
+	enemy_snapshot_timer.start()
+	_poll_enemy_snapshots()
+
+func _stop_enemy_snapshot_polling() -> void:
+	if enemy_snapshot_timer != null:
+		enemy_snapshot_timer.stop()
+		enemy_snapshot_timer.queue_free()
+		enemy_snapshot_timer = null
+	if enemy_snapshot_request != null:
+		if enemy_snapshot_request.get_http_client_status() != HTTPClient.STATUS_DISCONNECTED:
+			enemy_snapshot_request.cancel_request()
+		enemy_snapshot_request.queue_free()
+		enemy_snapshot_request = null
+	enemy_snapshot_pending = false
+
+func _poll_enemy_snapshots() -> void:
+	if player_id.is_empty() or auth_token.is_empty() or enemy_snapshot_pending or enemy_snapshot_request == null:
+		return
+	var url := api_base_url + "/api/v1/account/characters/" + player_id + "/world/enemies"
+	var error := enemy_snapshot_request.request(url, _api_headers())
+	if error == OK:
+		enemy_snapshot_pending = true
+
+func _on_enemy_snapshots_completed(result: int, response_code: int, _headers: PackedStringArray, body: PackedByteArray) -> void:
+	enemy_snapshot_pending = false
+	if player_id.is_empty():
+		return
+	if response_code == 401:
+		_expire_session()
+		return
+	if response_code == 404:
+		_stop_enemy_snapshot_polling()
+		return
+	if result != HTTPRequest.RESULT_SUCCESS or response_code != 200:
+		return
+	var payload: Variant = JSON.parse_string(body.get_string_from_utf8())
+	if not payload is Dictionary:
+		return
+	var snapshots: Variant = payload.get("enemies", [])
+	if not snapshots is Array:
+		return
+	for snapshot in snapshots:
+		if not snapshot is Dictionary:
+			continue
+		var enemy_id := str(snapshot.get("enemyId", ""))
+		if not enemy_nodes.has(enemy_id):
+			continue
+		var target := Vector3(float(snapshot.get("x", 0.0)), 0.0, float(snapshot.get("z", 0.0)))
+		enemy_targets[enemy_id] = target
+		var health := int(snapshot.get("health", 0))
+		var maximum := int(snapshot.get("maxHealth", 1))
+		var behavior := str(snapshot.get("behavior", "idle"))
+		var creature: Node3D = enemy_nodes[enemy_id]
+		creature.visible = health > 0
+		var label: Label3D = enemy_labels[enemy_id]
+		if health <= 0:
+			label.text = str(snapshot.get("name", enemy_id)) + "\nRespawning..."
+		elif behavior == "telegraphing":
+			label.text = str(snapshot.get("name", enemy_id)) + "\n" + str(health) + "/" + str(maximum) + " • ⚠ ATTACK"
+		else:
+			label.text = str(snapshot.get("name", enemy_id)) + "\n" + str(health) + "/" + str(maximum) + " • " + behavior.capitalize()
+
+func _update_enemy_visuals(delta: float) -> void:
+	var blend := 1.0 - exp(-delta * 10.0)
+	for enemy_id in enemy_nodes.keys():
+		var creature: Node3D = enemy_nodes[enemy_id]
+		if not is_instance_valid(creature):
+			continue
+		var target: Vector3 = enemy_targets.get(enemy_id, creature.position)
+		if creature.position.distance_to(target) > 20.0:
+			creature.position = target
+		else:
+			creature.position = creature.position.lerp(target, blend)
 
 func _add_copper_vein(at: Vector3) -> void:
 	var deposit := Node3D.new()
@@ -881,15 +977,17 @@ func _request_interaction() -> void:
 	var enemy_distance := 1.0e20
 	for enemy in enemy_catalog:
 		if enemy is Dictionary:
+			var enemy_id := str(enemy.get("id", ""))
 			var enemy_position: Variant = enemy.get("position", {})
 			if enemy_position is Dictionary:
+				var target_position: Vector3 = enemy_targets.get(enemy_id, Vector3(float(enemy_position.get("x", 0.0)), 0.0, float(enemy_position.get("z", 0.0))))
 				var distance := Vector2(
-					player_node.global_position.x - float(enemy_position.get("x", 0.0)),
-					player_node.global_position.z - float(enemy_position.get("z", 0.0))
+					player_node.global_position.x - target_position.x,
+					player_node.global_position.z - target_position.z
 				).length()
 				if distance < enemy_distance:
 					enemy_distance = distance
-					nearest_enemy_id = str(enemy.get("id", ""))
+					nearest_enemy_id = enemy_id
 	var error := OK
 	if merchant_distance <= 3.0 and merchant_distance <= bank_distance and merchant_distance <= nearest_station_distance and merchant_distance <= nearest_node_distance and merchant_distance <= enemy_distance:
 		_show_market_panel()
@@ -1337,6 +1435,7 @@ func _create_account_character(character_name: String) -> void:
 
 
 func _expire_session() -> void:
+	_stop_presence()
 	_stop_chat()
 	_stop_skills_request()
 	auth_token = ""
@@ -1642,12 +1741,15 @@ func _start_presence() -> void:
 	add_child(presence_roster_timer)
 	presence_heartbeat_timer.start()
 	presence_roster_timer.start()
+	_start_enemy_snapshot_polling()
 	_start_trade_polling()
 	_send_presence_heartbeat()
 	_poll_zone_presence()
 
 
+
 func _stop_presence() -> void:
+	_stop_enemy_snapshot_polling()
 	if presence_heartbeat_timer != null:
 		presence_heartbeat_timer.stop()
 		presence_heartbeat_timer.queue_free()
