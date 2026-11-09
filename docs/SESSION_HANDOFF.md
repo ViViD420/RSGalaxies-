@@ -1575,3 +1575,16 @@ Wait for Server Action #603. If it passes, record the run URL and exact package/
 ### Current verification boundary
 
 The procedural placement algorithm is deterministic by design and now has direct generator-level regression coverage. MultiMesh creation/count is covered, but visual appearance, GPU instance transform behavior, draw-call behavior and collision/navigation remain unverified on a real rendered client. The props are intentionally non-colliding presentation elements. No physical desktop/mobile visual test has been performed.
+
+
+## Environmental dressing verification result — 2026-11-09
+
+- Client Action #186 / run 42619558244 passed on code commit 623ebe543fdd00394767f019efbfc9fd20de5d1d.
+- The player/terrain smoke test passed, including terrain collision (55,296 face vertices), deterministic height, movement acceleration/deceleration, jump, camera zoom bounds, attack swing, collision/presentation separation, deterministic dressing generator output, valid-site exclusions and terrain-height alignment.
+- Godot 4.3 editor import passed.
+- Godot Web export passed.
+- Full job logs inspected: no SCRIPT ERROR or ERROR output from Godot.
+- The earlier "Parameter m is null" dummy mesh storage message did not recur in the successful run. It was observed only after the previous failing smoke-test cleanup; no separate renderer failure is currently reproduced.
+- Client #184 / 42619189823 and #185 / 42619400395 remain recorded as historical failures and are not erased.
+- Non-headless visual/GPU placement and actual-device review remain outstanding.
+- Documentation-only follow-up commit: this handoff update, architecture verification boundary and roadmap status; no client code changed after the #186 validated commit.

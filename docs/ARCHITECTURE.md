@@ -207,3 +207,8 @@ Placement rejects the spawn-clearance radius, the existing integrated trail corr
 ### Headless validation boundary for MultiMesh dressing
 
 The deterministic placement generator is validated independently of RenderingServer transform readback. In the Godot headless dummy renderer, MultiMesh.get_instance_transform() returned an identity-origin transform for a populated instance, so the smoke test no longer treats that readback as proof of deterministic placement. A non-headless rendered-client check remains required to verify actual GPU instance placement and visual output. Do not interpret the headless readback test limitation as evidence that visual placement has passed.
+
+
+### Verification update
+
+Client Action #186 passed the revised headless regression, editor import and Web export. The complete job log contained no Godot SCRIPT ERROR or ERROR output. The prior dummy mesh-storage cleanup message did not recur after the failing assertion was removed. This confirms automated headless validation, not actual rendered visual quality; a non-headless renderer and physical-device review remain outstanding.

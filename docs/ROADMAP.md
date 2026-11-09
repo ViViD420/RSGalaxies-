@@ -205,3 +205,7 @@ Client Action #183 (run 42604378304) passed; #182 (42604361140) passed. Client #
 - [ ] Inspect client run #186 (42619558244) after the regression-test correction; inspect the complete log for the earlier dummy-renderer cleanup error.
 - [ ] Verify actual MultiMesh transforms and visual placement in a non-headless Godot renderer.
 - [ ] Keep decorative props non-colliding until a separate collision/navigation and server-authority design is implemented.
+
+
+- [x] Client Action #186 (run 42619558244) passed deterministic environmental placement generator checks, terrain collision/movement smoke, Godot import and Web export with no Godot errors.
+- [ ] Verify MultiMesh appearance and GPU placement in a non-headless rendered client and on desktop/mobile hardware.
