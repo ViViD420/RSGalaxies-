@@ -1,6 +1,6 @@
 # RS Galaxies — Session Handoff
 
-Last updated: 2026-11-09 (boss interruption and respawn tests added; CI pending)
+Last updated: 2026-11-09 (lethal boss ability test added; CI pending)
 
 ## Project identity
 
@@ -502,3 +502,26 @@ Next add boss interruption/player death/respawn-cycle integration coverage, veri
 3. Verify the player-initiated defeat path and AI ability path cannot overlap to double-apply state.
 4. Add the Stoneback definition to the enemy catalog and world tick loop only after all above checks pass.
 5. Verify snapshots show boss fields through the authenticated endpoint and Godot HUD using the live encounter. Keep rewards on the existing multi-item claim path.
+
+## Boss player-defeat integration coverage (2026-11-09)
+
+- Added a third PostgreSQL world-tick integration test for a lethal Ground Shatter:
+  - Starts the boss at 50% health so Rampage is active.
+  - Places the player outside Stone Fist range but within Ground Shatter range.
+  - Starts and resolves the two-second Ground Shatter telegraph.
+  - Confirms player health reaches zero, exactly one Defense XP is awarded, the persisted enemy target is cleared, and the active boss ability is cleared.
+- Test commit: c48d57efbd8cdf526228531c6c4f29b2f136e4e7.
+- The complete current boss world-tick test file now covers concurrent exactly-once damage, telegraph interruption, encounter-cycle respawn reset, and player defeat. The latest new tests are not yet CI-verified.
+- CI status at last check:
+  - Server #565 passed migration fix and race-enabled PostgreSQL tests plus Vet.
+  - Server #566–#575 passed; #574 and #575 both completed successfully. #573 explicitly passed first-hit terminal defeat integration coverage.
+  - Server #576–#580 were still in progress. #579 covers concurrent exact-once ability damage; #580 covers interruption and respawn reset.
+  - The new lethal player-defeat test commit c48d57e should trigger a subsequent server run; inspect it when available.
+  - Client #135/#136 passed Godot import/script validation.
+
+### Next actions
+1. Inspect all pending Actions #576–#580 and the run for c48d57e. Resolve any test/compile/race failure.
+2. If green, add Stoneback Colossus to the game enemy definition catalog with its own health/defense/attack/respawn tuning and ensure RunEnemyAITick includes it.
+3. Verify the public catalog and authenticated snapshots include the boss, and the client HUD renders the live server values.
+4. Ensure the existing multi-item reward settlement is configured for the boss and that the current damage-only eligibility policy is preserved.
+5. Do not call the boss playable until server/client CI validates the entire vertical slice.
