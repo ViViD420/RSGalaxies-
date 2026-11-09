@@ -25,29 +25,30 @@ type SkillDefinition struct {
 	Name        string `json:"name"`
 	Description string `json:"description"`
 	Category    string `json:"-"`
+	ParentID    string `json:"-"`
+	parent      bool
+	coSkill     bool
 	combatMastery bool
 }
 
 var skillDefinitions = []SkillDefinition{
-	{ID: "blades", Name: "Blades", Description: "Master edged melee weapons and their techniques.", Category: "combat", combatMastery: true},
-	{ID: "combat", Name: "Combat", Description: "Build general combat experience and battlefield fundamentals.", Category: "combat", combatMastery: true},
+	{ID: "blades", Name: "Blades", Description: "Master edged melee weapons and their techniques.", Category: "combat", ParentID: "melee", combatMastery: true},
 	{ID: "cooking", Name: "Cooking", Description: "Prepare food and provisions from gathered ingredients.", Category: "production"},
 	{ID: "crafting", Name: "Crafting", Description: "Shape materials into useful tools, equipment and goods.", Category: "production"},
-	{ID: "defense", Name: "Defense", Description: "Improve defensive technique, timing and damage mitigation.", Category: "combat", combatMastery: true},
+	{ID: "defense", Name: "Defense", Description: "Train defensive technique and qualify to use protective equipment.", Category: "combat", coSkill: true},
 	{ID: "farming", Name: "Farming", Description: "Cultivate crops and manage productive land.", Category: "gathering"},
 	{ID: "foraging", Name: "Foraging", Description: "Find useful plants, fungi and natural materials.", Category: "gathering"},
-	{ID: "magic", Name: "Magic", Description: "Study and use offensive, defensive and utility magic.", Category: "combat", combatMastery: true},
-	{ID: "melee", Name: "Melee", Description: "Develop fundamentals for close-quarters weapon combat.", Category: "combat", combatMastery: true},
+	{ID: "magic", Name: "Magic", Description: "Study and use offensive, defensive and utility magic.", Category: "combat", ParentID: "ranged", combatMastery: true},
+	{ID: "melee", Name: "Melee", Description: "Develop broad close-quarters combat fundamentals.", Category: "combat", parent: true},
 	{ID: "mining", Name: "Mining", Description: "Extract ores, stone and mineral resources.", Category: "gathering"},
-	{ID: "pistols", Name: "Pistols", Description: "Improve proficiency with one-handed firearms.", Category: "combat", combatMastery: true},
-	{ID: "polearms", Name: "Polearms", Description: "Master staffs, spears and other long-reach melee weapons.", Category: "combat", combatMastery: true},
-	{ID: "ranged", Name: "Ranged", Description: "Use bows, thrown weapons and other non-firearm ranged weapons.", Category: "combat", combatMastery: true},
-	{ID: "rifles", Name: "Rifles", Description: "Improve proficiency with long guns and precision firearms.", Category: "combat", combatMastery: true},
+	{ID: "pistols", Name: "Pistols", Description: "Improve proficiency with one-handed firearms.", Category: "combat", ParentID: "ranged", combatMastery: true},
+	{ID: "polearms", Name: "Polearms", Description: "Master staffs, spears and other long-reach melee weapons.", Category: "combat", ParentID: "melee", combatMastery: true},
+	{ID: "ranged", Name: "Ranged", Description: "Develop broad ranged-combat fundamentals.", Category: "combat", parent: true},
+	{ID: "rifles", Name: "Rifles", Description: "Improve proficiency with long guns and precision firearms.", Category: "combat", ParentID: "ranged", combatMastery: true},
 	{ID: "scavenging", Name: "Scavenging", Description: "Recover components and useful materials from ruins.", Category: "gathering"},
 	{ID: "smithing", Name: "Smithing", Description: "Refine ores and work metals into equipment.", Category: "production"},
-	{ID: "strength", Name: "Strength", Description: "Develop physical power for demanding combat techniques.", Category: "combat", combatMastery: true},
-	{ID: "tactics", Name: "Tactics", Description: "Learn positioning, timing and effective combat decisions.", Category: "combat", combatMastery: true},
-	{ID: "unarmed", Name: "Unarmed", Description: "Master hand-to-hand combat without a weapon.", Category: "combat", combatMastery: true},
+	{ID: "strength", Name: "Strength", Description: "Develop physical power that contributes to maximum melee damage.", Category: "combat", coSkill: true},
+	{ID: "unarmed", Name: "Unarmed", Description: "Master hand-to-hand combat without a weapon.", Category: "combat", ParentID: "melee", combatMastery: true},
 	{ID: "woodcutting", Name: "Woodcutting", Description: "Harvest timber and other renewable plant resources.", Category: "gathering"},
 }
 
