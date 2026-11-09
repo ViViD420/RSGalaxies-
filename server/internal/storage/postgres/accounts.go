@@ -375,7 +375,7 @@ func (r *AccountRepository) AttackEnemyForAccount(ctx context.Context,accountID 
 	if err!=nil{return game.Player{},game.CombatResult{},fmt.Errorf("update enemy state: %w",err)}
 	if err:=recordEncounterContribution(ctx,tx,encounterID,enemyID,accountID,player.ID,result.SkillID,result.DamageDealt,result.DamageReceived,now);err!=nil{return game.Player{},game.CombatResult{},err}
 	if result.EnemyDefeated {
-		if bossDefinition, isBoss := game.FindBossEncounter(enemyID); isBoss {
+		if bossDefinition, isBoss := game.FindBossEncounterForEnemy(enemyID); isBoss {
 			if err := markBossEncounterDefeated(ctx, tx, enemyID, bossDefinition, encounterID, now); err != nil {
 				return game.Player{}, game.CombatResult{}, fmt.Errorf("persist boss defeat: %w", err)
 			}
