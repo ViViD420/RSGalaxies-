@@ -768,7 +768,6 @@ func _build_hud() -> void:
 	trade_button.offset_right = 118
 	trade_button.offset_bottom = 189
 	trade_button.visible = false
-	rewards_button.visible = false
 	trade_button.pressed.connect(_toggle_trade_panel)
 	layer.add_child(trade_button)
 	rewards_button = Button.new()
@@ -1428,6 +1427,8 @@ func _activate_character(character_data: Dictionary) -> void:
 		inventory_panel.visible = false
 	if market_panel != null:
 		market_panel.visible = false
+	if rewards_panel != null:
+		rewards_panel.visible = false
 	logout_button.visible = true
 	trade_button.visible = true
 	rewards_button.visible = true
@@ -1506,6 +1507,8 @@ func _show_character_selection(characters: Array) -> void:
 		skills_panel.visible = false
 	if inventory_panel != null:
 		inventory_panel.visible = false
+	if rewards_panel != null:
+		rewards_panel.visible = false
 	if movement_timer != null:
 		movement_timer.stop()
 	movement_pending = false
