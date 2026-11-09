@@ -143,8 +143,8 @@ type EnemySnapshot struct {
 	BossID string `json:"bossId,omitempty"`
 	BossDefinitionVersion int `json:"bossDefinitionVersion,omitempty"`
 	BossPhaseID string `json:"bossPhaseId,omitempty"`
-	BossPhaseStartedAt time.Time `json:"bossPhaseStartedAt,omitempty"`
+	BossPhaseStartedAt *time.Time `json:"bossPhaseStartedAt,omitempty"`
 	BossActiveAbilityID string `json:"bossActiveAbilityId,omitempty"`
-	BossTelegraphStartedAt time.Time `json:"bossTelegraphStartedAt,omitempty"`
-	BossTelegraphUntil time.Time `json:"bossTelegraphUntil,omitempty"`
+	BossTelegraphStartedAt *time.Time `json:"bossTelegraphStartedAt,omitempty"`
+	BossTelegraphUntil *time.Time `json:"bossTelegraphUntil,omitempty"`
 }
