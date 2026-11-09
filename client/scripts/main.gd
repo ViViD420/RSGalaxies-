@@ -1008,6 +1008,8 @@ func _on_gather_completed(result: int, response_code: int, _headers: PackedStrin
 		var combat_message := "Hit for " + str(combat.get("damageDealt", 0)) + " • Enemy HP " + str(combat.get("enemyHealth", 0)) + " • Your HP " + str(current_health)
 		if bool(combat.get("enemyDefeated", false)):
 			combat_message = "Enemy defeated • +" + str(combat.get("experience", 0)) + " " + str(combat.get("skillId", "combat")).capitalize() + " XP"
+			if not str(combat.get("parentSkillId", "")).is_empty():
+				combat_message += " • +" + str(combat.get("parentExperience", 0)) + " " + str(combat.get("parentSkillId", "")).capitalize() + " XP"
 			if not str(combat.get("lootItemId", "")).is_empty():
 				combat_message += " • Loot: " + str(combat.get("lootItemId", "")).replace("_", " ")
 		if bool(combat.get("playerDefeated", false)):
