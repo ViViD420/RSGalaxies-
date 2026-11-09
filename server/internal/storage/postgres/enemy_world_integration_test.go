@@ -262,3 +262,68 @@ func TestPostgresEnemyAITargetRemainsStickyWhilePresenceIsActive(t *testing.T) {
 	if err := db.QueryRowContext(ctx, "SELECT target_character_id FROM enemy_spawn_state WHERE enemy_id=$1", enemyID).Scan(&targetID); err != nil { t.Fatal(err) }
 	if targetID != string(firstID) { t.Fatalf("target after previous lease expires = %s, want %s", targetID, firstID) }
 }
+
+ 
+func TestPostgresEncounterContributionsPersistAcrossEnemyRespawn(t *testing.T) {
+	databaseURL := os.Getenv("RS_GALAXIES_TEST_DATABASE_URL")
+	if databaseURL == "" { t.Skip("RS_GALAXIES_TEST_DATABASE_URL is not configured") }
+	ctx := context.Background()
+	db, err := sql.Open("pgx", databaseURL)
+	if err != nil { t.Fatal(err) }
+	defer db.Close()
+	if err := db.PingContext(ctx); err != nil { t.Fatalf("connect test database: %v", err) }
+	if err := Migrate(ctx, db); err != nil { t.Fatalf("migrate test database: %v", err) }
+
+	now := time.Now().UTC().Truncate(time.Second)
+	accountRepo := NewAccountRepository(db)
+	email := fmt.Sprintf("enemy-ledger-%d@example.test", now.UnixNano())
+	account, _, err := accountRepo.Register(ctx, email, "StrongTestPassword!2026", now)
+	if err != nil { t.Fatalf("register test account: %v", err) }
+	playerID := game.PlayerID(fmt.Sprintf("enemy-ledger-player-%d", now.UnixNano()))
+	player, err := game.NewPlayer(playerID, "LedgerWayfarer", now)
+	if err != nil { t.Fatal(err) }
+	player.Position.X = 8 // Frontier Rat's catalog spawn position.
+	if err := accountRepo.CreateCharacter(ctx, account.ID, player); err != nil { t.Fatalf("create ledger character: %v", err) }
+	const enemyID = "frontier-rat-001"
+	if _, err := db.ExecContext(ctx, "DELETE FROM enemy_encounter_participants WHERE enemy_id=$1", enemyID); err != nil { t.Fatal(err) }
+	if _, err := db.ExecContext(ctx, "DELETE FROM enemy_spawn_state WHERE enemy_id=$1", enemyID); err != nil { t.Fatal(err) }
+	t.Cleanup(func() {
+		_, _ = db.ExecContext(context.Background(), "DELETE FROM enemy_encounter_participants WHERE enemy_id=$1", enemyID)
+		_, _ = db.ExecContext(context.Background(), "DELETE FROM enemy_spawn_state WHERE enemy_id=$1", enemyID)
+		_, _ = db.ExecContext(context.Background(), "DELETE FROM players WHERE id=$1", string(playerID))
+		_, _ = db.ExecContext(context.Background(), "DELETE FROM accounts WHERE id=$1", account.ID)
+	})
+
+	first, err := accountRepo.AttackEnemyForAccount(ctx, account.ID, playerID, enemyID, now.Add(2*time.Second))
+	if err != nil { t.Fatalf("first encounter attack: %v", err) }
+	if first.DamageDealt != 2 || first.DamageReceived != 2 { t.Fatalf("first combat result = %+v", first) }
+	var firstEncounterID string
+	if err := db.QueryRowContext(ctx, "SELECT encounter_id FROM enemy_spawn_state WHERE enemy_id=$1", enemyID).Scan(&firstEncounterID); err != nil { t.Fatal(err) }
+	firstParticipants, err := accountRepo.ListEncounterParticipants(ctx, enemyID, firstEncounterID)
+	if err != nil { t.Fatalf("list first encounter participants: %v", err) }
+	if len(firstParticipants) != 1 || firstParticipants[0].CharacterID != playerID ||
+		firstParticipants[0].DamageDealt != 2 || firstParticipants[0].DamageReceived != 2 ||
+		firstParticipants[0].ActionCount != 1 {
+		t.Fatalf("first encounter contribution = %+v", firstParticipants)
+	}
+
+	if _, err := db.ExecContext(ctx, "UPDATE enemy_spawn_state SET health=0,respawn_at=$2 WHERE enemy_id=$1", enemyID, now.Add(10*time.Second)); err != nil { t.Fatal(err) }
+	if _, _, err := accountRepo.AttackEnemyForAccount(ctx, account.ID, playerID, enemyID, now.Add(9*time.Second)); !errors.Is(err, game.ErrEnemyRespawning) {
+		t.Fatalf("attack during encounter respawn error = %v, want ErrEnemyRespawning", err)
+	}
+	second, err := accountRepo.AttackEnemyForAccount(ctx, account.ID, playerID, enemyID, now.Add(11*time.Second))
+	if err != nil { t.Fatalf("attack new encounter after respawn: %v", err) }
+	if second.DamageDealt != 2 { t.Fatalf("second encounter combat result = %+v", second) }
+	var secondEncounterID string
+	if err := db.QueryRowContext(ctx, "SELECT encounter_id FROM enemy_spawn_state WHERE enemy_id=$1", enemyID).Scan(&secondEncounterID); err != nil { t.Fatal(err) }
+	if secondEncounterID == firstEncounterID || len(secondEncounterID) != 32 {
+		t.Fatalf("respawn did not create a new encounter cycle: first=%q second=%q", firstEncounterID, secondEncounterID)
+	}
+	secondParticipants, err := accountRepo.ListEncounterParticipants(ctx, enemyID, secondEncounterID)
+	if err != nil { t.Fatalf("list second encounter participants: %v", err) }
+	if len(secondParticipants) != 1 || secondParticipants[0].CharacterID != playerID ||
+		secondParticipants[0].DamageDealt != 2 || secondParticipants[0].DamageReceived != 2 ||
+		secondParticipants[0].ActionCount != 1 {
+		t.Fatalf("second encounter contribution = %+v", secondParticipants)
+	}
+}
