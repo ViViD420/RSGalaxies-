@@ -1,6 +1,7 @@
 extends Node3D
 
 const PLAYER_SCENE := preload("res://scenes/player.tscn")
+const WORLD_TERRAIN_SCRIPT := preload("res://scripts/world_terrain.gd")
 const CORE_SKILL_IDS := ["blades", "cooking", "crafting", "defense", "farming", "foraging", "magic", "melee", "mining", "pistols", "polearms", "ranged", "rifles", "scavenging", "smithing", "strength", "unarmed", "woodcutting"]
 
 var status_label: Label
@@ -130,6 +131,7 @@ var movement_request: HTTPRequest
 var gather_request: HTTPRequest
 var movement_timer: Timer
 var player_node: CharacterBody3D
+var world_terrain: Node3D
 var equipment_visual_root: Node3D
 var player_id := ""
 var api_stage := "health"
@@ -174,6 +176,12 @@ func _register_key_action(action_name: String, key: int) -> void:
 	event.physical_keycode = key
 	InputMap.action_add_event(action_name, event)
 
+func _terrain_height_at(x: float, z: float) -> float:
+	if world_terrain == null or not is_instance_valid(world_terrain):
+		return 0.0
+	return float(world_terrain.call("get_height_at", x, z))
+
+
 func _build_world() -> void:
 	var environment := WorldEnvironment.new()
 	var world_environment := Environment.new()
@@ -190,31 +198,15 @@ func _build_world() -> void:
 	sun.light_energy = 1.2
 	add_child(sun)
 
-	var floor_body := StaticBody3D.new()
-	floor_body.name = "WorldFloor"
-	var floor_mesh := MeshInstance3D.new()
-	var plane := PlaneMesh.new()
-	plane.size = Vector2(240.0, 240.0)
-	floor_mesh.mesh = plane
-	var floor_material := StandardMaterial3D.new()
-	floor_material.albedo_color = Color(0.18, 0.23, 0.20)
-	floor_material.roughness = 1.0
-	floor_mesh.material_override = floor_material
-	floor_body.add_child(floor_mesh)
+	world_terrain = WORLD_TERRAIN_SCRIPT.new() as Node3D
+	world_terrain.name = "WorldTerrain"
+	add_child(world_terrain)
 
-	var floor_collision := CollisionShape3D.new()
-	var floor_shape := BoxShape3D.new()
-	floor_shape.size = Vector3(240.0, 1.0, 240.0)
-	floor_collision.shape = floor_shape
-	floor_collision.position.y = -0.5
-	floor_body.add_child(floor_collision)
-	add_child(floor_body)
-
-	_add_bank_chest(Vector3(0.0, 0.0, -4.0))
-	_add_merchant_stall(Vector3(4.0, 0.0, 0.0))
+	_add_bank_chest(Vector3(0.0, _terrain_height_at(0.0, -4.0), -4.0))
+	_add_merchant_stall(Vector3(4.0, _terrain_height_at(4.0, 0.0), 0.0))
 
 	player_node = PLAYER_SCENE.instantiate() as CharacterBody3D
-	player_node.position = Vector3(0.0, 0.05, 0.0)
+	player_node.position = Vector3(0.0, _terrain_height_at(0.0, 0.0) + 0.05, 0.0)
 	equipment_visual_root = Node3D.new()
 	equipment_visual_root.name = "EquipmentVisuals"
 	player_node.add_child(equipment_visual_root)
@@ -282,6 +274,7 @@ func _build_crafting_station_visuals() -> void:
 		if not position_data is Dictionary:
 			continue
 		var at := Vector3(float(position_data.get("x", 0.0)), 0.0, float(position_data.get("z", 0.0)))
+		at.y = _terrain_height_at(at.x, at.z)
 		match str(station.get("id", "")):
 			"frontier-workbench":
 				_add_workbench(at)
@@ -500,6 +493,7 @@ func _on_enemy_snapshots_completed(result: int, response_code: int, _headers: Pa
 		if not enemy_nodes.has(enemy_id):
 			continue
 		var target := Vector3(float(snapshot.get("x", 0.0)), 0.0, float(snapshot.get("z", 0.0)))
+		target.y = _terrain_height_at(target.x, target.z)
 		enemy_targets[enemy_id] = target
 		var health := int(snapshot.get("health", 0))
 		var maximum := int(snapshot.get("maxHealth", 1))
@@ -1429,11 +1423,13 @@ func _update_inventory(inventory_data: Variant, bank_data: Variant = {}, coins_d
 		_refresh_trade_items()
 
 func _apply_server_position(position_data: Dictionary, force: bool) -> void:
-	var target := Vector3(
-		float(position_data.get("x", 0.0)),
-		player_node.global_position.y,
-		float(position_data.get("z", 0.0))
-	)
+	var target_x := float(position_data.get("x", 0.0))
+	var target_z := float(position_data.get("z", 0.0))
+	var vertical_offset := 0.05
+	if not force:
+		var current_ground_height := _terrain_height_at(player_node.global_position.x, player_node.global_position.z)
+		vertical_offset = maxf(0.05, player_node.global_position.y - current_ground_height)
+	var target := Vector3(target_x, _terrain_height_at(target_x, target_z) + vertical_offset, target_z)
 	if force or player_node.global_position.distance_to(target) > 2.5:
 		player_node.global_position = target
 	else:
@@ -1996,7 +1992,8 @@ func _on_presence_roster_completed(result: int, response_code: int, _headers: Pa
 		if zone_id.is_empty():
 			continue
 		seen[character_id] = true
-		var target := Vector3(float(remote_data.get("x", 0.0)), 0.05, float(remote_data.get("z", 0.0)))
+		var target := Vector3(float(remote_data.get("x", 0.0)), 0.0, float(remote_data.get("z", 0.0)))
+		target.y = _terrain_height_at(target.x, target.z) + 0.05
 		if not remote_player_nodes.has(character_id):
 			_create_remote_player_visual(character_id, str(remote_data.get("name", "Wayfarer")), target)
 		remote_player_targets[character_id] = target
