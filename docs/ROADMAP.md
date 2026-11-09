@@ -112,3 +112,7 @@ Each milestone is a tested, reviewable slice. A feature is not complete because 
 - [x] Render authoritative boss health, phase and active ability warnings in the Godot enemy label and centered boss HUD (passive snapshot consumer; live boss integration remains incomplete).
 
 - [x] Correct migration 0016's SQL comment so the existing semicolon-splitting migration runner does not submit comment text as SQL (commit f098eda; awaiting server CI).
+
+- [x] Persist terminal boss defeat in the player attack transaction, including first-hit kills before the first boss AI tick.
+- [x] Resolve boss definitions by enemy spawn identity.
+- [ ] Integrate the boss phase engine and damage resolver into the autonomous world tick.
