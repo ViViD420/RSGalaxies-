@@ -76,7 +76,7 @@ An original sandbox MMORPG combining long-form skill progression and item gamepl
 - Email verification, password reset/recovery, MFA, distributed rate limiting, admin account tools and security/load review remain incomplete.
 - The current in-process auth throttle is only a local safety net; production still needs trusted edge controls. When its 10,000-key map is full, new keys fail closed until stale windows expire. `/readyz` provides a bounded PostgreSQL dependency check, while `/healthz` intentionally remains live during database outages.
 - The Godot client does not persist access tokens across launches. Secure platform-specific persistence is a future decision.
-- Remote character presence and position snapshots are implemented; successful authoritative movement now refreshes the shared presence snapshot in the same transaction, coalesced to one database write per character per second. The client still polls snapshots; there is no interpolation protocol or zone ownership yet. Enemy AI/movement, combat animations/abilities, boss encounters, dedicated loot tables, deeper crafting, unique equipment instances/durability, housing, settlements and large-scale world streaming are also outstanding.
+- Remote character presence and position snapshots are implemented; successful authoritative movement now refreshes the shared presence snapshot in the same transaction, coalesced to one database write per character per second. The client still polls snapshots; there is no interpolation protocol or zone ownership yet. Enemy AI domain state machine (idle, aggro/chase, telegraph/interruption, leash/return) has now been added with deterministic server-timestamp advancement and unit tests. It is not yet wired to persisted enemy instances or a tick/attack transaction; that integration remains outstanding. Combat animations/abilities, boss encounters, dedicated loot tables, deeper crafting, unique equipment instances/durability, housing, settlements and large-scale world streaming are also outstanding.
 - The account APIs require PostgreSQL. The server's in-memory-only development mode does not register account routes.
 
 ## Latest verified repository state
@@ -84,6 +84,13 @@ An original sandbox MMORPG combining long-form skill progression and item gamepl
 - Current server CI: run #408 passed at commit `2e2fe958`; run #407 also passed. Current client CI: run #124 passed at commit `a856a481`.
 - Documentation consistency update: `1bb8a9d` aligns `docs/COMBAT.md` with the active 18-skill hierarchy and actual combat behavior. This handoff update follows it.
 - Earlier skill transition runs #394–#402 included intermediate failures; later corrected runs #403–#408 passed. Do not describe every transition run as green; use the latest successful runs as the current validation signal.
+
+## Enemy AI foundation (new)
+
+- Commits: `b805b26` added `server/internal/game/enemy_ai.go`; `b8bdd94` added behavior tests; `cf2540c` refined the bounded return-path test.
+- `AdvanceEnemyAI` is a pure deterministic domain transition: idle acquires a same-zone target within aggro range, chases at bounded server-tick speed, telegraphs before requesting an attack, interrupts telegraphs when the player leaves attack range, and returns to spawn when the target leaves the leash or zone. Long pauses cap movement catch-up at one second.
+- The function only emits an attack request; the future repository integration must atomically persist enemy state and apply server-calculated player damage. Do not expose a client-controlled enemy tick or trust client damage.
+- Current limitation: this is tested domain logic, not yet connected to PostgreSQL spawn rows, an encounter scheduler, or client-visible enemy movement.
 
 ## Latest skill-system implementation
 
@@ -95,7 +102,8 @@ An original sandbox MMORPG combining long-form skill progression and item gamepl
 
 ## Next engineering tasks
 
-1. Finish ordinary combat foundations: server-owned weapon/ability definitions, derived hit resolution, enemy aggro, movement, leash and behavior state. `docs/COMBAT.md` now reflects the actual current combat implementation and the next sequence.
+1. Integrate the new enemy AI state machine with persisted spawn instances and a bounded server-side tick/attack transaction; add migration, concurrency, restart and account-isolation tests. Then replicate enemy position/state to Godot.
+2. Add server-owned weapon/ability definitions and derived hit resolution. `docs/COMBAT.md` reflects the current combat implementation and next sequence.
 2. Add durable encounter participation and reward settlement before implementing boss phases or group loot.
 3. Implement the reusable boss encounter state machine after ordinary enemy AI and combat are stable.
 4. Add dedicated loot tables, idempotent reward claims and explicit inventory-overflow handling before valuable boss drops.
