@@ -10,12 +10,19 @@ var (
 	ErrItemNotEquippable = errors.New("item cannot be equipped")
 	ErrEquipmentSlotEmpty = errors.New("equipment slot is empty")
 	ErrInvalidEquipmentSlot = errors.New("invalid equipment slot")
+	ErrInsufficientEquipmentSkill = errors.New("required skill level is not met")
 )
 
 func (p *Player) EquipItem(itemID string) error {
 	if err:=p.CanAct();err!=nil{return err}
 	item,ok:=FindItem(itemID)
 	if !ok||item.EquipmentSlot==""{return ErrItemNotEquippable}
+	if item.RequiredSkillID != "" {
+		if !IsKnownSkill(item.RequiredSkillID) || item.RequiredSkillLevel < 1 { return ErrItemNotEquippable }
+		if p.Skills[item.RequiredSkillID].Level < item.RequiredSkillLevel { return ErrInsufficientEquipmentSkill }
+	} else if item.RequiredSkillLevel != 0 {
+		return ErrItemNotEquippable
+	}
 	if p.Inventory[itemID]<1{return ErrInsufficientItems}
 	if p.Equipment==nil{p.Equipment=make(map[string]string)}
 	oldItemID:=p.Equipment[item.EquipmentSlot]
