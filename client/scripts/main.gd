@@ -2930,13 +2930,6 @@ func _show_inventory_panel() -> void:
 	var summary := Label.new()
 	summary.text = "Health %d/%d  •  Coins %d" % [current_health, game_max_health, current_coins]
 	column.add_child(summary)
-	var scroll := ScrollContainer.new()
-	scroll.custom_minimum_size = Vector2(330, 130)
-	scroll.size_flags_vertical = Control.SIZE_EXPAND_FILL
-	column.add_child(scroll)
-	var items_column := VBoxContainer.new()
-	items_column.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-	scroll.add_child(items_column)
 	var filter_row := HBoxContainer.new()
 	column.add_child(filter_row)
 	inventory_filter_select = OptionButton.new()
