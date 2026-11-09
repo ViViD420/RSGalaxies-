@@ -39,6 +39,7 @@ type characterStore interface {
 	UseItemForAccount(context.Context, string, game.PlayerID, string) (game.Player, int, error)
 	HeartbeatPresenceForAccount(context.Context, string, game.PlayerID, time.Time) error
 	ListZonePresenceForAccount(context.Context, string, game.PlayerID, time.Time) ([]game.RemotePlayer, error)
+	ListEnemySnapshotsForAccount(context.Context, string, game.PlayerID, time.Time) ([]game.EnemySnapshot, error)
 	CreateTradeForAccount(context.Context, string, game.PlayerID, game.PlayerID, game.TradeOffer, time.Time) (game.TradeSnapshot, error)
 	AcceptTradeForAccount(context.Context, string, game.PlayerID, string, game.TradeOffer, time.Time) (game.TradeSnapshot, error)
 	UpdateTradeOfferForAccount(context.Context, string, game.PlayerID, string, int64, game.TradeOffer, time.Time) (game.TradeSnapshot, error)
@@ -122,6 +123,7 @@ func (s *Server) Routes() http.Handler {
 		mux.HandleFunc("POST /api/v1/account/characters/{id}/inventory/use/{itemID}", s.useOwnedItem)
 		mux.HandleFunc("POST /api/v1/account/characters/{id}/presence/heartbeat", s.heartbeatOwnedPresence)
 		mux.HandleFunc("GET /api/v1/account/characters/{id}/presence", s.listOwnedPresence)
+		mux.HandleFunc("GET /api/v1/account/characters/{id}/world/enemies", s.listOwnedEnemySnapshots)
 		if os.Getenv("RS_GALAXIES_ENV") != "production" || os.Getenv("RS_GALAXIES_ENABLE_TRADING") == "true" {
 			mux.HandleFunc("POST /api/v1/account/characters/{id}/trades/invite/{targetID}", s.createOwnedTradeInvite)
 			mux.HandleFunc("POST /api/v1/account/characters/{id}/trades/accept/{tradeID}", s.acceptOwnedTradeInvite)
@@ -813,6 +815,20 @@ func (s *Server) heartbeatOwnedPresence(w http.ResponseWriter,r *http.Request) {
 		return
 	}
 	w.WriteHeader(http.StatusNoContent)
+}
+
+func (s *Server) listOwnedEnemySnapshots(w http.ResponseWriter, r *http.Request) {
+	account, _, ok := s.authenticatedAccount(w, r)
+	if !ok { return }
+	enemies, err := s.characters.ListEnemySnapshotsForAccount(r.Context(), account.ID, game.PlayerID(strings.TrimSpace(r.PathValue("id"))), s.now())
+	if err != nil {
+		if errors.Is(err, game.ErrPlayerNotFound) { writeError(w, http.StatusNotFound, "character_not_found") } else {
+			log.Printf("list authoritative enemy snapshots: %v", err)
+			writeError(w, http.StatusInternalServerError, "internal_error")
+		}
+		return
+	}
+	writeJSON(w, http.StatusOK, map[string]any{"enemies": enemies, "serverTime": s.now().UTC()})
 }
 
 func (s *Server) listOwnedPresence(w http.ResponseWriter,r *http.Request) {
