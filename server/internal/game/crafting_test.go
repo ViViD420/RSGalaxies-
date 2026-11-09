@@ -156,3 +156,34 @@ func TestRatToothBladeCraftingConnectsLootToProfessionSpecificEquipment(t *testi
 	attack, _ := player.EquipmentBonuses()
 	if attack != 3 { t.Fatalf("rat-tooth blade attack bonus=%d, want 3", attack) }
 }
+
+func TestBoarTuskCraftingConnectsLootToPolearmsEquipment(t *testing.T) {
+	player, err := NewPlayer("boar-tusk-smith", "FrontierPolearmSmith", time.Now())
+	if err != nil { t.Fatal(err) }
+	player.Position.Z = 8
+	player.Inventory["copper_bar"] = 2
+	player.Inventory["boar_tusk"] = 2
+	player.Inventory["wooden_plank"] = 1
+	if _, err := player.AwardExperience("smithing", 300); err != nil { t.Fatal(err) }
+
+	recipe, ok := FindCraftingRecipe("boar-tusk-spear")
+	if !ok { t.Fatal("boar-tusk spear recipe missing") }
+	forge, ok := FindCraftingStation("frontier-forge")
+	if !ok { t.Fatal("frontier forge missing") }
+	result, err := player.Craft(recipe, forge, time.Now())
+	if err != nil { t.Fatalf("craft boar-tusk spear: %v", err) }
+	if result.Experience != 120 || result.SkillID != "smithing" ||
+		player.Inventory["copper_bar"] != 0 || player.Inventory["boar_tusk"] != 0 ||
+		player.Inventory["wooden_plank"] != 0 || player.Inventory["boar_tusk_spear"] != 1 {
+		t.Fatalf("boar-tusk spear craft result=%+v inventory=%v", result, player.Inventory)
+	}
+	if err := player.EquipItem("boar_tusk_spear"); !errors.Is(err, ErrInsufficientEquipmentSkill) {
+		t.Fatalf("equip below polearms level 2 error=%v, want skill requirement", err)
+	}
+	if _, err := player.AwardExperience("polearms", 100); err != nil { t.Fatal(err) }
+	if err := player.EquipItem("boar_tusk_spear"); err != nil {
+		t.Fatalf("equip boar-tusk spear at polearms level 2: %v", err)
+	}
+	attack, _ := player.EquipmentBonuses()
+	if attack != 4 { t.Fatalf("boar-tusk spear attack bonus=%d, want 4", attack) }
+}
