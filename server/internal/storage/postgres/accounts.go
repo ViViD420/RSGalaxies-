@@ -345,6 +345,8 @@ func (r *AccountRepository) AttackEnemyForAccount(ctx context.Context,accountID 
 	var respawnValue any
 	if !nextState.RespawnAt.IsZero(){respawnValue=nextState.RespawnAt}
 	if nextState.Health > 0 {
+		var targetCharacterID any = string(player.ID)
+		if player.Health <= 0 { targetCharacterID = nil }
 		// The click-to-attack retaliation is itself an enemy attack. Cancel any
 		// pending telegraph and share the AI cooldown to avoid double strikes.
 		nextAttackAt := now.Add(enemyAIConfig(spawnDefinition).AttackCooldown)
@@ -353,7 +355,7 @@ func (r *AccountRepository) AttackEnemyForAccount(ctx context.Context,accountID 
 				behavior='chasing',position_zone_id=$5,position_x=$6,position_z=$7,
 				telegraph_until=NULL,next_attack_at=$8,last_ai_updated_at=$9,target_character_id=$10 WHERE enemy_id=$1`,
 				enemyID,nextState.Health,respawnValue,nextState.Initialized,spawnDefinition.Position.ZoneID,
-				spawnDefinition.Position.X,spawnDefinition.Position.Z,nextAttackAt,now.UTC(),string(player.ID))
+				spawnDefinition.Position.X,spawnDefinition.Position.Z,nextAttackAt,now.UTC(),targetCharacterID)
 		} else {
 			_,err=tx.ExecContext(ctx,`UPDATE enemy_spawn_state SET health=$2,respawn_at=$3,initialized=$4,
 				behavior='chasing',telegraph_until=NULL,next_attack_at=$5,last_ai_updated_at=$6,target_character_id=$7 WHERE enemy_id=$1`,
