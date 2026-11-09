@@ -103,7 +103,7 @@ An original sandbox MMORPG combining long-form skill progression and item gamepl
 ## Next engineering tasks
 
 1. Integrate the new enemy AI state machine with persisted spawn instances and a bounded server-side tick/attack transaction; add migration, concurrency, restart and account-isolation tests. Then replicate enemy position/state to Godot.
-2. Add server-owned weapon/ability definitions and derived hit resolution. `docs/COMBAT.md` reflects the current combat implementation and next sequence.
+2. Add server-owned weapon/ability definitions and derived hit resolution. `docs/COMBAT.md` now documents the AI domain foundation and its remaining persistence/scheduler/client integration.
 2. Add durable encounter participation and reward settlement before implementing boss phases or group loot.
 3. Implement the reusable boss encounter state machine after ordinary enemy AI and combat are stable.
 4. Add dedicated loot tables, idempotent reward claims and explicit inventory-overflow handling before valuable boss drops.
