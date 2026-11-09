@@ -1600,3 +1600,14 @@ The procedural placement algorithm is deterministic by design and now has direct
 - Smoke test now verifies both MultiMeshes enable per-instance colors, the foliage palette produces at least three distinct deterministic colors across the starter zone, and repeated sampling at one coordinate is stable.
 - Client Action #187 / run 42619776488 was triggered by this code commit. At this documentation checkpoint it is still in progress; inspect full logs and do not mark this color feature verified until it completes.
 - Latest documented passing client run remains #186 / 42619558244, which validates the previous deterministic prop-placement slice, not this new color variation.
+
+
+## Biome-aware environmental tint verification — 2026-11-09
+
+- Client Action #187 / run 42619776488 passed on code commit 8a5fddac140b92783458b92ab79d43a8a75b14d8.
+- The smoke test confirmed both foliage and rock MultiMeshes enable per-instance color storage, moisture-derived foliage colors produce at least three distinct palette values across the zone, and repeated sampling at the same coordinate is deterministic.
+- The full terrain/movement smoke test passed; Godot editor import passed; Web export passed.
+- Full job logs inspected: no Godot SCRIPT ERROR or ERROR output.
+- No production code changed after the #187 validated commit; subsequent changes are documentation-only.
+- The #186 run validates the base dressing placement; #187 validates the additional biome-aware per-instance tinting.
+- Actual non-headless visual review and physical desktop/mobile QA remain outstanding.

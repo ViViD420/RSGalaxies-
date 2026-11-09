@@ -217,3 +217,7 @@ Client Action #183 (run 42604378304) passed; #182 (42604361140) passed. Client #
 - [x] Add deterministic palette diversity and color-data configuration regression coverage.
 - [ ] Verify biome-aware MultiMesh tinting through Client Action #187 (42619776488).
 - [ ] Review the result in a non-headless rendered client and on physical desktop/mobile devices.
+
+
+- [x] Client Action #187 (run 42619776488) passed biome-aware prop tint regression, terrain/movement smoke, Godot import and Web export with no Godot errors.
+- [ ] Review actual rendered biome tint and prop placement in a non-headless client and on physical devices.

@@ -217,3 +217,8 @@ Client Action #186 passed the revised headless regression, editor import and Web
 ### Biome-aware prop tinting
 
 Foliage and rock MultiMeshes now use per-instance color data derived from the same deterministic moisture field that drives terrain surface palettes. This preserves the shared biome signal across ground and environmental dressing while keeping batched rendering. Per-instance color storage is enabled before allocating MultiMesh buffers, as required by the engine API. Verification is pending Client Action #187.
+
+
+### Biome-aware environmental tint verification
+
+Client Action #187 passed deterministic palette diversity and stable repeated sampling, with per-instance color storage enabled on both foliage and rock MultiMeshes. The full headless terrain/movement smoke test, editor import and Web export also passed. The complete log contains no Godot script or engine errors. Actual rendered visual review remains outstanding.
