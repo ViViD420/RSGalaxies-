@@ -66,6 +66,7 @@ Send `Authorization: Bearer <accessToken>`:
 - `POST /api/v1/account/characters/{characterId}/inventory/use/{itemId}` — consume an owned item effect such as a healing potion.
 - `POST /api/v1/account/characters/{characterId}/presence/heartbeat` — refresh this owned character's 20-second zone-presence lease; returns 204.
 - `GET /api/v1/account/characters/{characterId}/presence` — list up to 100 other active characters in the same zone, exposing only character ID, display name, zone and position.
+- `GET /api/v1/account/characters/{characterId}/world/enemies` — list authoritative enemy instance positions, health, behavior and telegraph/respawn timestamps for the character's current zone. Requires account ownership.
 - `POST /api/v1/account/characters/{characterId}/trades/invite/{targetCharacterId}` with `{"offer":{"items":{"softwood_log":2},"coins":10}}` — create a nearby-player invitation and escrow the initiator's offer.
 - `POST /api/v1/account/characters/{characterId}/trades/accept/{tradeId}` with `{"offer":{"items":{"rough_stone":1},"coins":5}}` — accept and escrow the target's offer.
 - `GET /api/v1/account/characters/{characterId}/trades/active` — recover the character's current trade after reconnect.
@@ -76,7 +77,7 @@ Send `Authorization: Bearer <accessToken>`:
 
 Trade invitations require a fresh target presence lease and both characters to be active in the same zone within six world units. Each trade expires after five minutes; escrow is returned atomically on cancellation or expiry. Offers are limited to 20 distinct catalog items, and the server reserves inventory-stack and currency capacity so escrow can always be refunded.
 
-A new local-chat reader starts with `after=0` and receives the latest 50 zone messages in chronological order; later requests fetch newer IDs from the returned cursor. Every character operation is scoped by the authenticated account in its SQL query or transaction. A character belonging to another account is reported as not found.
+A new local-chat reader starts with `after=0` and receives the latest 50 zone messages in chronological order; later requests fetch newer IDs from the returned cursor. A PostgreSQL-backed world worker advances enemy AI every 250 ms. It selects fresh character presence, locks the character row before the enemy spawn row, and commits enemy movement/behavior and any completed telegraph damage plus Defense XP atomically. Multiple server instances serialize on the same rows. Every character operation is scoped by the authenticated account in its SQL query or transaction. A character belonging to another account is reported as not found.
 
 New characters start with 100 coins; starter merchant prices are part of the public item catalog. Purchases and sales atomically update the owned character's coin balance and inventory. Sessions expire after 30 days. The server stores only a SHA-256 digest of the random 256-bit token. Each account is limited to 10 active sessions; creating another prunes the oldest. Logout revokes the digest server-side.
 
