@@ -1,6 +1,7 @@
 extends SceneTree
 
 const PLAYER_SCENE := preload("res://scenes/player.tscn")
+const WORLD_TERRAIN_SCRIPT := preload("res://scripts/world_terrain.gd")
 
 
 func _initialize() -> void:
@@ -12,21 +13,42 @@ func _run_movement_smoke_test() -> void:
 		if not InputMap.has_action(action_name):
 			InputMap.add_action(action_name)
 
-	var ground := StaticBody3D.new()
-	var ground_collision := CollisionShape3D.new()
-	var ground_shape := BoxShape3D.new()
-	ground_shape.size = Vector3(100.0, 1.0, 100.0)
-	ground_collision.shape = ground_shape
-	ground.add_child(ground_collision)
-	ground.position.y = -0.5
-	root.add_child(ground)
+	var terrain := WORLD_TERRAIN_SCRIPT.new() as Node3D
+	root.add_child(terrain)
+	var terrain_surface := terrain.get_node_or_null("TerrainSurface") as MeshInstance3D
+	var terrain_collision := terrain.get_node_or_null("TerrainCollision/TerrainShape") as CollisionShape3D
+	if terrain_surface == null or terrain_surface.mesh == null or terrain_surface.mesh.get_surface_count() == 0:
+		_fail("Procedural terrain surface did not generate a renderable mesh.")
+		return
+	if terrain_collision == null or terrain_collision.shape == null:
+		_fail("Procedural terrain did not generate collision geometry.")
+		return
+
+	var spawn_height := float(terrain.call("get_height_at", 0.0, 0.0))
+	var distant_height := float(terrain.call("get_height_at", 24.0, -18.0))
+	var repeated_height := float(terrain.call("get_height_at", 24.0, -18.0))
+	if not is_finite(spawn_height) or not is_finite(distant_height):
+		_fail("Terrain height sampling returned a non-finite value.")
+		return
+	if absf(distant_height - repeated_height) > 0.0001:
+		_fail("Terrain height sampling is not deterministic.")
+		return
+	if absf(spawn_height - distant_height) < 0.01:
+		_fail("Terrain heightmap did not produce any elevation variation.")
+		return
 
 	var player := PLAYER_SCENE.instantiate() as CharacterBody3D
-	player.position = Vector3(0.0, 0.05, 0.0)
+	player.position = Vector3(0.0, spawn_height + 0.05, 0.0)
 	root.add_child(player)
 
-	for frame in range(5):
+	var initial_ground_frames := 0
+	while not player.is_on_floor() and initial_ground_frames < 120:
 		await physics_frame
+		await process_frame
+		initial_ground_frames += 1
+	if not player.is_on_floor():
+		_fail("Player did not settle on generated terrain collision; position=%s velocity=%s." % [player.global_position, player.velocity])
+		return
 
 	var starting_z := player.global_position.z
 	Input.action_press("move_forward")
