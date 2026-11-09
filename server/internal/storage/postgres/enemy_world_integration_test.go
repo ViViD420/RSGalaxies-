@@ -100,6 +100,14 @@ func TestPostgresEnemyWorldTickCommitsAttackExactlyOnce(t *testing.T) {
 	if err := accountRepo.TickEnemyAI(ctx, enemyID, now.Add(10*time.Second)); err != nil { t.Fatal(err) }
 	if err := db.QueryRowContext(ctx, "SELECT health FROM players WHERE id=$1", string(playerID)).Scan(&healthAfterCooldown); err != nil { t.Fatal(err) }
 	if healthAfterCooldown != 94 { t.Fatalf("enemy did not resume after shared cooldown/telegraph: health=%d, want 94", healthAfterCooldown) }
+	var activeEncounterID string
+	if err := db.QueryRowContext(ctx, "SELECT encounter_id FROM enemy_spawn_state WHERE enemy_id=$1", enemyID).Scan(&activeEncounterID); err != nil { t.Fatal(err) }
+	contributions, err := accountRepo.ListEncounterParticipants(ctx, enemyID, activeEncounterID)
+	if err != nil { t.Fatalf("list live encounter contributions: %v", err) }
+	if len(contributions) != 1 || contributions[0].DamageDealt != 2 ||
+		contributions[0].DamageReceived != 4 || contributions[0].ActionCount != 2 {
+		t.Fatalf("live encounter contribution ledger = %+v", contributions)
+	}
 
 	snapshots, err := accountRepo.ListEnemySnapshotsForAccount(ctx, account.ID, playerID, now.Add(4*time.Second))
 	if err != nil { t.Fatalf("list enemy snapshots: %v", err) }
