@@ -84,7 +84,7 @@ An original sandbox MMORPG combining long-form skill progression and item gamepl
 - Server CI runs #413–#421 all passed, including migration 0010, restart recovery, enemy damage, transactional tick coordinator and snapshot model/repository.
 - Server runs #422–#424 failed because the HTTP test double had not yet implemented the newly extended enemy-snapshot interface. This was a test-adapter compile failure; commit `97c5d41` added the fake implementation and #425 passed. #426 passed stale-presence leash-return coverage; #427 passed dynamic live-position combat. #428 failed because its integration assertion still expected the pre-player-attack enemy health; #429 corrected the expected value and passed. Runs #430 and #431 both passed, validating monotonic simulation time across replica clock skew. Run #432 adds the defeated-active-target integration assertion and was in progress at the latest check; #433 adds cross-zone target rejection coverage and was queued. Verify Actions before claiming either green.
 - Client runs #125–#127 all passed. They validate snapshot polling/interpolation code and the respawn-label/type-cast refinements.
-- Latest documentation updates `28c86c8` (combat), `77b8195` (architecture) and `662df6b` (roadmap) record the transactional enemy simulation and Godot integration. API docs update `ad6b6e5` documents the authenticated snapshot endpoint and server tick.
+- Latest documentation updates `28c86c8` (combat), `77b8195` (architecture), `662df6b` (roadmap) and `1a035ca` (README) record the transactional enemy simulation and Godot integration. API docs update `ad6b6e5` documents the authenticated snapshot endpoint and server tick.
 
 ## Enemy AI foundation, transactional world and Godot integration (current milestone)
 
