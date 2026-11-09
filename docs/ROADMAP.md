@@ -48,7 +48,8 @@
 - [x] Migration 0014 persists each participant's combat specialization for XP attribution; Actions #479–#481 passed.
 - [x] Authenticated reward-claim API, account-scoped listing, idempotent redemption and full-stack pending behavior; settlement/claim integration suite passed in #497.
 - [x] Authenticated HTTP API ownership/success-path tests (#498–#503) and Godot Rewards panel follow-up CI (#129–#132).
-- [ ] Bounded pathfinding, party aggro, combat animations, enemy abilities, weapon-family expansion and server-derived hit/miss outcomes (see docs/COMBAT_PROGRESSION.md).
+- [ ] Bounded pathfinding, party aggro, enemy abilities, weapon-family expansion and server-derived hit/miss outcomes (see docs/COMBAT_PROGRESSION.md).
+- [ ] Expand the initial melee swing into weapon-family animations, hit reactions and ability effects. Initial server-confirmed placeholder swing and bounded third-person camera zoom are implemented; headless regression verification is pending.
 - [x] Reusable versioned boss phase/ability domain engine with validated definitions, threshold transitions, telegraphs, cooldowns, range interruption, encounter-cycle reset and deterministic damage intents (domain-only; server Actions verification pending).
 - [ ] Durable boss encounter persistence groundwork: migration 0016 adds encounter-cycle-scoped state, versioned definition/phase, telegraph timestamps, JSONB cooldowns, ability cursor and terminal defeat state; PostgreSQL load/save helpers lock the parent enemy cycle and reject stale-cycle or stale-timestamp writes. Integration test added; GitHub Actions verification pending, and the world tick has not yet been wired to these helpers.
 - [x] Initial server-owned weighted ordinary-enemy loot tables with cryptographically secure rolls and no-drop outcomes (server Actions #518 passed; later superseded in live enemy definitions by the multi-drop pipeline).
@@ -93,7 +94,7 @@
 Boss roster expansion and boss-specific polish are paused. Development now prioritizes the core player experience across the whole game.
 
 - [x] Implement third-person movement acceleration/deceleration, air control, coyote time, jump buffering, facing/turn smoothing, fall-speed cap and mesh-only locomotion feedback; headless regression and strict Godot import/Web export passed in client Action #153.
-- [ ] Interactive desktop/mobile playtesting, touch-control feel, camera collision/zoom and movement reconciliation tuning.
+- [ ] Interactive desktop/mobile playtesting, touch-control feel, camera collision and movement reconciliation tuning. Bounded wheel/keyboard camera zoom is implemented; automated min/max and attack-animation checks are pending.
 - [ ] Complete movement authority and reconciliation: server snapshots, bounded correction, reconnect recovery and smooth remote-player interpolation without client trust.
 - [ ] Replace the flat placeholder floor with collision-safe deterministic terrain. A noise-based 240m terrain mesh and matching collision now place local/remote players, enemies, gathering nodes and stations consistently; runtime collision smoke coverage now includes an actual physics ray hit and player grounding. Client Action #161 passed the runtime physics ray/grounding and movement checks without Godot errors. Action #162 exposed a test-cleanup regression, reverted in 71eafa2; validate Action #163 before closing this item. All failures remain documented in the handoff. Server-authoritative vertical movement and richer biomes/paths remain future work.
 - [ ] Establish a real character presentation/animation foundation: idle, locomotion, start/stop, jump, fall, land, interact and combat states, with equipment-aware attachment points.
