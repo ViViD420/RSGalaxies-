@@ -102,7 +102,7 @@ Each milestone is a tested, reviewable slice. A feature is not complete because 
 - [x] Register Stoneback Colossus in the public enemy catalog at Verdant Frontier (32,32): 100 HP, 2 Defense, no ordinary attack, 500 encounter XP and 300-second respawn.
 - [x] Assign the versioned Stoneback multi-item harvest table and verify defeat, durable settlement, claim listing, claim redemption, XP and idempotent retry.
 - [x] Render the boss world model and consume authoritative boss health/phase/ability snapshots in the Godot HUD.
-- [x] Keep the encounter HUD visible on authoritative defeat snapshots, show explicit reward-claim feedback, and make active telegraphs communicate the ability warning and move-out-of-range instruction.
+- [x] Keep the encounter HUD visible on authoritative defeat snapshots, show explicit reward-claim feedback, make active telegraphs communicate the ability warning and move-out-of-range instruction, and surface short phase-transition cues.
 - [x] Verify server Actions #599/#600, including race-enabled PostgreSQL integration tests and Vet; verify client Actions #137 for Godot import/script validation.
 - [ ] Continue player-facing playtesting and polish: telegraph timing feedback, phase transition cues, target lifecycle, defeat/respawn presentation and accessibility at desktop/mobile aspect ratios.
 - [ ] Add group encounters, party threat and support contribution before implementing group reward distribution.
