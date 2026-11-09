@@ -82,7 +82,7 @@ An original sandbox MMORPG combining long-form skill progression and item gamepl
 ## Latest verified repository state
 
 - Server CI runs #413–#421 all passed, including migration 0010, restart recovery, enemy damage, transactional tick coordinator and snapshot model/repository.
-- Server runs #422–#424 failed because the HTTP test double had not yet implemented the newly extended enemy-snapshot interface. This was a test-adapter compile failure; commit `97c5d41` added the fake implementation and #425 passed. #426 passed stale-presence leash-return coverage; #427 passed dynamic live-position combat. #428 failed because its integration assertion still expected the pre-player-attack enemy health; #429 corrected the expected value and passed. Runs #430 and #431 both passed, validating monotonic simulation time across replica clock skew. Run #432 adds the defeated-active-target integration assertion and was queued at the latest check; verify Actions before claiming it green.
+- Server runs #422–#424 failed because the HTTP test double had not yet implemented the newly extended enemy-snapshot interface. This was a test-adapter compile failure; commit `97c5d41` added the fake implementation and #425 passed. #426 passed stale-presence leash-return coverage; #427 passed dynamic live-position combat. #428 failed because its integration assertion still expected the pre-player-attack enemy health; #429 corrected the expected value and passed. Runs #430 and #431 both passed, validating monotonic simulation time across replica clock skew. Run #432 adds the defeated-active-target integration assertion and was in progress at the latest check; #433 adds cross-zone target rejection coverage and was queued. Verify Actions before claiming either green.
 - Client runs #125–#127 all passed. They validate snapshot polling/interpolation code and the respawn-label/type-cast refinements.
 - Latest documentation updates `28c86c8` (combat), `77b8195` (architecture) and `662df6b` (roadmap) record the transactional enemy simulation and Godot integration. API docs update `ad6b6e5` documents the authenticated snapshot endpoint and server tick.
 
@@ -96,7 +96,7 @@ An original sandbox MMORPG combining long-form skill progression and item gamepl
 - The world worker runs only with PostgreSQL-backed account storage and advances catalogued spawns every 250 ms. No-player ticks cause pursuing enemies to return to spawn. Enemy snapshots are authenticated and limited to the requesting character's current zone.
 - Godot commits: `401e1e5` adds 0.5-second authenticated snapshot polling, health/behavior labels, telegraph warnings and interpolation; `424415e` keeps the respawn label visible when the creature mesh is hidden; `816147a` uses safe typed mesh casts. Client runs #125–#127 passed.
 - PostgreSQL player-initiated attacks now read the persisted enemy position (`a13b0b9`), so the client can attack a moving enemy rather than the static catalog spawn. `6f4369c` adds integration coverage; `4e403d9` updates expected snapshot health.
-- Monotonic simulation time: `0a0cbe2` prevents a delayed tick from moving persisted simulation time backwards across server replicas; `9a64f8d` tests clock regression. Runs #430/#431 passed. `ebfa1a5` adds a PostgreSQL integration assertion that a defeated character with a fresh presence lease is not attacked and causes the enemy to return; run #432 is pending.
+- Monotonic simulation time: `0a0cbe2` prevents a delayed tick from moving persisted simulation time backwards across server replicas; `9a64f8d` tests clock regression. Runs #430/#431 passed. `ebfa1a5` adds a PostgreSQL integration assertion that a defeated character with a fresh presence lease is not attacked and causes the enemy to return; #432 is pending. `49cfd8c` adds a cross-zone presence test proving an enemy does not pursue or damage a character after the character and presence move to another zone; #433 is pending.
 - Remaining AI limitations: nearest-active-target selection is simple and not sticky; no threat table, pathfinding, party aggro, enemy abilities or boss phases. No client-authoritative AI ticks or damage are permitted.
 
 
@@ -111,7 +111,7 @@ An original sandbox MMORPG combining long-form skill progression and item gamepl
 
 ## Next engineering tasks
 
-1. Finish CI verification for run #432 and correct any failures. Add explicit zone-change coverage if needed; defeated-target, stale-presence and leash-return coverage is now in the integration suite.
+1. Finish CI verification for runs #432/#433 and correct any failures. Defeated-target, cross-zone, stale-presence and leash-return coverage is now in the integration suite.
 2. Improve enemy target stickiness/threat selection and add bounded pathfinding; do this before party aggro or multi-enemy encounters.
 3. Add server-owned enemy abilities and combat telegraph types, then combat animations/feedback in Godot.
 4. Add durable encounter participation, contribution tracking and reward settlement before boss phases or group loot.
