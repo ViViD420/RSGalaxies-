@@ -103,6 +103,41 @@ func TestPostgresBossEncounterStatePersistsAndRejectsStaleCycles(t *testing.T) {
 		t.Fatal(err)
 	}
 
+	definition, ok := game.FindBossEncounter("stoneback-colossus")
+	if !ok {
+		t.Fatal("Stoneback Colossus definition missing")
+	}
+	defeatAt := now.Add(3 * time.Second)
+	defeatTx, err := db.BeginTx(ctx, nil)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if err := markBossEncounterDefeated(ctx, defeatTx, enemyID, definition, firstCycle, defeatAt); err != nil {
+		_ = defeatTx.Rollback()
+		t.Fatalf("mark boss defeated: %v", err)
+	}
+	if err := defeatTx.Commit(); err != nil {
+		t.Fatal(err)
+	}
+
+	verifyDefeatTx, err := db.BeginTx(ctx, nil)
+	if err != nil {
+		t.Fatal(err)
+	}
+	defeatedState, _, found, err := loadBossEncounterStateForUpdate(ctx, verifyDefeatTx, enemyID, firstCycle)
+	if err != nil {
+		_ = verifyDefeatTx.Rollback()
+		t.Fatal(err)
+	}
+	if !found || !defeatedState.Defeated || defeatedState.ActiveAbilityID != "" ||
+		!defeatedState.TelegraphStartedAt.IsZero() || !defeatedState.TelegraphUntil.IsZero() {
+		_ = verifyDefeatTx.Rollback()
+		t.Fatalf("boss defeat did not clear active telegraph: %+v", defeatedState)
+	}
+	if err := verifyDefeatTx.Commit(); err != nil {
+		t.Fatal(err)
+	}
+
 	// A respawn changes the authoritative parent cycle. A stale worker from
 	// the previous life must not load or overwrite the new life.
 	if _, err := db.ExecContext(ctx, "UPDATE enemy_spawn_state SET encounter_id=$2 WHERE enemy_id=$1", enemyID, secondCycle); err != nil {
