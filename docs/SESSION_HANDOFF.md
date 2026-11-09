@@ -545,3 +545,16 @@ Next add boss interruption/player death/respawn-cycle integration coverage, veri
 1. Verify Actions #580/#581 and the new loot-table run.
 2. Add explicit reward-settlement integration coverage for the Stoneback multi-item claim path if needed.
 3. Register the boss in the enemy catalog only after all world-tick, defeat, respawn, snapshot and reward tests pass.
+
+## Distinctive Stoneback world model (2026-11-09)
+
+- Updated Godot enemy visual generation to give Stoneback Colossus a larger stone-colored body, armored back plates, oversized fists and a more prominent world label.
+- Defeat/respawn visibility now toggles every mesh child, not just the first body/head pair, so the extra boss armor/fists hide correctly while defeated.
+- Client commit: bae81fb851c8e08bbc404b2035cd39660e44166d. Client workflow for this commit must be checked.
+- The boss model is keyed to the future public enemy ID but remains unused until Stoneback is added to the enemy catalog.
+
+### Current pending CI
+- Server #580 passed race-enabled PostgreSQL tests and Vet for interruption and respawn-cycle reset.
+- Server #579 passed exactly-once concurrent damage.
+- Server #581 (lethal player defeat) and #582–#584 (boss items/loot) were still in progress at the last check.
+- Client #135/#136 passed earlier boss HUD validation; new model change awaits its own client run.
