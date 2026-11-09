@@ -149,3 +149,35 @@ Each milestone is a tested, reviewable slice. A feature is not complete because 
 - [ ] Movement authority review and explicit server-side terrain-height/jump/collision design decision.
 - [ ] End-to-end core gameplay loop polish: gathering, crafting, equipment, interaction, feedback and progression.
 - Boss expansion is deliberately paused per user direction until the core game is substantially stronger.
+
+
+## Source-driven design and decision checkpoint — 2026-11-09
+
+- [x] Validate and fully read the supplied SWG Pre-CU JSON manual (`/mnt/data/swg_pre_cu_reference_manual.json`).
+- [x] Validate and fully read the supplied OSRS JSON manual (`/mnt/data/osrs_system_reference_manual.json`).
+- [x] Validate and fully read the supplied RS3 JSON manual (`/mnt/data/rs3_system_reference_manual.json`).
+- [x] Create source-attributed comparative synthesis in `docs/DESIGN_SYNTHESIS.md`, including source section attribution, inferred player motivations, strengths/trade-offs, dispositions, implementation mapping and source coverage gaps.
+- [x] Create `docs/DESIGN_DECISIONS.md` with accepted, adapted, rejected, deferred and open decisions.
+- [x] Preserve broad skill progression and reject an arbitrary skill-learning cap/250-point budget.
+- [x] Audit current client movement, server planar movement validation, terrain/collision and regression smoke test.
+- [ ] Add delayed-request/latency movement regression coverage and determine whether the 250 ms elapsed-window cap causes avoidable corrections under realistic request latency. Do not change server limits until reproduced and tested.
+- [ ] Complete movement reconciliation and reconnect design without trusting client coordinates.
+- [ ] Add terrain environmental dressing, landmarks, vegetation, rocks and biome-aware resource placement while preserving deterministic generation and shared visual/collision sampling.
+- [ ] Build the player presentation state machine for locomotion, jump/fall/land, attack and interaction, separate from collision and authoritative state.
+- [ ] Improve gather/craft/use-item feedback and responsive gameplay panels.
+- [ ] Design mobile virtual movement/look/action controls and perform physical-device QA.
+
+### Source interpretation boundary
+
+The three JSON manuals do not provide sufficient source detail for quest design, mobile controls, accessibility, detailed UI, terrain/world layout, animation systems or housing decoration. Those topics remain original design work and are not marked as source-derived. See `docs/DESIGN_SYNTHESIS.md` for the exact coverage statement.
+
+### Current source/CI notes
+
+The raw JSON manuals were available as current conversation attachments under `/mnt/data`; they were not found as files under a tracked repository source folder and were not committed as raw source data. The source paths above are the actual mounted paths in this workspace, not proposed Git paths.
+
+Client Action #183 (run 42604378304) passed; #182 (42604361140) passed. Client #178 (42603926295) and #179 (42603956717) failed due to unsupported `get_viewport_rect()` in `client/scripts/main.gd` plus a dependent type inference error; correction to `get_viewport().get_visible_rect().size.x` was validated by #180 (42604040649) and #181 (42604113289). Full logs were inspected. Server Action #602 (42598330356) passed race-enabled PostgreSQL integration tests and Vet. Its PostgreSQL service log includes intentional negative-path constraint errors from integration tests; the Go test packages and Vet completed successfully. The latest CI logs also include an upstream Node.js 20 deprecation warning from checkout@v4.
+
+### Source documents committed
+
+- `docs/DESIGN_SYNTHESIS.md` — source-attributed comparison and original design direction.
+- `docs/DESIGN_DECISIONS.md` — decision log with explicit status and implementation boundaries.
