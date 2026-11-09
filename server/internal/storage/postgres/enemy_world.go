@@ -130,6 +130,72 @@ func (r *AccountRepository) activeEnemyCandidates(ctx context.Context, enemy gam
 // presence, then locks that character before locking the enemy row. This
 // matches player combat's player-then-enemy ordering and commits telegraph
 // completion, damage, health, Defense XP and AI state atomically.
+// advanceBossEncounterInTransaction advances one boss and, if its
+// telegraph resolves, applies player damage/Defense XP in the same transaction
+// as the boss state. A nil player represents an empty spawn tick and can only
+// interrupt an active ability, never resolve one.
+func advanceBossEncounterInTransaction(
+	ctx context.Context,
+	tx *sql.Tx,
+	enemy game.EnemyDefinition,
+	definition game.BossEncounterDefinition,
+	encounterID string,
+	health int,
+	aiState *game.EnemyAIState,
+	player *game.Player,
+	accountID string,
+	now time.Time,
+) error {
+	bossState, storedDefinitionID, found, err := loadBossEncounterStateForUpdate(ctx, tx, enemy.ID, encounterID)
+	if err != nil {
+		return err
+	}
+	if found && storedDefinitionID != definition.ID {
+		return fmt.Errorf("boss definition mismatch: stored %q, active %q", storedDefinitionID, definition.ID)
+	}
+
+	targetPosition := game.WorldPosition{}
+	if player != nil {
+		targetPosition = player.Position
+	}
+	result, err := game.AdvanceBossEncounter(definition, bossState, game.BossEncounterInput{
+		EncounterID: encounterID,
+		Health: health,
+		MaxHealth: enemy.MaxHealth,
+		BossPosition: aiState.Position,
+		TargetPosition: targetPosition,
+		Now: now.UTC(),
+	})
+	if err != nil {
+		return fmt.Errorf("advance boss encounter %s: %w", definition.ID, err)
+	}
+
+	if result.AbilityResolved {
+		if player == nil {
+			return errors.New("boss ability resolved without a locked target player")
+		}
+		ability, ok := game.FindBossAbility(definition, result.AbilityID)
+		if !ok {
+			return fmt.Errorf("resolved boss ability %q is missing from definition", result.AbilityID)
+		}
+		attack, err := player.ReceiveBossAttack(result.Damage, aiState.Position, ability.MinRange, ability.MaxRange, now)
+		if err != nil {
+			return fmt.Errorf("resolve boss ability %s: %w", ability.ID, err)
+		}
+		if player.Health <= 0 {
+			aiState.TargetCharacterID = ""
+		}
+		if err := recordEncounterDamageReceived(ctx, tx, encounterID, enemy.ID, player.ID, attack.DamageReceived, now); err != nil {
+			return err
+		}
+		if err := updateOwnedPlayer(ctx, tx, accountID, *player); err != nil {
+			return fmt.Errorf("persist boss ability target: %w", err)
+		}
+	}
+
+	return persistBossEncounterState(ctx, tx, enemy.ID, definition.ID, result.State)
+}
+
 func (r *AccountRepository) TickEnemyAI(ctx context.Context, enemyID string, now time.Time) error {
 	enemy, ok := game.FindEnemy(enemyID)
 	if !ok {
