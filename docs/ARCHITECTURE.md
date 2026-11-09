@@ -117,4 +117,4 @@ Never hide or silently bypass an error. Stop, reproduce, diagnose and fix it bef
 
 - Third-person camera zoom is controlled through the SpringArm3D with configurable min/max distance and wheel/keyboard input. Default bounds are 2.5–9.0m.
 - A reusable placeholder melee swing animates only the visual body mesh and is triggered only after a successful server-authoritative combat response. It does not alter collision geometry or predict damage.
-- Headless regression coverage for zoom bounds and attack tween completion is added; Client Action #164 validation is pending.
+- Headless regression coverage for zoom bounds and attack tween completion is added. Actions #164/#165 passed import/export; #166 exposed a tween-completion assertion failure. The tween and elapsed-time diagnostic test were corrected in 9e24d4f/4a424b4; their CI verification is pending.
