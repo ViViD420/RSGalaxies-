@@ -42,6 +42,8 @@ type EnemyState struct {
 
 type CombatResult struct {
 	EnemyID string `json:"enemyId"`
+	SkillID string `json:"skillId"`
+	ParentSkillID string `json:"parentSkillId,omitempty"`
 	EnemyHealth int `json:"enemyHealth"`
 	PlayerHealth int `json:"playerHealth"`
 	DamageDealt int `json:"damageDealt"`
@@ -100,7 +102,7 @@ func (p *Player) AttackEnemy(enemy EnemyDefinition,state EnemyState,now time.Tim
 	if damage>state.Health{damage=state.Health}
 	if _, err := p.AwardExperience("strength", 1); err != nil && !errors.Is(err, ErrExperienceOverflow) { return CombatResult{}, state, err }
 	state.Health-=damage
-	result:=CombatResult{EnemyID:enemy.ID,EnemyHealth:state.Health,DamageDealt:damage}
+	result:=CombatResult{EnemyID:enemy.ID,SkillID:styleSkillID,ParentSkillID:parentSkillID,EnemyHealth:state.Health,DamageDealt:damage}
 	if state.Health==0{
 		state.RespawnAt=now.Add(time.Duration(enemy.RespawnSeconds)*time.Second)
 		result.EnemyDefeated=true
