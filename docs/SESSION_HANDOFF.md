@@ -820,3 +820,9 @@ Start by checking current main HEAD and client Action #139 for commit 743c5a8. S
 2. Verify latest main HEAD after any follow-up fixes and inspect all newest Actions.
 3. Continue reviewing target lifecycle, respawn snapshots and encounter completion UX. Keep client authority limited to rendering server state.
 4. Update this handoff, roadmap and architecture after each meaningful milestone.
+
+## Concurrent reward-claim CI correction (2026-11-09)
+
+- Server Action #601 (run 42598317321, commit 639a0f772a57e1a65b0a295216c823b77e0454ff) failed during Go compilation before tests: the first concurrent-claim test revision retained an unused local variable named claimedPlayer. The Actions log confirmed this exact compile error; no runtime or database assertion failed in that run.
+- Corrected the unused binding in commit 96e67caa6af9bf766caeca1483d0817dacb512ed. Server Action #602 (run 42598330356) is validating this corrected revision; at this checkpoint its race-enabled PostgreSQL Test step is still in progress and Vet has not started.
+- Do not treat the concurrent-claim test as CI-verified until #602 or a later run passes both Test and Vet.
