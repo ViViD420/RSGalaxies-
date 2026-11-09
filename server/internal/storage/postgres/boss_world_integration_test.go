@@ -358,7 +358,7 @@ func TestPostgresBossAbilityCanDefeatPlayerAndClearsTarget(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	player.Position = game.WorldPosition{ZoneID: testZoneID, X: 28, Z: 0}
+	player.Position = game.WorldPosition{ZoneID: testZoneID, X: 20, Z: 0}
 	player.Health = 5
 	if err := accountRepo.CreateCharacter(ctx, account.ID, player); err != nil {
 		t.Fatal(err)
@@ -404,7 +404,7 @@ func TestPostgresBossAbilityCanDefeatPlayerAndClearsTarget(t *testing.T) {
 	}
 
 	// Rampage is seeded with Stone Fist on cooldown. The target remains
-	// within Ground Shatter range, so the only eligible ability is Ground Shatter.
+	// within range. Stone Fist is on cooldown, so Ground Shatter is selected.
 	if err := accountRepo.tickEnemyAIForDefinition(ctx, enemy, now); err != nil {
 		t.Fatalf("start Ground Shatter telegraph: %v", err)
 	}
