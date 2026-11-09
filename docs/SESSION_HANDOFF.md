@@ -1,6 +1,6 @@
 # RS Galaxies — Session Handoff
 
-Last updated: 2026-11-09 (boss defeat transaction groundwork; server CI pending)
+Last updated: 2026-11-09 (boss tick integration committed; latest CI pending)
 
 ## Project identity
 
@@ -436,4 +436,45 @@ RS GALAXIES — RESUME DEVELOPMENT. Work only in ViViD420/RSGalaxies- on main. R
 Boss persistence groundwork, strict telegraph validation, ability-range-aware damage, optional active-cycle boss snapshot fields, and passive Godot boss HUD are committed. markBossEncounterDefeated now persists terminal boss state inside player-initiated combat settlement, including a first-hit defeat before the first AI tick; PostgreSQL integration tests cover telegraph clearing and first-hit terminal state. Boss is still not live.
 
 Next integrate AdvanceBossEncounter and ReceiveBossAttack into AccountRepository.TickEnemyAI with the existing player-then-enemy lock order and atomic player health/Defense XP/AI/boss persistence. Then add concurrent exactly-once and respawn tests, verify server Actions, and only then activate Stoneback Colossus using existing multi-item reward claims. Preserve all existing systems and 18 skills. Never modify GalaxyMMO or reuse proprietary code. Always update this handoff after meaningful progress and never claim CI passed without completed job evidence.
+~~~
+
+## Transactional boss world-tick integration (2026-11-09)
+
+- Refactored the enemy tick coordinator so its transaction logic can be exercised with an injected server-owned enemy definition while the public TickEnemyAI entry point still requires a catalogued enemy.
+- Added a boss tick coordinator that:
+  - loads cycle-scoped boss state while holding the parent enemy spawn row lock;
+  - advances the shared boss phase/telegraph engine using server time and the persisted live boss position;
+  - disables the ordinary enemy attack channel for bosses while retaining shared chase/leash movement;
+  - resolves abilities through the new ability-specific range/damage resolver;
+  - persists player health, Defense XP, boss state and ordinary AI state in the same player-then-enemy transaction;
+  - interrupts active boss telegraphs when no eligible player is present.
+- Added a PostgreSQL integration test that seeds the Stoneback definition through an injected test enemy, starts a persisted Stone Fist telegraph, and races two workers at the same deadline. It asserts one hit and one Defense XP award only.
+- Code commits:
+  - ae63365cc8a41b260b231906edd633e6a90908dc — expose boss ability lookup.
+  - 74050d6cd425e7cc6f1b74af7e227acf8bc9f6af — separate enemy tick coordinator from catalog lookup.
+  - e2c59130e45f0a1d2ec2a880eebe600cf646f8d6 — add transactional boss encounter advancement helper.
+  - d5a29622931edb2404e5476bda2a56015585a4dd — advance boss telegraphs inside world tick.
+  - 8d2a68e0bfd15b720167f8a46229abbe649cf324 — persist phase transitions and interrupt telegraphs without targets.
+  - 56e626b11c69fbe3b07dbff5a5fe5aca3e1a76cd — add concurrent exactly-once boss ability integration test.
+- CI-verified preceding boss persistence/defeat foundation:
+  - Server #565 (run 42591547672, commit f098eda): passed race-enabled PostgreSQL tests and Vet after the migration comment correction.
+  - Server #566–#573 all completed successfully. Latest #573 (run 42591798887, commit 93c4ab1) explicitly passed the race-enabled PostgreSQL integration step and Vet, including first-hit terminal boss defeat persistence.
+  - Client #135 (42591342570) and #136 (42591405867) passed Godot 4.3 project import and script validation.
+- At the last check, server runs #574–#579 were still in progress for the tick refactor, boss advancement helper, boss branch, idle interruption path and concurrent test. Do not claim the live world-tick integration is CI-verified until one of these runs for the latest code finishes and its test/Vet steps are checked.
+- Stoneback Colossus is still not in game.EnemyDefinitions and is not a live spawn. The tick coordinator can exercise the definition via the internal test seam, but the public world worker and catalog remain unchanged.
+
+### Critical review items before enabling the boss
+1. Inspect Action #579 and preceding #574–#578 logs; fix any compile, SQL, integration or race-test failure.
+2. Confirm the exactly-once test passes under race detector and PostgreSQL, and verify the new code on the latest commit.
+3. Add explicit boss interruption, player-death and respawn-cycle tests. Confirm the old boss state is not inherited by the new encounter cycle.
+4. Only after all of that, register Stoneback Colossus in the public enemy catalog and ensure RunEnemyAITick includes it.
+5. Reuse the existing multi-item encounter reward settlement; preserve the existing 18 skills and Rewards UI.
+
+### Continuation prompt
+~~~text
+RS GALAXIES — RESUME DEVELOPMENT. Continue only in ViViD420/RSGalaxies- on main. Read docs/SESSION_HANDOFF.md fully and inspect latest HEAD, commits and GitHub Actions jobs. Server #565 (42591547672) passed migration 0016 after fixing its semicolon-in-comment bug. Server #566–#573 passed; #573 (42591798887) explicitly passed race-enabled PostgreSQL tests and Vet for first-hit terminal boss defeat. Client #135/#136 passed Godot import/script validation.
+
+The boss persistence, telegraph validation, ability-specific damage, active-cycle snapshot fields, passive Godot HUD, and player-initiated terminal defeat path are committed and verified. New transactional world-tick integration is now in commits ae63365, 74050d6, e2c5913, d5a2962, 8d2a68e and 56e626b. It refactors TickEnemyAI for test injection, advances boss telegraphs within the player-then-enemy transaction, applies ability-specific damage/Defense XP, persists boss/AI/player state atomically, interrupts without targets, and adds a concurrent exactly-once integration test. Server Actions #574–#579 were still running at the last check; verify their results/logs and fix any failures before proceeding.
+
+Next add boss interruption/player death/respawn-cycle integration coverage, verify all server jobs, then register Stoneback Colossus as a live enemy and include it in RunEnemyAITick. Keep rewards on the existing multi-item claim pipeline. Preserve all current systems and 18 skills. Never modify GalaxyMMO or reuse proprietary code. Always update this handoff after meaningful changes; never claim tests passed without completed job evidence.
 ~~~
