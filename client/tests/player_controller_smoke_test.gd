@@ -69,6 +69,22 @@ func _run_movement_smoke_test() -> void:
 	if absf(distant_height - repeated_height) > 0.0001:
 		_fail("Terrain height sampling is not deterministic.")
 		return
+	var biome_sample_height := float(terrain.call("get_height_at", 18.0, -42.0))
+	var biome_color_a: Color = terrain.call("_base_color_for_position", Vector3(18.0, biome_sample_height, -42.0))
+	var biome_color_b: Color = terrain.call("_base_color_for_position", Vector3(18.0, biome_sample_height, -42.0))
+	if not is_equal_approx(biome_color_a.r, biome_color_b.r) or not is_equal_approx(biome_color_a.g, biome_color_b.g) or not is_equal_approx(biome_color_a.b, biome_color_b.b):
+		_fail("Biome color sampling is not deterministic for the same terrain coordinate.")
+		return
+	var biome_palette: Dictionary = {}
+	for sample_x in range(-100, 101, 25):
+		for sample_z in range(-100, 101, 25):
+			var sample_height := float(terrain.call("get_height_at", float(sample_x), float(sample_z)))
+			var sample_color: Color = terrain.call("_base_color_for_position", Vector3(float(sample_x), sample_height, float(sample_z)))
+			var color_key := "%.2f|%.2f|%.2f" % [sample_color.r, sample_color.g, sample_color.b]
+			biome_palette[color_key] = true
+	if biome_palette.size() < 3:
+		_fail("Terrain biome palette did not produce at least three distinct deterministic surface colors.")
+		return
 	if absf(spawn_height - distant_height) < 0.01:
 		_fail("Terrain heightmap did not produce any elevation variation.")
 		return
