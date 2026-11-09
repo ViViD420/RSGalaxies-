@@ -94,52 +94,17 @@ Each milestone is a tested, reviewable slice. A feature is not complete because 
 
 ## Boss encounter vertical slice
 
-- [x] Persist boss phase, ability telegraph, cooldown and defeat state under the existing per-spawn encounter-cycle ID (migration 0016).
-- [x] Reject stale-cycle boss state reads/writes and stale timestamp upserts.
-- [x] Validate complete telegraph state on load/save; reject partial timestamps and inverted intervals.
-- [ ] Integrate boss phase advancement and ability damage atomically into the enemy world tick.
-- [ ] Add exactly-once concurrent tick/retry tests and verify migration 0016 against PostgreSQL CI.
-- [ ] Expose authoritative boss phase/telegraph snapshots and render the Godot boss HUD.
-- [ ] Activate Stoneback Colossus only after the server, persistence, snapshots and client path pass CI; use the existing multi-item reward claim pipeline.
+- [x] Migration 0016 persists versioned boss phase, telegraph, cooldown, ability cursor and terminal defeat state under the active spawn encounter-cycle ID.
+- [x] Reject stale-cycle and stale-timestamp boss state writes; validate complete telegraph timestamp invariants.
+- [x] Advance boss phases and telegraphs inside the PostgreSQL enemy world tick; resolve ability-specific range checks and Defense/equipment mitigation transactionally with player health, contribution, boss state and AI state.
+- [x] Interrupt active telegraphs when the target moves out of ability range or no eligible target remains.
+- [x] Cover concurrent exactly-once damage, lethal player defeat, target/telegraph cleanup, respawn-cycle reset and public authenticated snapshots with PostgreSQL integration tests.
+- [x] Register Stoneback Colossus in the public enemy catalog at Verdant Frontier (32,32): 100 HP, 2 Defense, no ordinary attack, 500 encounter XP and 300-second respawn.
+- [x] Assign the versioned Stoneback multi-item harvest table and verify defeat, durable settlement, claim listing, claim redemption, XP and idempotent retry.
+- [x] Render the boss world model and consume authoritative boss health/phase/ability snapshots in the Godot HUD.
+- [x] Keep the encounter HUD visible on authoritative defeat snapshots, show explicit reward-claim feedback, and make active telegraphs communicate the ability warning and move-out-of-range instruction.
+- [x] Verify server Actions #599/#600, including race-enabled PostgreSQL integration tests and Vet; verify client Actions #137 for Godot import/script validation.
+- [ ] Continue player-facing playtesting and polish: telegraph timing feedback, phase transition cues, target lifecycle, defeat/respawn presentation and accessibility at desktop/mobile aspect ratios.
+- [ ] Add group encounters, party threat and support contribution before implementing group reward distribution.
+- [ ] Expand boss roster only after the Stoneback encounter remains robust under repeated combat, respawn and reward-claim testing.
 
-- [x] Add a boss ability damage resolver with ability-specific range checks and existing Defense/armor mitigation (domain primitive; not yet connected to the world tick).
-- [ ] Connect the boss damage resolver to transactional world-tick and player-defeat paths; persist terminal boss state atomically.
-
-- [x] Add optional authoritative boss identity, phase, active ability and telegraph fields to enemy snapshots; query only the active encounter-cycle row.
-- [x] Preserve ordinary enemy JSON by omitting absent boss fields and add serialization regression tests.
-- [ ] Render boss phase and telegraph feedback in Godot after transactional boss state integration.
-
-- [x] Render authoritative boss health, phase and active ability warnings in the Godot enemy label and centered boss HUD (passive snapshot consumer; live boss integration remains incomplete).
-
-- [x] Correct migration 0016's SQL comment so the existing semicolon-splitting migration runner does not submit comment text as SQL (commit f098eda; awaiting server CI).
-
-- [x] Persist terminal boss defeat in the player attack transaction, including first-hit kills before the first boss AI tick.
-- [x] Resolve boss definitions by enemy spawn identity.
-- [ ] Integrate the boss phase engine and damage resolver into the autonomous world tick.
-
-- [x] Integrate boss telegraph advancement and ability damage into the transactional enemy world tick; persist player, boss and AI changes atomically.
-- [x] Interrupt boss telegraphs when no eligible player is present.
-- [x] Add concurrent exactly-once boss ability damage PostgreSQL integration coverage (CI pending).
-- [ ] Verify latest server Actions #574–#579, then add interruption/player-death/respawn coverage before live registration.
-
-- [x] Cover boss telegraph interruption when the target leaves ability range and clean state after a respawn cycle (PostgreSQL integration coverage; CI pending).
-- [ ] Cover boss ability player defeat and interaction with player-initiated boss defeat before live registration.
-
-- [x] Cover lethal boss ability damage, player defeat, Defense XP and target/telegraph cleanup (PostgreSQL integration coverage; CI pending).
-
-- [x] Prepare Stoneback-specific crafting materials and a guaranteed-plus-independent-bonus multi-item loot table using the existing claim pipeline.
-- [ ] Assign the table to the live boss enemy definition and verify reward settlement end-to-end.
-
-- [x] Add a distinctive armored Stoneback world model and boss-scale label in Godot (client CI pending).
-
-- [x] Correct deterministic Ground Shatter test positioning and refresh item/loot catalog count assertions after adding Stoneback content (server CI pending).
-
-- [x] Cover no-target boss telegraph interruption after presence lease expiry, without damage or Defense XP (CI pending).
-
-- [x] Register Stoneback Colossus in the public enemy catalog and world tick loop with the prepared multi-item reward table (latest server CI pending).
-- [ ] Verify public TickEnemyAI/RunEnemyAITick, authenticated snapshots and end-to-end reward claim flow.
-
-- [x] Add an end-to-end Stoneback defeat, durable settlement, multi-item claim and idempotent retry PostgreSQL integration test (CI pending).
-
-- [x] Update existing enemy snapshot integration coverage for the third catalogued spawn.
-- [x] Isolate boss world-tick integration tests in unique zones and make no-target/ability timing setup deterministic (CI pending).
