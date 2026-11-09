@@ -92,7 +92,8 @@
 
 Boss roster expansion and boss-specific polish are paused. Development now prioritizes the core player experience across the whole game.
 
-- [ ] Improve third-person movement: acceleration/deceleration, air control, coyote time, jump buffering, facing/turn smoothing, camera controls and consistent keyboard/touch behavior.
+- [x] Implement third-person movement acceleration/deceleration, air control, coyote time, jump buffering, facing/turn smoothing, fall-speed cap and mesh-only locomotion feedback; headless regression and strict Godot import/Web export passed in client Action #153.
+- [ ] Interactive desktop/mobile playtesting, touch-control feel, camera collision/zoom and movement reconciliation tuning.
 - [ ] Complete movement authority and reconciliation: server snapshots, bounded correction, reconnect recovery and smooth remote-player interpolation without client trust.
 - [ ] Replace the flat placeholder floor with server-aligned, collision-safe terrain that supports elevation, slopes, traversable paths, resource placement and future biome expansion.
 - [ ] Establish a real character presentation/animation foundation: idle, locomotion, start/stop, jump, fall, land, interact and combat states, with equipment-aware attachment points.
