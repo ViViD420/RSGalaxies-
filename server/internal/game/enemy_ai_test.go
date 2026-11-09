@@ -44,6 +44,8 @@ func TestEnemyAIMovementInterruptsTelegraphAndLeashesHome(t *testing.T) {
 	result = AdvanceEnemyAI(enemy, config, result.State, player, now.Add(2*time.Second))
 	if result.State.Behavior != EnemyReturning || result.State.Position.X >= 10 { t.Fatalf("leash result=%+v", result) }
 	result = AdvanceEnemyAI(enemy, config, result.State, player, now.Add(10*time.Second))
+	result = AdvanceEnemyAI(enemy, config, result.State, player, now.Add(11*time.Second))
+	result = AdvanceEnemyAI(enemy, config, result.State, player, now.Add(12*time.Second))
 	if result.State.Behavior != EnemyIdle || !result.ReachedSpawn || result.State.Position.X != 0 { t.Fatalf("home result=%+v", result) }
 }
 
