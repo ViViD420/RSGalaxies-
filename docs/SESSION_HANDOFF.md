@@ -1103,3 +1103,9 @@ Core game focus only. The player controller now has smooth ground acceleration/d
 - Replaced six individually positioned top-right action buttons with a named two-column GridContainer toolbar in commit 7125b0f. Skills, Bag, Rest, Gear, Characters and Sign out remain the same controls/callbacks and preserve their authenticated visibility rules.
 - Added viewport-size-aware layout sizing in commit 10d36dd: the status panel width scales down on narrow viewports, the toolbar stays right-aligned with a bounded width, and status/instruction labels wrap rather than overflowing. The toolbar uses compact 34px rows and 12px labels.
 - This is a layout refactor only; gameplay actions and existing panel callbacks are unchanged. Strict client Action for commits 7125b0f/10d36dd is pending. Visual device testing is still required, especially on narrow mobile aspect ratios.
+
+## HUD responsive layout parse failure and correction (2026-11-09)
+
+- Client Action #178 (run 42603926295, commit 7125b0f) failed strict Godot parsing: `get_viewport_rect()` is not a Node method in Godot 4.3, which also prevented type inference for viewport_width. The movement smoke test itself printed PASS, but the run correctly failed due main.gd parse errors. This failure is not hidden.
+- Corrected the viewport query to the supported `get_viewport().get_visible_rect().size.x` and declared viewport_width as float in commit 3d46875.
+- Client Action #179 (run 42603956717, commit 10d36dd) is the next validation of the first HUD refactor commit; Action after 3d46875 must validate the fix. Inspect both job logs; do not claim responsive HUD verified until the fixed current HEAD passes.
