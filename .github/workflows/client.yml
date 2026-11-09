@@ -28,7 +28,18 @@ jobs:
           godot --version
       - name: Import project and validate scripts
         working-directory: client
+        shell: bash
         run: |
-          godot --headless --editor --path . --quit
+          set -euo pipefail
+          run_godot_check() {
+            local log_file="$1"
+            shift
+            "$@" 2>&1 | tee "$log_file"
+            if grep -E 'SCRIPT ERROR:|ERROR:' "$log_file"; then
+              echo "::error::Godot emitted an error; refusing to treat this run as a pass."
+              return 1
+            fi
+          }
+          run_godot_check /tmp/godot-import.log godot --headless --editor --path . --quit
           mkdir -p build/web
-          godot --headless --path . --export-release "Web" build/web/index.html
+          run_godot_check /tmp/godot-web-export.log godot --headless --path . --export-release "Web" build/web/index.html
