@@ -25,7 +25,7 @@ func TestEnemyAIAggroChasesAndTelegraphsBeforeAttack(t *testing.T) {
 	result = AdvanceEnemyAI(enemy, config, result.State, player, now.Add(2*time.Second))
 	if result.State.Behavior != EnemyTelegraphing || result.AttackRequested { t.Fatalf("telegraph start=%+v", result) }
 	result = AdvanceEnemyAI(enemy, config, result.State, player, now.Add(3*time.Second))
-	if !result.AttackRequested || result.State.NextAttackAt != now.Add(6*time.Second) { t.Fatalf("attack event=%+v", result) }
+	if !result.AttackRequested || result.State.NextAttackAt != now.Add(6*time.Second) || !result.State.TelegraphUntil.IsZero() { t.Fatalf("attack event=%+v", result) }
 }
 
 func TestEnemyAIMovementInterruptsTelegraphAndLeashesHome(t *testing.T) {
