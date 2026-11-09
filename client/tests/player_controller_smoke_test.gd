@@ -27,20 +27,23 @@ func _run_movement_smoke_test() -> void:
 		_fail("Procedural terrain mesh has no renderable surfaces.")
 		return
 
-	var trail_visual := terrain.get_node_or_null("TrailSurface") as MeshInstance3D
-	if trail_visual == null:
-		_fail("Terrain-conforming frontier trail node did not generate.")
+	var terrain_arrays := generated_mesh.surface_get_arrays(0)
+	var terrain_colors: PackedColorArray = terrain_arrays[Mesh.ARRAY_COLOR]
+	if terrain_colors.is_empty():
+		_fail("Terrain mesh has no vertex colors for its surface and trail presentation.")
 		return
-	var trail_mesh := trail_visual.mesh
-	if trail_mesh == null:
-		_fail("Terrain-conforming frontier trail has no mesh resource.")
+	var trail_color_found := false
+	for vertex_color in terrain_colors:
+		if absf(vertex_color.r - 0.48) < 0.03 and absf(vertex_color.g - 0.34) < 0.03 and absf(vertex_color.b - 0.20) < 0.03:
+			trail_color_found = true
+			break
+	if not trail_color_found:
+		_fail("Terrain vertex colors do not contain the configured frontier trail surface.")
 		return
-	if trail_mesh.get_surface_count() == 0:
-		_fail("Terrain-conforming frontier trail mesh has no surfaces.")
-		return
-	var trail_bounds := trail_mesh.get_aabb()
-	if trail_bounds.position.x < -120.0 or trail_bounds.position.z < -120.0 or trail_bounds.end.x > 120.0 or trail_bounds.end.z > 120.0:
-		_fail("Generated trail network extends outside the authoritative zone bounds.")
+	var settlement_trail_distance := float(terrain.call("_distance_to_trails", Vector2.ZERO))
+	var remote_trail_distance := float(terrain.call("_distance_to_trails", Vector2(119.0, 119.0)))
+	if settlement_trail_distance > 0.01 or remote_trail_distance < 1.0:
+		_fail("Frontier trail centerline sampling is incorrect; center=%s remote=%s." % [settlement_trail_distance, remote_trail_distance])
 		return
 
 	var terrain_body := terrain.get_node_or_null("TerrainCollision") as StaticBody3D
