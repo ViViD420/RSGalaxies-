@@ -143,7 +143,40 @@ func _run_movement_smoke_test() -> void:
 		_fail("Locomotion presentation unexpectedly changed the collision shape transform.")
 		return
 
-	print("PASS: terrain mesh/collision, deterministic height, movement acceleration, sustained speed, deceleration, jump and collision/presentation separation.")
+	var camera_arm := player.get_node("CameraPivot/SpringArm3D") as SpringArm3D
+	var zoom_in := InputEventMouseButton.new()
+	zoom_in.button_index = MOUSE_BUTTON_WHEEL_UP
+	zoom_in.pressed = true
+	player.call("_unhandled_input", zoom_in)
+	if not is_equal_approx(camera_arm.spring_length, 4.75):
+		_fail("Mouse-wheel camera zoom-in did not adjust the spring arm by one step.")
+		return
+	for frame in range(20):
+		player.call("_unhandled_input", zoom_in)
+	if not is_equal_approx(camera_arm.spring_length, float(player.get("camera_min_distance"))):
+		_fail("Camera zoom-in exceeded or failed to reach its configured minimum distance.")
+		return
+	var zoom_out := InputEventMouseButton.new()
+	zoom_out.button_index = MOUSE_BUTTON_WHEEL_DOWN
+	zoom_out.pressed = true
+	for frame in range(30):
+		player.call("_unhandled_input", zoom_out)
+	if not is_equal_approx(camera_arm.spring_length, float(player.get("camera_max_distance"))):
+		_fail("Camera zoom-out exceeded or failed to reach its configured maximum distance.")
+		return
+
+	player.call("play_attack_animation")
+	var attack_tween := player.get("_attack_tween") as Tween
+	if attack_tween == null or not attack_tween.is_running():
+		_fail("Successful combat presentation did not start the attack swing animation.")
+		return
+	for frame in range(20):
+		await process_frame
+	if absf(player.get_node("BodyMesh").rotation.y) > 0.01:
+		_fail("Attack swing animation did not return the body mesh to its neutral pose.")
+		return
+
+	print("PASS: terrain mesh/collision, deterministic height, movement acceleration, sustained speed, deceleration, jump, camera zoom bounds, attack swing and collision/presentation separation.")
 	for child in root.get_children():
 		child.queue_free()
 	await process_frame
