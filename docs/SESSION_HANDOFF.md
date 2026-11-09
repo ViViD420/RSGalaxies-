@@ -656,3 +656,77 @@ Next verify latest server tests and Vet. Then add end-to-end Stoneback reward cl
 2. Confirm public TickEnemyAI creates the boss state and authenticated snapshots include boss identity/phase.
 3. Verify Stoneback multi-item reward claim, including XP and idempotent retry.
 4. Only after server and client CI pass, treat the registered boss as a verified playable encounter.
+
+## Latest verified continuation checkpoint — Stoneback public boss and reward validation (2026-11-09)
+
+### Current repository state
+- Repository: `ViViD420/RSGalaxies-`
+- Branch: `main`
+- Latest inspected HEAD before this handoff update: `1deaff03e173c0583700061f9e66dfc3f7c5050b` — “Verify the public world tick loop includes Stoneback”.
+- This handoff update is being committed immediately after that HEAD; re-check the branch HEAD at the start of the next chat.
+- Stoneback Colossus is registered in the public enemy catalog at Verdant Frontier (32,32), with 100 HP, 2 Defense, no ordinary attack, 500 encounter XP, 300-second respawn and the existing `stoneback-colossus-harvest` multi-item loot table.
+- The public enemy world tick and authenticated enemy snapshot enumeration include Stoneback. Boss state is encounter-cycle scoped and persisted transactionally. Boss ability damage, terminal defeat, telegraph interruption, cooldowns, and reset handling use the existing authoritative player/enemy transaction paths.
+- The passive Godot boss HUD and distinct Stoneback model were previously added. Client workflow #137 passed Godot 4.3 import/script validation on commit `bae81fb8`.
+
+### Latest CI evidence — verified green
+The latest two server workflows completed successfully, including the race detector + PostgreSQL integration suite and `go vet`:
+- Server #599, run ID `42594708616`, commit `03ea5c41bfb4654adff5285177b526fd149756ad`: **success**. Test and Vet steps both passed.
+  - <https://github.com/ViViD420/RSGalaxies-/actions/runs/42594708616>
+- Server #600, run ID `42594784308`, commit `1deaff03e173c0583700061f9e66dfc3f7c5050b`: **success**. Test and Vet steps both passed.
+  - <https://github.com/ViViD420/RSGalaxies-/actions/runs/42594784308>
+- #597 and #598 also passed. Earlier runs #589–#596 failed while test isolation, catalog counts, no-target interruption, and ability-selection test fixtures were being corrected; their failures are superseded by #597–#600 passing on later commits. Keep the history transparent; do not present the earlier failed runs as green.
+- #600 is the latest server Actions run observed at this checkpoint. Check for newer runs before relying on this status in a later chat.
+
+### Boss/reward integration coverage now present
+- Boss persistence is cycle-scoped and protects against stale encounter writes.
+- World tick tests cover concurrent exactly-once ability damage, out-of-range/no-target interruption, terminal defeat and encounter reset.
+- Ground Shatter test now deterministically seeds Rampage with Stone Fist on cooldown and places the player inside the ability's range.
+- Public Stoneback tick/snapshot integration test verifies it appears in authenticated snapshots with boss identity, definition version and initial phase.
+- Existing snapshot integration expectation was updated for the third public enemy.
+- Stoneback reward integration test defeats the boss through the existing account-owned combat path, verifies terminal boss state and durable settlement, checks guaranteed scale drops and valid optional bonus lines, claims the complete multi-item bundle, verifies Blades/Melee XP, then retries to prove item/XP idempotency.
+- Catalog registration test verifies the public enemy definition, boss encounter definition and loot table resolve together.
+- Test isolation was improved with unique zones and controlled presence so unrelated test players do not become boss targets.
+
+### Next work — continue autonomously
+1. Re-read this handoff and inspect latest main HEAD, recent commits, and current server/client Actions runs and job steps.
+2. Review the newly passing boss tests and production code for edge cases rather than assuming passing CI is the end of the milestone. Inspect boss snapshot polling, target lifecycle, respawn reset, contribution/settlement rules and concurrent claims.
+3. Validate the actual client presentation path for Stoneback: boss identity/health/phase, telegraph warning and clearing on interruption/defeat/reset. Do not add client-side authority for combat.
+4. Improve encounter UX and balance only where grounded in existing mechanics. Keep boss abilities server authoritative and ensure defeated bosses cannot attack or pay rewards twice.
+5. Preserve existing 18 skills, profession/class equipment rules, crafting, normal enemy progression, multi-item loot/claim UI and all unrelated game systems.
+6. Update `docs/SESSION_HANDOFF.md`, `docs/ROADMAP.md` and `docs/ARCHITECTURE.md` after each meaningful milestone; commit changes to `main`. Never claim tests passed without inspecting the actual current workflow run and job steps.
+7. Do not modify GalaxyMMO or copy/reuse proprietary code. Continue improving existing RSGalaxies code instead of recreating project systems.
+
+### Ready-to-copy next-chat resume command
+```text
+RS GALAXIES — RESUME DEVELOPMENT FROM THE LATEST REPOSITORY HANDOFF.
+
+Work ONLY in GitHub repository ViViD420/RSGalaxies- on branch main. Do not touch GalaxyMMO and do not reuse proprietary code.
+
+FIRST, before editing:
+1. Read docs/SESSION_HANDOFF.md completely.
+2. Inspect current main HEAD and recent commits; the last verified HEAD recorded in the handoff was 1deaff03e173c0583700061f9e66dfc3f7c5050b, but always trust the live repository over this recorded SHA.
+3. Inspect the latest GitHub Actions runs and individual job steps for both server and client. Latest observed server run #600 (42594784308) passed race-enabled PostgreSQL integration tests and go vet; #599 (42594708616) also passed. Client #137 (42592975125) passed Godot 4.3 import/script validation. Re-check for newer results.
+4. Continue the exact unfinished work from this handoff. Do not restart or recreate the project.
+
+WORK STYLE:
+- Work autonomously for as long as possible with minimal requests for input.
+- Enhance/upgrade existing code wherever practical; preserve current architecture and working features.
+- Commit meaningful progress to main and update docs/SESSION_HANDOFF.md after every meaningful progression. Keep docs/ROADMAP.md and docs/ARCHITECTURE.md aligned.
+- Verify actual Actions job results before reporting success. Do not infer green from a commit or queued run.
+
+CURRENT PROJECT STATE:
+- The 18-skill foundation, professions, crafting, enemy progression, loot and multi-item reward claim system are existing project systems and must be preserved.
+- Boss encounter persistence, transactional world-tick integration, ability damage, telegraph interruption, terminal defeat, reset handling, boss snapshot fields, passive Godot HUD and distinct Stoneback model have been implemented.
+- Stoneback Colossus is registered in the public enemy catalog at Verdant Frontier (32,32): 100 HP, 2 Defense, zero ordinary attack, 500 encounter XP, 300-second respawn, and stoneback-colossus-harvest multi-item rewards.
+- Existing authenticated snapshots and public enemy world tick include Stoneback.
+- PostgreSQL integration coverage exercises exactly-once damage, no-target/out-of-range telegraph interruption, respawn cycle reset, public snapshots, boss defeat and the existing multi-item reward claim/retry path.
+- Latest server CI evidence at the last checkpoint: #600 and #599 passed race-enabled PostgreSQL tests and Vet; earlier failures #589–#596 were superseded by passing later runs. Latest client evidence: #137 passed Godot 4.3 import/script validation.
+
+NEXT PRIORITIES:
+1. Inspect the live main branch, latest Actions and all relevant current source before coding.
+2. Deep-review boss target lifecycle, snapshot/HUD updates, telegraph timing and cancellation, reset behavior, damage mitigation, defeat settlement and idempotent reward claims.
+3. Validate the full player-facing Stoneback encounter loop in Godot; fix any gaps while keeping combat authority on the server.
+4. Improve boss encounter presentation and balance using the existing systems, then extend tests.
+5. Continue toward further bosses and group encounter mechanics only after the Stoneback path is robust.
+6. Keep every handoff current and leave a concise continuation command for the next chat.
+```
