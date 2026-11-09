@@ -14,6 +14,9 @@ func _run_interaction_hint_smoke_test() -> void:
 	main_node.set_script(MAIN_SCRIPT)
 	var hint_label := Label.new()
 	main_node.add_child(hint_label)
+	var status_test_label := Label.new()
+	main_node.add_child(status_test_label)
+	main_node.set("status_label", status_test_label)
 	var player := CharacterBody3D.new()
 	root.add_child(player)
 	main_node.set("player_node", player)
@@ -54,7 +57,17 @@ func _run_interaction_hint_smoke_test() -> void:
 		_fail("Interaction hint remained visible without an authenticated character.")
 		return
 
-	print("PASS: contextual interaction hints select the nearest gathering target, show range guidance, expose pending state and hide before character selection.")
+	main_node.set("interaction_pending", true)
+	main_node.call("_on_gather_completed", HTTPRequest.RESULT_SUCCESS, 200, PackedStringArray(), PackedByteArray("not json".to_utf8_buffer()))
+	if status_test_label.text != "Interaction: invalid server response":
+		_fail("Malformed successful interaction response was not surfaced clearly: " + status_test_label.text)
+		return
+	main_node.call("_report_interaction_request_error", ERR_BUSY)
+	if not status_test_label.text.begins_with("Interaction: request could not start"):
+		_fail("Interaction request startup failure was not surfaced: " + status_test_label.text)
+		return
+
+	print("PASS: contextual interaction hints select the nearest gathering target, show range guidance, expose pending state, hide before character selection and report malformed/startup errors.")
 	player.queue_free()
 	main_node.free()
 	await process_frame

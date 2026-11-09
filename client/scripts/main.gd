@@ -485,6 +485,7 @@ func _on_enemy_snapshots_completed(result: int, response_code: int, _headers: Pa
 		return
 	var payload: Variant = JSON.parse_string(body.get_string_from_utf8())
 	if not payload is Dictionary:
+		status_label.text = "Interaction: invalid server response"
 		return
 	var snapshots: Variant = payload.get("enemies", [])
 	if not snapshots is Array:
@@ -1301,6 +1302,14 @@ func _request_interaction() -> void:
 		)
 	if error == OK:
 		interaction_pending = true
+	else:
+		_report_interaction_request_error(error)
+
+
+func _report_interaction_request_error(request_error: int) -> void:
+	if status_label != null:
+		status_label.text = "Interaction: request could not start (" + error_string(request_error) + ")"
+
 
 func _on_gather_completed(result: int, response_code: int, _headers: PackedStringArray, body: PackedByteArray) -> void:
 	interaction_pending = false
