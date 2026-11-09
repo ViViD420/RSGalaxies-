@@ -1057,3 +1057,11 @@ Core game focus only. The player controller now has smooth ground acceleration/d
 - Root-cause hypothesis addressed: the completed Tween remained retained in `_attack_tween`, including its body-mesh target and completion callback, until the player node was destroyed. Commit 6749495 changes the completion callback to a named method, restores the captured neutral pose and immediately releases `_attack_tween`. Test commit 7ed47d now explicitly asserts the tween is no longer owned after completion, clears its local reference and yields one frame before normal cleanup.
 - This is a targeted resource-lifetime fix, not a CI filter. Client Actions after 7ed47d are pending; inspect full logs. If null-mesh warnings persist, isolate the remaining renderer resource lifetime rather than relaxing the strict error gate.
 - Action #164 and #165 passed import/export for zoom and combat trigger wiring; #166–#168 remain recorded as failures and are not overwritten.
+
+## Attack renderer error follow-up (2026-11-09)
+
+- Action #169 (run 42602904690, commit 846182e) still failed with two Parameter "m" is null dummy-renderer errors after all functional assertions passed. Releasing the completed Tween did not fix the renderer error; do not claim that hypothesis was confirmed.
+- Root cause isolation direction: remove Tween resources entirely from the attack presentation. Commits 6749495/7ed47d attempted Tween release but were insufficient.
+- Replaced Tween with a deterministic, allocation-free time-based swing state in commit 136f497: attack elapsed time, active state and neutral yaw are stored on the controller; an update function applies a smooth sine arc in physics and restores neutral yaw at completion. This affects only BodyMesh, not the collision body.
+- Replaced Tween-based assertions with visible mid-swing rotation and completed neutral-pose assertions in commit f948208.
+- The next client Actions are required to prove both animation behavior and absence of renderer errors. Keep strict CI unchanged. If null-mesh errors persist, isolate terrain/player mesh lifetime independently; do not assume the animation is the source without evidence.
