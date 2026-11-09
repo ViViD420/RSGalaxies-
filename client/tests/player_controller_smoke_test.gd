@@ -144,17 +144,19 @@ func _run_movement_smoke_test() -> void:
 		return
 
 	print("PASS: terrain mesh/collision, deterministic height, movement acceleration, sustained speed, deceleration, jump and collision/presentation separation.")
-	# Exit directly. Manually queue-freeing MeshInstance3D nodes immediately
-	# before SceneTree shutdown can trigger dummy-renderer null-mesh warnings.
+	for child in root.get_children():
+		child.queue_free()
+	await process_frame
 	quit(0)
 
 
 func _fail(message: String) -> void:
 	push_error("Player movement smoke test failed: " + message)
-	# Let SceneTree own shutdown cleanup; avoid freeing render resources while
-	# the headless dummy renderer is still processing queued mesh updates.
+	for child in root.get_children():
+		child.queue_free()
 	call_deferred("_quit_after_cleanup", 1)
 
 
 func _quit_after_cleanup(exit_code: int) -> void:
+	await process_frame
 	quit(exit_code)
