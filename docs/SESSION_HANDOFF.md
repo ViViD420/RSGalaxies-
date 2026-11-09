@@ -1,6 +1,6 @@
 # RS Galaxies — Session Handoff
 
-Last updated: 2026-11-09 (migration splitter defect corrected; server CI pending)
+Last updated: 2026-11-09 (boss defeat transaction groundwork; server CI pending)
 
 ## Project identity
 
@@ -403,3 +403,37 @@ Continue the existing boss vertical slice: integrate cycle-scoped boss persisten
 2. Correct any newly exposed compile, migration, test or query issues and rerun.
 3. Once the persistence and snapshot code is green, integrate the boss state machine into the existing transaction paths and add concurrent exactly-once coverage.
 4. Keep the live encounter disabled until server and client CI both pass the full vertical slice.
+
+## Terminal boss defeat transaction groundwork (2026-11-09)
+
+- Added markBossEncounterDefeated in PostgreSQL persistence. It locks and validates the active enemy cycle, verifies the stored encounter definition/version, clears any active ability and telegraph, and persists Defeated=true. If a player kills the boss before its first AI tick, it creates a valid terminal state using the first phase as the initial phase.
+- AccountRepository.AttackEnemyForAccount now invokes this helper inside the same player/enemy transaction when a registered boss is defeated, before reward settlement and commit. This path is dormant until a boss enemy is added to the catalog.
+- Added FindBossEncounterForEnemy so content is resolved by its spawn identity rather than relying on the definition ID matching the enemy ID.
+- Extended PostgreSQL integration coverage for marking an existing telegraph defeated and for a first-hit defeat before any boss-state row exists.
+- Commits:
+  - 33ffe18a58282fa7f4d5e6440feb3cfafb66f830 — terminal defeat persistence helper.
+  - 5ed63020721624ccd8de6fa2cb425be8672f842f — call terminal defeat from player attack settlement.
+  - ec06c7705ba44efdabe431cd6e53547f3fab7e6d — test telegraph cancellation on defeat.
+  - 3271027d1ae2638fb06b092c36ac0f2121e950ef — lookup boss definitions by enemy spawn identity.
+  - b08ef97619b6c22e36532d13fbf6cf96bc734298 — use spawn identity in defeat settlement.
+  - acf296ad355dad74efbc902d5d98847a45669a1e — exercise spawn-identity lookup in integration test.
+  - f7eef11f29f2b20327db5d00bd3cf2d797481fac — domain lookup regression test.
+  - 93c4ab1b7928f4276a1aa6fb85911bec3f14377b — cover defeat before first AI state creation.
+- CI: server Action #565 (run 42591547672, migration delimiter fix) was still in progress at the last check. Server Actions #566–#572 were queued/in progress for the new defeat changes. No new server test or Vet result is verified yet. The previous server failures #552–#564 were all traced to the semicolon inside the migration comment, now corrected in f098eda.
+- Client Actions #135/#136 passed Godot 4.3 import/script validation. The current centered HUD is passive and only displays server snapshot data.
+
+### Remaining critical work
+1. Integrate boss state advancement into TickEnemyAI and use ReceiveBossAttack when a telegraph resolves. Maintain player-then-enemy locking, and commit player health/Defense XP plus boss/AI state together.
+2. Ensure player-initiated defeat, AI damage and enemy respawn all use the same encounter-cycle lifecycle. A defeated boss must never resolve another ability in the same cycle.
+3. Add concurrent tick, retry, interruption, out-of-range, player death, boss death and respawn PostgreSQL tests.
+4. Verify actual server runs for migration 0016 and all new code before marking the milestone green.
+5. Do not register Stoneback Colossus as a live spawn until this vertical slice is fully verified.
+
+### Current handoff prompt
+~~~text
+RS GALAXIES — RESUME DEVELOPMENT. Work only in ViViD420/RSGalaxies- on main. Read docs/SESSION_HANDOFF.md fully, inspect live HEAD/recent commits and GitHub Actions runs/jobs first. Migration 0016 originally failed because its SQL comment contained a semicolon and the migration runner splits on semicolons. Commit f098eda062a40e44bd01a4e94260a66fd9640ea4 removes that delimiter. Server Action #565 (42591547672) was still running at the last check; server Actions #566–#572 were queued/in progress for boss defeat changes. Earlier server Actions #552–#564 failed on that same migration-comment issue. Client Actions #135 (42591342570) and #136 (42591405867) passed Godot 4.3 import/script validation.
+
+Boss persistence groundwork, strict telegraph validation, ability-range-aware damage, optional active-cycle boss snapshot fields, and passive Godot boss HUD are committed. markBossEncounterDefeated now persists terminal boss state inside player-initiated combat settlement, including a first-hit defeat before the first AI tick; PostgreSQL integration tests cover telegraph clearing and first-hit terminal state. Boss is still not live.
+
+Next integrate AdvanceBossEncounter and ReceiveBossAttack into AccountRepository.TickEnemyAI with the existing player-then-enemy lock order and atomic player health/Defense XP/AI/boss persistence. Then add concurrent exactly-once and respawn tests, verify server Actions, and only then activate Stoneback Colossus using existing multi-item reward claims. Preserve all existing systems and 18 skills. Never modify GalaxyMMO or reuse proprietary code. Always update this handoff after meaningful progress and never claim CI passed without completed job evidence.
+~~~
