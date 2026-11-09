@@ -988,3 +988,15 @@ Core game focus only. The player controller now has smooth ground acceleration/d
 - Client Action #157 (run 42601768080) is the first runtime smoke validation of terrain generation/collision and remains pending at this checkpoint. Inspect its full job steps and logs. If terrain generation, collision or movement fails, stop and correct it before continuing.
 - Architecture constraint remains explicit: server world positions are planar X/Z today. The terrain sampler is deterministic and shared across local player, enemy and remote-player presentation, but vertical movement is still client-side and not a server-authoritative position component. Do not treat vertical terrain traversal as production-grade authoritative movement until a deliberate server terrain-height/vertical movement contract is designed and tested.
 
+
+## Terrain runtime smoke failure and collision correction (2026-11-09)
+
+- Client Action #157 (run 42601768080, commit d47ac273de01a33d272e23df5a6fcfcbd850b3fa) correctly failed the new terrain runtime test. The terrain mesh and collision object existed and height samples were deterministic/non-flat, but the test player did not settle on the generated terrain within 120 frames; observed player state was position `(-0.420942, -0.467222, -0.420942)`, velocity `(0, -20.25333, 0)`. Godot also logged `ERROR: Parameter "m" is null.` during test shutdown; this additional engine error must be accounted for, not ignored.
+- Initial investigation showed the collision was being generated through `ArrayMesh.create_trimesh_shape()`, but the test did not yet assert the generated concave shape contained triangle faces or report its face count.
+- Updated `client/scripts/world_terrain.gd` in commit aa4af37b64a964e474ca3e70c92531683e977178:
+  - Cast the generated collision to `ConcavePolygonShape3D`.
+  - Reject an empty face array with an explicit error.
+  - Enable `backface_collision` and explicitly set collision layer/mask to 1.
+- Expanded terrain test diagnostics in commit 746334f8df6edff9ce173fdc562c237653c8aa36 to assert non-empty collision faces, report face count and include sampled ground height/player state if grounding fails.
+- This is a corrective hypothesis, not yet a verified fix. Inspect the next strict CI run and the full Godot log. If the player still falls through or the null-mesh engine error remains, continue root-cause analysis before moving on.
+
