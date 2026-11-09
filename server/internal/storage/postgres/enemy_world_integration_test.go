@@ -82,6 +82,11 @@ func TestPostgresEnemyWorldTickCommitsAttackExactlyOnce(t *testing.T) {
 	if combat.DamageDealt <= 0 || combat.EnemyHealth != 10 {
 		t.Fatalf("attack against moving enemy result = %+v", combat)
 	}
+	var targetCharacter sql.NullString
+	if err := db.QueryRowContext(ctx, "SELECT target_character_id FROM enemy_spawn_state WHERE enemy_id=$1", enemyID).Scan(&targetCharacter); err != nil { t.Fatal(err) }
+	if !targetCharacter.Valid || targetCharacter.String != string(playerID) {
+		t.Fatalf("player-initiated combat target = %+v, want %s", targetCharacter, playerID)
+	}
 
 	// The immediate retaliation above must reset the autonomous cooldown and
 	// cancel any pending telegraph; otherwise the worker could double-strike.
@@ -131,6 +136,8 @@ func TestPostgresEnemyWorldTickCommitsAttackExactlyOnce(t *testing.T) {
 		}
 	}
 	if !found { t.Fatal("frontier rat missing after leash return") }
+	if err := db.QueryRowContext(ctx, "SELECT target_character_id FROM enemy_spawn_state WHERE enemy_id=$1", enemyID).Scan(&targetCharacter); err != nil { t.Fatal(err) }
+	if targetCharacter.Valid { t.Fatalf("enemy retained stale target after leash return: %s", targetCharacter.String) }
 
 	// Even a still-fresh presence must not make a defeated character an AI
 	// target. Force a telegraph at the character and verify the tick returns
