@@ -153,3 +153,8 @@ The first data-driven tables are server-owned and use a 10,000-point roll range:
 - The world server generates independent cryptographically secure drop and quantity rolls. The pure game resolver is deterministic and boundary-tested.
 - The single result (or no-drop result) is resolved once during the unique encounter settlement and attached only to the highest-damage eligible participant's pending claim. XP distribution remains contribution-weighted.
 - This is the first loot-table slice: one selected item per encounter, fixed quantity ranges, no per-player multiple rolls, rarity modifiers, boss tables or unique item instances yet.
+
+
+## First rare-material crafting sink
+
+The Rat Tooth now feeds a forge recipe: two Rat Teeth, two Copper Bars and one Wooden Plank produce a Rat-Tooth Blade at Smithing level 2. The blade itself requires Blades level 2 to equip and provides a modest attack bonus. This deliberately separates the crafting profession gate (Smithing) from the combat equipment gate (Blades), reinforcing profession-specific gear progression. The recipe and its skill-gated equipment test are implemented; verify the corresponding server Actions before marking the loop CI-complete.
