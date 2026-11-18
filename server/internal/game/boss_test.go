@@ -31,8 +31,8 @@ func bossInput(encounterID string, health int, now time.Time, targetX float64) B
 
 func TestBossEncounterCatalogIsValidAndDefensivelyCopied(t *testing.T) {
 	definitions := BossEncounterDefinitions()
-	if len(definitions) != 2 {
-		t.Fatalf("boss definition count=%d, want 2", len(definitions))
+	if len(definitions) != 3 {
+		t.Fatalf("boss definition count=%d, want 3", len(definitions))
 	}
 	for _, def := range definitions {
 		if err := ValidateBossEncounterDefinition(def); err != nil {
@@ -394,5 +394,88 @@ func TestKraytJadSovereignThreePhaseBossEncounterAndLootTable(t *testing.T) {
 		t.Fatalf("unexpected Krayt-Jad Sovereign boss drops: %+v", drops)
 	}
 }
+
+func TestTzKalMythosaurEmperorThreePhaseBossEncounterAndLootTable(t *testing.T) {
+	enemy, ok := FindEnemy("tzkal-mythosaur-emperor")
+	if !ok {
+		t.Fatal("tzkal-mythosaur-emperor missing from enemy catalog")
+	}
+	if enemy.MaxHealth != 620 || enemy.Defense != 14 || enemy.Experience != 2600 ||
+		enemy.Attack != 0 || enemy.LootTableID != "tzkal-mythosaur-emperor-harvest" ||
+		enemy.Position.ZoneID != DefaultWorldZoneID || enemy.RespawnSeconds != 420 {
+		t.Fatalf("unexpected TzKal-Mythosaur Emperor enemy definition: %+v", enemy)
+	}
+	definition, ok := FindBossEncounterForEnemy(enemy.ID)
+	if !ok || definition.ID != "tzkal-mythosaur-emperor" || len(definition.Phases) != 3 {
+		t.Fatalf("TzKal-Mythosaur Emperor boss definition = %+v, found=%v", definition, ok)
+	}
+
+	start := time.Date(2026, 11, 18, 16, 0, 0, 0, time.UTC)
+	input := func(health int, now time.Time) BossEncounterInput {
+		return BossEncounterInput{
+			EncounterID:    "tzkal-mythosaur-cycle-1",
+			Health:         health,
+			MaxHealth:      enemy.MaxHealth,
+			BossPosition:   enemy.Position,
+			TargetPosition: WorldPosition{ZoneID: DefaultWorldZoneID, X: enemy.Position.X + 2.0, Z: enemy.Position.Z},
+			Now:            now,
+		}
+	}
+
+	// Phase 1 (100% HP -> beskar-aegis, starts mythosaur-tusk-rend)
+	p1, err := AdvanceBossEncounter(definition, BossEncounterState{}, input(620, start))
+	if err != nil {
+		t.Fatal(err)
+	}
+	if p1.State.PhaseID != "beskar-aegis" || !p1.AbilityStarted || p1.AbilityID != "mythosaur-tusk-rend" {
+		t.Fatalf("phase 1 start = %+v", p1)
+	}
+	p1Resolved, err := AdvanceBossEncounter(definition, p1.State, input(620, start.Add(1500*time.Millisecond)))
+	if err != nil {
+		t.Fatal(err)
+	}
+	if !p1Resolved.AbilityResolved || p1Resolved.AbilityID != "mythosaur-tusk-rend" || p1Resolved.Damage != 24 {
+		t.Fatalf("phase 1 mythosaur-tusk-rend resolution = %+v", p1Resolved)
+	}
+
+	// Phase 2 (<= 65% HP -> 390/620 = 62.9% -> infernal-overdrive)
+	p2Transition, err := AdvanceBossEncounter(definition, p1Resolved.State, input(390, start.Add(2*time.Second)))
+	if err != nil {
+		t.Fatal(err)
+	}
+	if !p2Transition.PhaseChanged || p2Transition.State.PhaseID != "infernal-overdrive" {
+		t.Fatalf("phase 2 transition = %+v", p2Transition)
+	}
+
+	// Phase 3 (<= 30% HP -> 180/620 = 29.0% -> omnium-apocalypse)
+	p3Transition, err := AdvanceBossEncounter(definition, p2Transition.State, input(180, start.Add(3*time.Second)))
+	if err != nil {
+		t.Fatal(err)
+	}
+	if !p3Transition.PhaseChanged || p3Transition.State.PhaseID != "omnium-apocalypse" {
+		t.Fatalf("phase 3 transition = %+v", p3Transition)
+	}
+
+	// Verify 5-roll boss loot table produces guaranteed infernal heart + leviathan crests + 3 independent bonus rolls
+	drops, err := RollLootTableDrops(enemy.LootTableID, []LootRollInput{
+		{DropRoll: 0, QuantityRoll: 9999}, // Guaranteed 1: tzkal_infernal_heart x2
+		{DropRoll: 0, QuantityRoll: 9999}, // Guaranteed 2: mythosaur_leviathan_crest x4
+		{DropRoll: 0, QuantityRoll: 9999}, // Bonus 1: terentatek_blood_spine x2
+		{DropRoll: 0, QuantityRoll: 0},    // Bonus 2: zaros_starforge_godsword x1
+		{DropRoll: 0, QuantityRoll: 0},    // Bonus 3: justiciar_mandalore_hauberk x1
+	})
+	if err != nil {
+		t.Fatalf("roll tzkal-mythosaur-emperor-harvest: %v", err)
+	}
+	if len(drops) != 5 ||
+		drops[0] != (ItemQuantity{ItemID: "tzkal_infernal_heart", Quantity: 2}) ||
+		drops[1] != (ItemQuantity{ItemID: "mythosaur_leviathan_crest", Quantity: 4}) ||
+		drops[2] != (ItemQuantity{ItemID: "terentatek_blood_spine", Quantity: 2}) ||
+		drops[3] != (ItemQuantity{ItemID: "zaros_starforge_godsword", Quantity: 1}) ||
+		drops[4] != (ItemQuantity{ItemID: "justiciar_mandalore_hauberk", Quantity: 1}) {
+		t.Fatalf("unexpected TzKal-Mythosaur Emperor boss drops: %+v", drops)
+	}
+}
+
 
 

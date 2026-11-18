@@ -419,6 +419,26 @@ func _build_gathering_node_visuals() -> void:
 				_add_spirit_muja_arbor(at)
 			"hypergate_relic_core":
 				_add_rakatan_hypercore_relic(at)
+			"orikalkum_beskar_ore":
+				_add_orikalkum_beskar_vein(at)
+			"felucian_magic_log":
+				_add_felucian_magic_copse(at)
+			"snapdragon_kolto_frond":
+				_add_snapdragon_kolto_glade(at)
+			"cursed_blight_plum":
+				_add_cursed_blight_trellis(at)
+			"gree_aether_matrix":
+				_add_gree_aether_conduit(at)
+			"primordial_animica_ore":
+				_add_primordial_animica_monolith(at)
+			"elder_bloodwood_timber":
+				_add_bloodwood_brylark_tree(at)
+			"fellstalk_ryll_blossom":
+				_add_fellstalk_ryll_sanctuary(at)
+			"golden_dragon_cactus":
+				_add_golden_dragon_conservatory(at)
+			"starforge_omnium_core":
+				_add_starforge_reliquary(at)
 			_:
 				_add_generic_gathering_node(at, str(node.get("name", "Resource Node")))
 
@@ -1511,6 +1531,247 @@ func _add_rakatan_hypercore_relic(at: Vector3) -> void:
 	add_child(node)
 
 
+func _add_orikalkum_beskar_vein(at: Vector3) -> void:
+	var node := Node3D.new()
+	node.position = at
+	var mat := StandardMaterial3D.new()
+	mat.albedo_color = Color(0.84, 0.24, 0.18)
+	mat.emission_enabled = true
+	mat.emission = Color(0.42, 0.08, 0.06)
+	var vein := MeshInstance3D.new()
+	var mesh := CylinderMesh.new()
+	mesh.top_radius = 0.28
+	mesh.bottom_radius = 0.65
+	mesh.height = 1.95
+	vein.mesh = mesh
+	vein.position.y = 0.98
+	vein.material_override = mat
+	node.add_child(vein)
+	var label := Label3D.new()
+	label.text = "Mandalorian Orikalkum Vein"
+	label.position.y = 2.35
+	label.billboard = BaseMaterial3D.BILLBOARD_ENABLED
+	label.font_size = 22
+	node.add_child(label)
+	add_child(node)
+
+
+func _add_felucian_magic_copse(at: Vector3) -> void:
+	var node := Node3D.new()
+	node.position = at
+	var mat := StandardMaterial3D.new()
+	mat.albedo_color = Color(0.28, 0.88, 0.82)
+	mat.emission_enabled = true
+	mat.emission = Color(0.10, 0.42, 0.40)
+	var cap := MeshInstance3D.new()
+	var mesh := SphereMesh.new()
+	mesh.radius = 1.45
+	mesh.height = 2.15
+	cap.mesh = mesh
+	cap.position.y = 1.45
+	cap.material_override = mat
+	node.add_child(cap)
+	var label := Label3D.new()
+	label.text = "Felucian Magic-Spore Copse"
+	label.position.y = 2.95
+	label.billboard = BaseMaterial3D.BILLBOARD_ENABLED
+	label.font_size = 22
+	node.add_child(label)
+	add_child(node)
+
+
+func _add_snapdragon_kolto_glade(at: Vector3) -> void:
+	var node := Node3D.new()
+	node.position = at
+	var mat := StandardMaterial3D.new()
+	mat.albedo_color = Color(0.92, 0.28, 0.48)
+	mat.emission_enabled = true
+	mat.emission = Color(0.45, 0.10, 0.22)
+	var frond := MeshInstance3D.new()
+	var mesh := SphereMesh.new()
+	mesh.radius = 0.76
+	mesh.height = 1.25
+	frond.mesh = mesh
+	frond.position.y = 0.62
+	frond.material_override = mat
+	node.add_child(frond)
+	var label := Label3D.new()
+	label.text = "Snapdragon Kolto-Fern Glade"
+	label.position.y = 1.65
+	label.billboard = BaseMaterial3D.BILLBOARD_ENABLED
+	label.font_size = 22
+	node.add_child(label)
+	add_child(node)
+
+
+func _add_cursed_blight_trellis(at: Vector3) -> void:
+	var node := Node3D.new()
+	node.position = at
+	var mat := StandardMaterial3D.new()
+	mat.albedo_color = Color(0.56, 0.22, 0.78)
+	mat.emission_enabled = true
+	mat.emission = Color(0.24, 0.08, 0.36)
+	var trellis := MeshInstance3D.new()
+	var mesh := BoxMesh.new()
+	mesh.size = Vector3(1.65, 1.50, 1.15)
+	trellis.mesh = mesh
+	trellis.position.y = 0.75
+	trellis.material_override = mat
+	node.add_child(trellis)
+	var label := Label3D.new()
+	label.text = "Cursed Blight-Plum Trellis"
+	label.position.y = 1.90
+	label.billboard = BaseMaterial3D.BILLBOARD_ENABLED
+	label.font_size = 22
+	node.add_child(label)
+	add_child(node)
+
+
+func _add_gree_aether_conduit(at: Vector3) -> void:
+	var node := Node3D.new()
+	node.position = at
+	var mat := StandardMaterial3D.new()
+	mat.albedo_color = Color(0.24, 0.76, 0.96)
+	mat.emission_enabled = true
+	mat.emission = Color(0.10, 0.38, 0.56)
+	var pylon := MeshInstance3D.new()
+	var mesh := BoxMesh.new()
+	mesh.size = Vector3(0.95, 2.05, 0.95)
+	pylon.mesh = mesh
+	pylon.position.y = 1.02
+	pylon.material_override = mat
+	node.add_child(pylon)
+	var label := Label3D.new()
+	label.text = "Ancient Gree Aether-Conduit"
+	label.position.y = 2.45
+	label.billboard = BaseMaterial3D.BILLBOARD_ENABLED
+	label.font_size = 22
+	node.add_child(label)
+	add_child(node)
+
+
+func _add_primordial_animica_monolith(at: Vector3) -> void:
+	var node := Node3D.new()
+	node.position = at
+	var mat := StandardMaterial3D.new()
+	mat.albedo_color = Color(0.96, 0.78, 0.22)
+	mat.emission_enabled = true
+	mat.emission = Color(0.52, 0.38, 0.08)
+	var monolith := MeshInstance3D.new()
+	var mesh := CylinderMesh.new()
+	mesh.top_radius = 0.18
+	mesh.bottom_radius = 0.72
+	mesh.height = 2.35
+	monolith.mesh = mesh
+	monolith.position.y = 1.18
+	monolith.material_override = mat
+	node.add_child(monolith)
+	var label := Label3D.new()
+	label.text = "Primordial Animica-Phrik Monolith"
+	label.position.y = 2.75
+	label.billboard = BaseMaterial3D.BILLBOARD_ENABLED
+	label.font_size = 22
+	node.add_child(label)
+	add_child(node)
+
+
+func _add_bloodwood_brylark_tree(at: Vector3) -> void:
+	var node := Node3D.new()
+	node.position = at
+	var mat := StandardMaterial3D.new()
+	mat.albedo_color = Color(0.76, 0.14, 0.20)
+	mat.emission_enabled = true
+	mat.emission = Color(0.36, 0.04, 0.08)
+	var tree := MeshInstance3D.new()
+	var mesh := SphereMesh.new()
+	mesh.radius = 1.85
+	mesh.height = 2.75
+	tree.mesh = mesh
+	tree.position.y = 2.15
+	tree.material_override = mat
+	node.add_child(tree)
+	var label := Label3D.new()
+	label.text = "Wilderness Bloodwood-Brylark Patriarch"
+	label.position.y = 3.95
+	label.billboard = BaseMaterial3D.BILLBOARD_ENABLED
+	label.font_size = 22
+	node.add_child(label)
+	add_child(node)
+
+
+func _add_fellstalk_ryll_sanctuary(at: Vector3) -> void:
+	var node := Node3D.new()
+	node.position = at
+	var mat := StandardMaterial3D.new()
+	mat.albedo_color = Color(0.68, 0.28, 0.94)
+	mat.emission_enabled = true
+	mat.emission = Color(0.34, 0.12, 0.52)
+	var bloom := MeshInstance3D.new()
+	var mesh := SphereMesh.new()
+	mesh.radius = 0.84
+	mesh.height = 1.35
+	bloom.mesh = mesh
+	bloom.position.y = 0.68
+	bloom.material_override = mat
+	node.add_child(bloom)
+	var label := Label3D.new()
+	label.text = "Nightsister Fellstalk-Ryll Sanctuary"
+	label.position.y = 1.75
+	label.billboard = BaseMaterial3D.BILLBOARD_ENABLED
+	label.font_size = 22
+	node.add_child(label)
+	add_child(node)
+
+
+func _add_golden_dragon_conservatory(at: Vector3) -> void:
+	var node := Node3D.new()
+	node.position = at
+	var mat := StandardMaterial3D.new()
+	mat.albedo_color = Color(0.98, 0.62, 0.18)
+	mat.emission_enabled = true
+	mat.emission = Color(0.52, 0.28, 0.06)
+	var cactus := MeshInstance3D.new()
+	var mesh := CylinderMesh.new()
+	mesh.top_radius = 0.42
+	mesh.bottom_radius = 0.56
+	mesh.height = 1.80
+	cactus.mesh = mesh
+	cactus.position.y = 0.90
+	cactus.material_override = mat
+	node.add_child(cactus)
+	var label := Label3D.new()
+	label.text = "Sovereign Dragon-Cactus Conservatory"
+	label.position.y = 2.20
+	label.billboard = BaseMaterial3D.BILLBOARD_ENABLED
+	label.font_size = 22
+	node.add_child(label)
+	add_child(node)
+
+
+func _add_starforge_reliquary(at: Vector3) -> void:
+	var node := Node3D.new()
+	node.position = at
+	var mat := StandardMaterial3D.new()
+	mat.albedo_color = Color(0.96, 0.88, 0.36)
+	mat.emission_enabled = true
+	mat.emission = Color(0.58, 0.46, 0.14)
+	var core := MeshInstance3D.new()
+	var mesh := SphereMesh.new()
+	mesh.radius = 0.92
+	mesh.height = 1.85
+	core.mesh = mesh
+	core.position.y = 1.05
+	core.material_override = mat
+	node.add_child(core)
+	var label := Label3D.new()
+	label.text = "Celestial Star-Forge Singularity Reliquary"
+	label.position.y = 2.45
+	label.billboard = BaseMaterial3D.BILLBOARD_ENABLED
+	label.font_size = 22
+	node.add_child(label)
+	add_child(node)
+
+
 func _add_generic_gathering_node(at: Vector3, node_name: String) -> void:
 	var root := Node3D.new()
 	root.position = at
@@ -1550,9 +1811,17 @@ func _add_enemy_visual(enemy_id: String, at: Vector3, enemy_name: String, max_he
 	var creature := Node3D.new()
 	creature.name = "Enemy_" + enemy_id
 	creature.position = at
-	var is_boss := enemy_id == "stoneback-colossus"
+	var is_boss := enemy_id == "stoneback-colossus" or enemy_id == "krayt-jad-sovereign" or enemy_id == "tzkal-mythosaur-emperor"
 	var hide_material := StandardMaterial3D.new()
-	if is_boss:
+	if enemy_id == "tzkal-mythosaur-emperor":
+		hide_material.albedo_color = Color(0.88, 0.64, 0.16)
+		hide_material.emission_enabled = true
+		hide_material.emission = Color(0.46, 0.24, 0.04)
+	elif enemy_id == "krayt-jad-sovereign":
+		hide_material.albedo_color = Color(0.82, 0.22, 0.14)
+		hide_material.emission_enabled = true
+		hide_material.emission = Color(0.42, 0.10, 0.04)
+	elif is_boss:
 		hide_material.albedo_color = Color(0.27, 0.29, 0.30)
 	elif enemy_id.begins_with("canyon-stalker"):
 		hide_material.albedo_color = Color(0.58, 0.42, 0.22)
@@ -1596,6 +1865,22 @@ func _add_enemy_visual(enemy_id: String, at: Vector3, enemy_name: String, max_he
 		hide_material.albedo_color = Color(0.62, 0.44, 0.92)
 	elif enemy_id.begins_with("abyssal-goliath"):
 		hide_material.albedo_color = Color(0.18, 0.16, 0.28)
+	elif enemy_id.begins_with("dune-krayt-drake"):
+		hide_material.albedo_color = Color(0.84, 0.68, 0.34)
+	elif enemy_id.begins_with("dathomir-hexweaver"):
+		hide_material.albedo_color = Color(0.58, 0.18, 0.68)
+	elif enemy_id.begins_with("acklay-reaper"):
+		hide_material.albedo_color = Color(0.22, 0.72, 0.48)
+	elif enemy_id.begins_with("gorax-behemoth"):
+		hide_material.albedo_color = Color(0.46, 0.34, 0.24)
+	elif enemy_id.begins_with("terentatek-mauler"):
+		hide_material.albedo_color = Color(0.68, 0.16, 0.22)
+	elif enemy_id.begins_with("felucian-bull-rancor"):
+		hide_material.albedo_color = Color(0.24, 0.68, 0.58)
+	elif enemy_id.begins_with("mandalore-basilisk"):
+		hide_material.albedo_color = Color(0.62, 0.66, 0.74)
+	elif enemy_id.begins_with("mythosaur-reaper"):
+		hide_material.albedo_color = Color(0.82, 0.24, 0.36)
 	else:
 		hide_material.albedo_color = Color(0.48, 0.30, 0.18) if max_health < 20 else Color(0.32, 0.25, 0.18)
 	hide_material.roughness = 0.92
@@ -2443,6 +2728,32 @@ func _update_interaction_hint() -> void:
 
 
 func _select_forge_recipe() -> String:
+	if int(current_inventory.get("primordial_animica_bar", 0)) >= 2 and int(current_inventory.get("mythosaur_leviathan_crest", 0)) >= 1 and int(current_inventory.get("basilisk_beskar_core", 0)) >= 1:
+		return "justiciar-mandalore-hauberk"
+	if int(current_inventory.get("tzkal_infernal_heart", 0)) >= 1 and int(current_inventory.get("mythosaur_leviathan_crest", 0)) >= 1 and int(current_inventory.get("primordial_animica_bar", 0)) >= 1:
+		return "zuk-infernal-beskar-crown"
+	if int(current_inventory.get("primordial_animica_bar", 0)) >= 2 and int(current_inventory.get("tzkal_infernal_heart", 0)) >= 1 and int(current_inventory.get("starforge_omnium_core", 0)) >= 1:
+		return "zaros-starforge-godsword"
+	if int(current_inventory.get("primordial_animica_bar", 0)) >= 1 and int(current_inventory.get("mythosaur_sanguine_horn", 0)) >= 2 and int(current_inventory.get("elder_bloodwood_timber", 0)) >= 1:
+		return "vitur-mythosaur-scythe"
+	if int(current_inventory.get("primordial_animica_bar", 0)) >= 2 and int(current_inventory.get("basilisk_beskar_core", 0)) >= 2:
+		return "masterwork-animica-warplate"
+	if int(current_inventory.get("primordial_animica_bar", 0)) >= 2 and int(current_inventory.get("mythosaur_sanguine_horn", 0)) >= 1 and int(current_inventory.get("elder_bloodwood_timber", 0)) >= 1:
+		return "elder-maul-of-vitur"
+	if int(current_inventory.get("primordial_animica_ore", 0)) >= 2 and int(current_inventory.get("orikalkum_beskar_bar", 0)) >= 1:
+		return "primordial-animica-bar"
+	if int(current_inventory.get("orikalkum_beskar_bar", 0)) >= 2 and int(current_inventory.get("gree_aether_matrix", 0)) >= 1 and int(current_inventory.get("terentatek_blood_spine", 0)) >= 1:
+		return "korasi-darksaber-edge"
+	if int(current_inventory.get("orikalkum_beskar_bar", 0)) >= 1 and int(current_inventory.get("terentatek_blood_spine", 0)) >= 2 and int(current_inventory.get("felucian_magic_log", 0)) >= 1:
+		return "guthan-terentatek-warspear"
+	if int(current_inventory.get("orikalkum_beskar_bar", 0)) >= 2 and int(current_inventory.get("terentatek_blood_spine", 0)) >= 2:
+		return "malevolent-beskar-cuirass"
+	if int(current_inventory.get("orikalkum_beskar_bar", 0)) >= 1 and int(current_inventory.get("felucian_rancor_hide", 0)) >= 2:
+		return "barrows-cortosis-greathelm"
+	if int(current_inventory.get("orikalkum_beskar_bar", 0)) >= 2 and int(current_inventory.get("terentatek_blood_spine", 0)) >= 1 and int(current_inventory.get("felucian_magic_log", 0)) >= 1:
+		return "dharok-rancor-greataxe"
+	if int(current_inventory.get("orikalkum_beskar_ore", 0)) >= 2 and int(current_inventory.get("runic_banite_ore", 0)) >= 1:
+		return "orikalkum-beskar-bar"
 	if int(current_inventory.get("ancient_krayt_dragon_scale", 0)) >= 2 and int(current_inventory.get("ichor_spirit_sigil", 0)) >= 1 and int(current_inventory.get("runic_banite_bar", 0)) >= 1:
 		return "elysian-spirit-cuirass"
 	if int(current_inventory.get("sovereign_jad_fire_core", 0)) >= 1 and int(current_inventory.get("ancient_krayt_dragon_scale", 0)) >= 1 and int(current_inventory.get("runic_banite_bar", 0)) >= 1:
@@ -2493,6 +2804,34 @@ func _select_forge_recipe() -> String:
 
 
 func _select_workbench_recipe() -> String:
+	if int(current_inventory.get("elder_bloodwood_timber", 0)) >= 2 and int(current_inventory.get("starforge_omnium_core", 0)) >= 1 and int(current_inventory.get("tzkal_infernal_heart", 0)) >= 1:
+		return "bofa-bloodwood-railgun"
+	if int(current_inventory.get("tzkal_infernal_heart", 0)) >= 1 and int(current_inventory.get("starforge_omnium_core", 0)) >= 1 and int(current_inventory.get("elder_bloodwood_timber", 0)) >= 2:
+		return "fractured-armadyl-holostaff"
+	if int(current_inventory.get("primordial_animica_bar", 0)) >= 1 and int(current_inventory.get("mythosaur_leviathan_crest", 0)) >= 1 and int(current_inventory.get("starforge_omnium_core", 0)) >= 1:
+		return "telos-anima-talons"
+	if int(current_inventory.get("elder_bloodwood_timber", 0)) >= 2 and int(current_inventory.get("starforge_omnium_core", 0)) >= 1 and int(current_inventory.get("mythosaur_sanguine_horn", 0)) >= 1:
+		return "eldritch-starforge-bowcaster"
+	if int(current_inventory.get("starforge_omnium_core", 0)) >= 1 and int(current_inventory.get("basilisk_beskar_core", 0)) >= 1 and int(current_inventory.get("primordial_animica_bar", 0)) >= 1:
+		return "leng-starforge-blasters"
+	if int(current_inventory.get("fellstalk_ryll_blossom", 0)) >= 2 and int(current_inventory.get("golden_dragon_cactus", 0)) >= 2 and int(current_inventory.get("tzkal_infernal_heart", 0)) >= 1:
+		return "elder-overload-dragon-salve"
+	if int(current_inventory.get("starforge_omnium_core", 0)) >= 1 and int(current_inventory.get("fellstalk_ryll_blossom", 0)) >= 2 and int(current_inventory.get("bacta_gel", 0)) >= 1:
+		return "starforge-nanite-rejuvenator"
+	if int(current_inventory.get("felucian_magic_log", 0)) >= 2 and int(current_inventory.get("gree_aether_matrix", 0)) >= 1 and int(current_inventory.get("orikalkum_beskar_bar", 0)) >= 1:
+		return "crystal-seren-longrifle"
+	if int(current_inventory.get("felucian_magic_log", 0)) >= 2 and int(current_inventory.get("gree_aether_matrix", 0)) >= 1 and int(current_inventory.get("snapdragon_kolto_frond", 0)) >= 1:
+		return "ahrim-holocron-staff"
+	if int(current_inventory.get("felucian_rancor_hide", 0)) >= 2 and int(current_inventory.get("orikalkum_beskar_bar", 0)) >= 1 and int(current_inventory.get("gree_aether_matrix", 0)) >= 1:
+		return "goliath-shock-cestus"
+	if int(current_inventory.get("felucian_magic_log", 0)) >= 2 and int(current_inventory.get("gree_aether_matrix", 0)) >= 1 and int(current_inventory.get("felucian_rancor_hide", 0)) >= 1:
+		return "karil-quarrel-repeater"
+	if int(current_inventory.get("gree_aether_matrix", 0)) >= 2 and int(current_inventory.get("orikalkum_beskar_bar", 0)) >= 1:
+		return "ascension-bryar-carbine"
+	if int(current_inventory.get("cursed_blight_plum", 0)) >= 2 and int(current_inventory.get("snapdragon_kolto_frond", 0)) >= 1 and int(current_inventory.get("bacta_gel", 0)) >= 1:
+		return "guthix-blight-plum-restoration"
+	if int(current_inventory.get("snapdragon_kolto_frond", 0)) >= 2 and int(current_inventory.get("bacta_gel", 0)) >= 1 and int(current_inventory.get("gree_aether_matrix", 0)) >= 1:
+		return "kolto-barrows-trauma-injector"
 	if int(current_inventory.get("elder_wroshyr_timber", 0)) >= 2 and int(current_inventory.get("sovereign_jad_fire_core", 0)) >= 1 and int(current_inventory.get("hypergate_relic_core", 0)) >= 1:
 		return "twisted-wroshyr-longbow"
 	if int(current_inventory.get("ichor_spirit_sigil", 0)) >= 1 and int(current_inventory.get("sovereign_jad_fire_core", 0)) >= 1 and int(current_inventory.get("elder_wroshyr_timber", 0)) >= 2:

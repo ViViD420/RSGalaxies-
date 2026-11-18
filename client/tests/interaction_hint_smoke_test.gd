@@ -150,6 +150,14 @@ func _run_interaction_hint_smoke_test() -> void:
 	if str(main_node.call("_select_forge_recipe")) != "krayt-fang-whip-blade":
 		_fail("Forge recipe selector did not prioritize krayt-fang-whip-blade for Tier 10 Blades progression.")
 		return
+	main_node.set("current_inventory", {"orikalkum_beskar_bar": 2, "gree_aether_matrix": 1, "terentatek_blood_spine": 1})
+	if str(main_node.call("_select_forge_recipe")) != "korasi-darksaber-edge":
+		_fail("Forge recipe selector did not prioritize korasi-darksaber-edge for Tier 15 Blades progression.")
+		return
+	main_node.set("current_inventory", {"primordial_animica_bar": 2, "tzkal_infernal_heart": 1, "starforge_omnium_core": 1})
+	if str(main_node.call("_select_forge_recipe")) != "zaros-starforge-godsword":
+		_fail("Forge recipe selector did not prioritize zaros-starforge-godsword for Tier 20 Blades progression.")
+		return
 	main_node.set("current_inventory", {"ironwood_log": 2, "circuit_board": 1, "copper_bar": 1})
 	if str(main_node.call("_select_workbench_recipe")) != "skirmisher-repeater-bow":
 		_fail("Workbench recipe selector did not prioritize skirmisher-repeater-bow for Ranged progression.")
@@ -162,21 +170,29 @@ func _run_interaction_hint_smoke_test() -> void:
 	if str(main_node.call("_select_workbench_recipe")) != "overload-bacta-flask":
 		_fail("Workbench recipe selector did not prioritize overload-bacta-flask for Tier 10 Cooking progression.")
 		return
+	main_node.set("current_inventory", {"fellstalk_ryll_blossom": 2, "golden_dragon_cactus": 2, "tzkal_infernal_heart": 1})
+	if str(main_node.call("_select_workbench_recipe")) != "elder-overload-dragon-salve":
+		_fail("Workbench recipe selector did not prioritize elder-overload-dragon-salve for Tier 20 Cooking progression.")
+		return
 	main_node.set("market_catalog", [
 		{"id": "vanguard_cleaver", "name": "Melee Vanguard Cleaver", "equipmentSlot": "main_hand", "requiredSkillId": "melee", "requiredSkillLevel": 2},
 		{"id": "warlord_shock_maul", "name": "Melee Warlord Shock Maul", "equipmentSlot": "main_hand", "requiredSkillId": "melee", "requiredSkillLevel": 4},
 		{"id": "overlord_siege_maul", "name": "Melee Overlord Siege Maul", "equipmentSlot": "main_hand", "requiredSkillId": "melee", "requiredSkillLevel": 7},
-		{"id": "gorax_titan_maul", "name": "Gorax Titan Shock-Maul", "equipmentSlot": "main_hand", "requiredSkillId": "melee", "requiredSkillLevel": 10}
+		{"id": "gorax_titan_maul", "name": "Gorax Titan Shock-Maul", "equipmentSlot": "main_hand", "requiredSkillId": "melee", "requiredSkillLevel": 10},
+		{"id": "dharok_rancor_greataxe", "name": "Dharok-Rancor Bone Greataxe", "equipmentSlot": "main_hand", "requiredSkillId": "melee", "requiredSkillLevel": 15},
+		{"id": "elder_maul_of_vitur", "name": "Primordial Krayt-Vitur Warmaul", "equipmentSlot": "main_hand", "requiredSkillId": "melee", "requiredSkillLevel": 20}
 	])
 	main_node.set("recipe_catalog", [
 		{"id": "vanguard-cleaver", "name": "Forge Melee Vanguard Cleaver", "skillId": "smithing", "requiredLevel": 2, "stationId": "frontier-forge", "outputs": [{"itemId": "vanguard_cleaver", "quantity": 1}]},
 		{"id": "warlord-shock-maul", "name": "Forge Melee Warlord Shock Maul", "skillId": "smithing", "requiredLevel": 4, "stationId": "frontier-forge", "outputs": [{"itemId": "warlord_shock_maul", "quantity": 1}]},
 		{"id": "overlord-siege-maul", "name": "Forge Melee Overlord Siege Maul", "skillId": "smithing", "requiredLevel": 7, "stationId": "frontier-forge", "outputs": [{"itemId": "overlord_siege_maul", "quantity": 1}]},
-		{"id": "gorax-titan-maul", "name": "Forge Gorax Titan Shock-Maul", "skillId": "smithing", "requiredLevel": 10, "stationId": "frontier-forge", "outputs": [{"itemId": "gorax_titan_maul", "quantity": 1}]}
+		{"id": "gorax-titan-maul", "name": "Forge Gorax Titan Shock-Maul", "skillId": "smithing", "requiredLevel": 10, "stationId": "frontier-forge", "outputs": [{"itemId": "gorax_titan_maul", "quantity": 1}]},
+		{"id": "dharok-rancor-greataxe", "name": "Forge Dharok-Rancor Bone Greataxe", "skillId": "smithing", "requiredLevel": 15, "stationId": "frontier-forge", "outputs": [{"itemId": "dharok_rancor_greataxe", "quantity": 1}]},
+		{"id": "elder-maul-of-vitur", "name": "Forge Primordial Krayt-Vitur Warmaul", "skillId": "smithing", "requiredLevel": 20, "stationId": "frontier-forge", "outputs": [{"itemId": "elder_maul_of_vitur", "quantity": 1}]}
 	])
-	var melee_unlock_text := str(main_node.call("_describe_skill_progression_unlocks", "melee", 7))
-	if not melee_unlock_text.contains("Melee Overlord Siege Maul") or not melee_unlock_text.contains("Gorax Titan Shock-Maul"):
-		_fail("Skill unlock summary did not report Lv 7 unlocked and Lv 10 next Melee equipment milestones: " + melee_unlock_text)
+	var melee_unlock_text := str(main_node.call("_describe_skill_progression_unlocks", "melee", 15))
+	if not melee_unlock_text.contains("Dharok-Rancor Bone Greataxe") or not melee_unlock_text.contains("Primordial Krayt-Vitur Warmaul"):
+		_fail("Skill unlock summary did not report Lv 15 unlocked and Lv 20 next Melee equipment milestones: " + melee_unlock_text)
 		return
 
 	print("PASS: contextual interaction hints select the nearest gathering target, show range guidance, expose pending state, hide before character selection, select station recipes, build Crafting Schematics, Character Vitals, World Atlas and Options panels, sync HAM/Secondary attributes and report malformed/startup errors.")

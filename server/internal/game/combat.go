@@ -91,6 +91,12 @@ var enemyDefinitions = []EnemyDefinition{
 	{ID: "acklay-reaper-001", Name: "Geonosian Chitin-Reaper", MaxHealth: 182, Attack: 20, Defense: 7, Experience: 480, LootTableID: "acklay-reaper-harvest", Position: WorldPosition{ZoneID: DefaultWorldZoneID, X: 22, Z: 44}, InteractionRange: 3, RespawnSeconds: 190},
 	{ID: "gorax-behemoth-001", Name: "Endor Crag-Gorax", MaxHealth: 198, Attack: 21, Defense: 8, Experience: 530, LootTableID: "gorax-behemoth-harvest", Position: WorldPosition{ZoneID: DefaultWorldZoneID, X: -44, Z: 42}, InteractionRange: 3, RespawnSeconds: 200},
 	{ID: "krayt-jad-sovereign", Name: "Ancient Krayt-Jad Sovereign", MaxHealth: 320, Attack: 0, Defense: 8, Experience: 1200, LootTableID: "krayt-jad-sovereign-harvest", Position: WorldPosition{ZoneID: DefaultWorldZoneID, X: 0, Z: -44}, InteractionRange: 4, RespawnSeconds: 300},
+	// Tier 14-20 Elite Frontier Creatures & Level 20 Multi-Phase Emperor Boss (+5 enemies -> 34 total)
+	{ID: "terentatek-mauler-001", Name: "Korriban Terentatek Blood-Fiend", MaxHealth: 240, Attack: 23, Defense: 9, Experience: 620, LootTableID: "terentatek-mauler-harvest", Position: WorldPosition{ZoneID: DefaultWorldZoneID, X: -48, Z: 28}, InteractionRange: 3, RespawnSeconds: 210},
+	{ID: "felucian-bull-rancor-001", Name: "Felucian Spore-Blight Bull Rancor", MaxHealth: 265, Attack: 24, Defense: 10, Experience: 680, LootTableID: "felucian-bull-rancor-harvest", Position: WorldPosition{ZoneID: DefaultWorldZoneID, X: -48, Z: -24}, InteractionRange: 3, RespawnSeconds: 220},
+	{ID: "mandalore-basilisk-001", Name: "Imperial Basilisk-Nex War-Droid", MaxHealth: 310, Attack: 26, Defense: 12, Experience: 820, LootTableID: "mandalore-basilisk-harvest", Position: WorldPosition{ZoneID: DefaultWorldZoneID, X: 48, Z: -28}, InteractionRange: 3, RespawnSeconds: 240},
+	{ID: "mythosaur-reaper-001", Name: "Abyssal Mythosaur Bone-Stalker", MaxHealth: 340, Attack: 28, Defense: 13, Experience: 920, LootTableID: "mythosaur-reaper-harvest", Position: WorldPosition{ZoneID: DefaultWorldZoneID, X: 48, Z: 28}, InteractionRange: 3, RespawnSeconds: 255},
+	{ID: "tzkal-mythosaur-emperor", Name: "TzKal-Mythosaur Star-Forge Emperor", MaxHealth: 620, Attack: 0, Defense: 14, Experience: 2600, LootTableID: "tzkal-mythosaur-emperor-harvest", Position: WorldPosition{ZoneID: DefaultWorldZoneID, X: 0, Z: 54}, InteractionRange: 4, RespawnSeconds: 420},
 }
 
 func EnemyDefinitions() []EnemyDefinition {

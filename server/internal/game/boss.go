@@ -99,6 +99,22 @@ var bossEncounterDefinitions = []BossEncounterDefinition{
 			{ID: "krayt-singularity-roar", TelegraphDuration: 2200 * time.Millisecond, Cooldown: 9 * time.Second, MinRange: 0, MaxRange: 7.0, Damage: 30},
 		},
 	},
+	{
+		ID: "tzkal-mythosaur-emperor",
+		Version: 1,
+		EnemyID: "tzkal-mythosaur-emperor",
+		Phases: []BossPhaseDefinition{
+			{ID: "beskar-aegis", EnterAtOrBelowPercent: 100, AbilityIDs: []string{"mythosaur-tusk-rend", "starforge-plasma-barrage"}},
+			{ID: "infernal-overdrive", EnterAtOrBelowPercent: 65, AbilityIDs: []string{"mythosaur-tusk-rend", "starforge-plasma-barrage", "tzkal-seismic-eruption"}},
+			{ID: "omnium-apocalypse", EnterAtOrBelowPercent: 30, AbilityIDs: []string{"mythosaur-tusk-rend", "tzkal-seismic-eruption", "omnium-supernova-pulse"}},
+		},
+		Abilities: []BossAbilityDefinition{
+			{ID: "mythosaur-tusk-rend", TelegraphDuration: 1500 * time.Millisecond, Cooldown: 4 * time.Second, MinRange: 0, MaxRange: 4.0, Damage: 24},
+			{ID: "starforge-plasma-barrage", TelegraphDuration: 1800 * time.Millisecond, Cooldown: 6 * time.Second, MinRange: 0, MaxRange: 6.5, Damage: 28},
+			{ID: "tzkal-seismic-eruption", TelegraphDuration: 2000 * time.Millisecond, Cooldown: 7 * time.Second, MinRange: 0, MaxRange: 6.0, Damage: 34},
+			{ID: "omnium-supernova-pulse", TelegraphDuration: 2200 * time.Millisecond, Cooldown: 9 * time.Second, MinRange: 0, MaxRange: 7.5, Damage: 42},
+		},
+	},
 }
 
 func BossEncounterDefinitions() []BossEncounterDefinition {

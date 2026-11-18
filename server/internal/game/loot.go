@@ -251,6 +251,80 @@ var lootTableDefinitions = []LootTableDefinition{
 			{ItemID: "overload_bacta_flask", Weight: 2400, MinQuantity: 1, MaxQuantity: 2},
 		}},
 	}},
+	// Tier 14-20 Elite Creature & Level 20 Emperor Boss Harvest Tables (+5 tables -> 36 total)
+	{ID: "terentatek-mauler-harvest", Version: 1, GuaranteedDrops: []LootTableDrop{
+		{ItemID: "terentatek_blood_spine", MinQuantity: 1, MaxQuantity: 2},
+	}, BonusRolls: []LootTableRoll{
+		{Drops: []LootTableDrop{
+			{ItemID: "orikalkum_beskar_ore", Weight: 2000, MinQuantity: 1, MaxQuantity: 2},
+			{ItemID: "dharok_rancor_greataxe", Weight: 450, MinQuantity: 1, MaxQuantity: 1},
+			{ItemID: "guthan_terentatek_warspear", Weight: 450, MinQuantity: 1, MaxQuantity: 1},
+			{ItemID: "malevolent_beskar_cuirass", Weight: 450, MinQuantity: 1, MaxQuantity: 1},
+			{ItemID: "barrows_cortosis_greathelm", Weight: 450, MinQuantity: 1, MaxQuantity: 1},
+			{ItemID: "goliath_shock_cestus", Weight: 450, MinQuantity: 1, MaxQuantity: 1},
+		}},
+	}},
+	{ID: "felucian-bull-rancor-harvest", Version: 1, GuaranteedDrops: []LootTableDrop{
+		{ItemID: "felucian_rancor_hide", MinQuantity: 1, MaxQuantity: 2},
+	}, BonusRolls: []LootTableRoll{
+		{Drops: []LootTableDrop{
+			{ItemID: "felucian_magic_log", Weight: 2000, MinQuantity: 1, MaxQuantity: 2},
+			{ItemID: "karil_quarrel_repeater", Weight: 450, MinQuantity: 1, MaxQuantity: 1},
+			{ItemID: "crystal_seren_longrifle", Weight: 450, MinQuantity: 1, MaxQuantity: 1},
+			{ItemID: "ahrim_holocron_staff", Weight: 450, MinQuantity: 1, MaxQuantity: 1},
+			{ItemID: "korasi_darksaber_edge", Weight: 450, MinQuantity: 1, MaxQuantity: 1},
+			{ItemID: "ascension_bryar_carbine", Weight: 450, MinQuantity: 1, MaxQuantity: 1},
+		}},
+	}},
+	{ID: "mandalore-basilisk-harvest", Version: 1, GuaranteedDrops: []LootTableDrop{
+		{ItemID: "basilisk_beskar_core", MinQuantity: 1, MaxQuantity: 2},
+	}, BonusRolls: []LootTableRoll{
+		{Drops: []LootTableDrop{
+			{ItemID: "primordial_animica_ore", Weight: 2000, MinQuantity: 1, MaxQuantity: 2},
+			{ItemID: "masterwork_animica_warplate", Weight: 450, MinQuantity: 1, MaxQuantity: 1},
+			{ItemID: "justiciar_mandalore_hauberk", Weight: 450, MinQuantity: 1, MaxQuantity: 1},
+			{ItemID: "leng_starforge_blasters", Weight: 450, MinQuantity: 1, MaxQuantity: 1},
+			{ItemID: "bofa_bloodwood_railgun", Weight: 450, MinQuantity: 1, MaxQuantity: 1},
+		}},
+	}},
+	{ID: "mythosaur-reaper-harvest", Version: 1, GuaranteedDrops: []LootTableDrop{
+		{ItemID: "mythosaur_sanguine_horn", MinQuantity: 1, MaxQuantity: 2},
+	}, BonusRolls: []LootTableRoll{
+		{Drops: []LootTableDrop{
+			{ItemID: "elder_bloodwood_timber", Weight: 2000, MinQuantity: 1, MaxQuantity: 2},
+			{ItemID: "elder_maul_of_vitur", Weight: 450, MinQuantity: 1, MaxQuantity: 1},
+			{ItemID: "vitur_mythosaur_scythe", Weight: 450, MinQuantity: 1, MaxQuantity: 1},
+			{ItemID: "telos_anima_talons", Weight: 450, MinQuantity: 1, MaxQuantity: 1},
+			{ItemID: "eldritch_starforge_bowcaster", Weight: 450, MinQuantity: 1, MaxQuantity: 1},
+		}},
+	}},
+	{ID: "tzkal-mythosaur-emperor-harvest", Version: 1, GuaranteedDrops: []LootTableDrop{
+		{ItemID: "tzkal_infernal_heart", MinQuantity: 1, MaxQuantity: 2},
+		{ItemID: "mythosaur_leviathan_crest", MinQuantity: 2, MaxQuantity: 4},
+	}, BonusRolls: []LootTableRoll{
+		{Drops: []LootTableDrop{
+			{ItemID: "terentatek_blood_spine", Weight: 2500, MinQuantity: 1, MaxQuantity: 2},
+			{ItemID: "felucian_rancor_hide", Weight: 2500, MinQuantity: 1, MaxQuantity: 2},
+			{ItemID: "basilisk_beskar_core", Weight: 2500, MinQuantity: 1, MaxQuantity: 2},
+			{ItemID: "mythosaur_sanguine_horn", Weight: 2500, MinQuantity: 1, MaxQuantity: 2},
+		}},
+		{Drops: []LootTableDrop{
+			{ItemID: "zaros_starforge_godsword", Weight: 900, MinQuantity: 1, MaxQuantity: 1},
+			{ItemID: "vitur_mythosaur_scythe", Weight: 900, MinQuantity: 1, MaxQuantity: 1},
+			{ItemID: "bofa_bloodwood_railgun", Weight: 900, MinQuantity: 1, MaxQuantity: 1},
+			{ItemID: "fractured_armadyl_holostaff", Weight: 900, MinQuantity: 1, MaxQuantity: 1},
+			{ItemID: "elder_maul_of_vitur", Weight: 900, MinQuantity: 1, MaxQuantity: 1},
+			{ItemID: "eldritch_starforge_bowcaster", Weight: 900, MinQuantity: 1, MaxQuantity: 1},
+			{ItemID: "telos_anima_talons", Weight: 900, MinQuantity: 1, MaxQuantity: 1},
+			{ItemID: "leng_starforge_blasters", Weight: 900, MinQuantity: 1, MaxQuantity: 1},
+		}},
+		{Drops: []LootTableDrop{
+			{ItemID: "justiciar_mandalore_hauberk", Weight: 1200, MinQuantity: 1, MaxQuantity: 1},
+			{ItemID: "zuk_infernal_beskar_crown", Weight: 1200, MinQuantity: 1, MaxQuantity: 1},
+			{ItemID: "masterwork_animica_warplate", Weight: 1200, MinQuantity: 1, MaxQuantity: 1},
+			{ItemID: "elder_overload_dragon_salve", Weight: 2400, MinQuantity: 1, MaxQuantity: 2},
+		}},
+	}},
 }
 
 func LootTableDefinitions() []LootTableDefinition {
