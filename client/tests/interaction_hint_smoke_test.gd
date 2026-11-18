@@ -137,6 +137,28 @@ func _run_interaction_hint_smoke_test() -> void:
 		_fail("Options, Camera & Controls panel did not build or become visible.")
 		return
 
+	# Validate new melee/ranged/gathering progression recipe selection and skill unlock description.
+	main_node.set("current_inventory", {"iron_bar": 2, "ironwood_log": 1})
+	if str(main_node.call("_select_forge_recipe")) != "vanguard-cleaver":
+		_fail("Forge recipe selector did not prioritize vanguard-cleaver for Melee progression.")
+		return
+	main_node.set("current_inventory", {"ironwood_log": 2, "circuit_board": 1, "copper_bar": 1})
+	if str(main_node.call("_select_workbench_recipe")) != "skirmisher-repeater-bow":
+		_fail("Workbench recipe selector did not prioritize skirmisher-repeater-bow for Ranged progression.")
+		return
+	main_node.set("market_catalog", [
+		{"id": "vanguard_cleaver", "name": "Melee Vanguard Cleaver", "equipmentSlot": "main_hand", "requiredSkillId": "melee", "requiredSkillLevel": 2},
+		{"id": "warlord_shock_maul", "name": "Melee Warlord Shock Maul", "equipmentSlot": "main_hand", "requiredSkillId": "melee", "requiredSkillLevel": 4}
+	])
+	main_node.set("recipe_catalog", [
+		{"id": "vanguard-cleaver", "name": "Forge Melee Vanguard Cleaver", "skillId": "smithing", "requiredLevel": 2, "stationId": "frontier-forge", "outputs": [{"itemId": "vanguard_cleaver", "quantity": 1}]},
+		{"id": "warlord-shock-maul", "name": "Forge Melee Warlord Shock Maul", "skillId": "smithing", "requiredLevel": 4, "stationId": "frontier-forge", "outputs": [{"itemId": "warlord_shock_maul", "quantity": 1}]}
+	])
+	var melee_unlock_text := str(main_node.call("_describe_skill_progression_unlocks", "melee", 2))
+	if not melee_unlock_text.contains("Melee Vanguard Cleaver") or not melee_unlock_text.contains("Melee Warlord Shock Maul"):
+		_fail("Skill unlock summary did not report current and next Melee equipment milestones: " + melee_unlock_text)
+		return
+
 	print("PASS: contextual interaction hints select the nearest gathering target, show range guidance, expose pending state, hide before character selection, select station recipes, build Crafting Schematics, Character Vitals, World Atlas and Options panels, sync HAM/Secondary attributes and report malformed/startup errors.")
 	player.queue_free()
 	main_node.free()

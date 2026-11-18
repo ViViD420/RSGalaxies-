@@ -68,6 +68,15 @@ var gatheringNodes = []GatheringNodeDefinition{
 	{ID: "chronite-001", Name: "Chronite Rift Anomaly", SkillID: "mining", RequiredLevel: 8, ResourceID: "chronite_ore", Experience: 235, Position: WorldPosition{ZoneID: DefaultWorldZoneID, X: -12, Z: -40}, InteractionRange: 3, MaxCharges: 2, RespawnSeconds: 150},
 	{ID: "abyssal-001", Name: "Abyssal Adamant Chasm", SkillID: "mining", RequiredLevel: 9, ResourceID: "abyssal_ore", Experience: 275, Position: WorldPosition{ZoneID: DefaultWorldZoneID, X: -44, Z: -32}, InteractionRange: 3, MaxCharges: 2, RespawnSeconds: 165},
 	{ID: "nova-prism-001", Name: "Nova Core Matrix", SkillID: "mining", RequiredLevel: 10, ResourceID: "nova_prism", Experience: 320, Position: WorldPosition{ZoneID: DefaultWorldZoneID, X: 44, Z: 36}, InteractionRange: 3, MaxCharges: 2, RespawnSeconds: 180},
+	// Woodcutting, Foraging, Farming & Scavenging Tier 2-4 Gathering Nodes (+8 nodes)
+	{ID: "ironwood-001", Name: "Ironwood Timber Stand", SkillID: "woodcutting", RequiredLevel: 2, ResourceID: "ironwood_log", Experience: 50, Position: WorldPosition{ZoneID: DefaultWorldZoneID, X: 12, Z: 6}, InteractionRange: 3, MaxCharges: 3, RespawnSeconds: 45},
+	{ID: "starwood-001", Name: "Petrified Starwood Grove", SkillID: "woodcutting", RequiredLevel: 4, ResourceID: "petrified_starwood", Experience: 95, Position: WorldPosition{ZoneID: DefaultWorldZoneID, X: -24, Z: 12}, InteractionRange: 3, MaxCharges: 2, RespawnSeconds: 70},
+	{ID: "glowcap-001", Name: "Bioluminescent Glowcap Cluster", SkillID: "foraging", RequiredLevel: 2, ResourceID: "glowcap_fungus", Experience: 50, Position: WorldPosition{ZoneID: DefaultWorldZoneID, X: -12, Z: 8}, InteractionRange: 3, MaxCharges: 3, RespawnSeconds: 45},
+	{ID: "sunblossom-001", Name: "Solaris Sunblossom Patch", SkillID: "foraging", RequiredLevel: 4, ResourceID: "sunblossom_petal", Experience: 95, Position: WorldPosition{ZoneID: DefaultWorldZoneID, X: 24, Z: 16}, InteractionRange: 3, MaxCharges: 2, RespawnSeconds: 70},
+	{ID: "tuber-001", Name: "Irrigated Heart-Tuber Bed", SkillID: "farming", RequiredLevel: 2, ResourceID: "tuber_root", Experience: 50, Position: WorldPosition{ZoneID: DefaultWorldZoneID, X: -16, Z: 4}, InteractionRange: 3, MaxCharges: 3, RespawnSeconds: 45},
+	{ID: "starberry-001", Name: "Hydroponic Starberry Arbor", SkillID: "farming", RequiredLevel: 4, ResourceID: "starberry_cluster", Experience: 95, Position: WorldPosition{ZoneID: DefaultWorldZoneID, X: -20, Z: -6}, InteractionRange: 3, MaxCharges: 2, RespawnSeconds: 70},
+	{ID: "circuit-001", Name: "Abandoned Relay Array", SkillID: "scavenging", RequiredLevel: 2, ResourceID: "circuit_board", Experience: 55, Position: WorldPosition{ZoneID: DefaultWorldZoneID, X: 10, Z: -12}, InteractionRange: 3, MaxCharges: 3, RespawnSeconds: 50},
+	{ID: "capacitor-001", Name: "Crashed Orbital Pod Wreckage", SkillID: "scavenging", RequiredLevel: 4, ResourceID: "quantum_capacitor", Experience: 100, Position: WorldPosition{ZoneID: DefaultWorldZoneID, X: 28, Z: -18}, InteractionRange: 3, MaxCharges: 2, RespawnSeconds: 75},
 }
 
 func GatheringNodes() []GatheringNodeDefinition {

@@ -377,6 +377,22 @@ func _build_gathering_node_visuals() -> void:
 				_add_abyssal_chasm(at)
 			"nova_prism":
 				_add_nova_prism_matrix(at)
+			"ironwood_log":
+				_add_ironwood_tree(at)
+			"petrified_starwood":
+				_add_starwood_tree(at)
+			"glowcap_fungus":
+				_add_glowcap_cluster(at)
+			"sunblossom_petal":
+				_add_sunblossom_patch(at)
+			"tuber_root":
+				_add_tuber_bed(at)
+			"starberry_cluster":
+				_add_starberry_arbor(at)
+			"circuit_board":
+				_add_circuit_relay(at)
+			"quantum_capacitor":
+				_add_orbital_pod_wreckage(at)
 			_:
 				_add_generic_gathering_node(at, str(node.get("name", "Resource Node")))
 
@@ -922,6 +938,207 @@ func _add_nova_prism_matrix(at: Vector3) -> void:
 	var label := Label3D.new()
 	label.text = "Nova Core Matrix"
 	label.position.y = 2.05
+	label.billboard = BaseMaterial3D.BILLBOARD_ENABLED
+	label.font_size = 22
+	node.add_child(label)
+	add_child(node)
+
+
+func _add_ironwood_tree(at: Vector3) -> void:
+	var node := Node3D.new()
+	node.position = at
+	var trunk_mat := StandardMaterial3D.new()
+	trunk_mat.albedo_color = Color(0.32, 0.22, 0.16)
+	var trunk := MeshInstance3D.new()
+	var trunk_mesh := CylinderMesh.new()
+	trunk_mesh.top_radius = 0.28
+	trunk_mesh.bottom_radius = 0.42
+	trunk_mesh.height = 2.6
+	trunk.mesh = trunk_mesh
+	trunk.position.y = 1.3
+	trunk.material_override = trunk_mat
+	node.add_child(trunk)
+	var canopy_mat := StandardMaterial3D.new()
+	canopy_mat.albedo_color = Color(0.18, 0.42, 0.28)
+	var canopy := MeshInstance3D.new()
+	var canopy_mesh := SphereMesh.new()
+	canopy_mesh.radius = 1.4
+	canopy_mesh.height = 2.6
+	canopy.mesh = canopy_mesh
+	canopy.position.y = 3.0
+	canopy.material_override = canopy_mat
+	node.add_child(canopy)
+	var label := Label3D.new()
+	label.text = "Ironwood Timber Stand"
+	label.position.y = 4.5
+	label.billboard = BaseMaterial3D.BILLBOARD_ENABLED
+	label.font_size = 22
+	node.add_child(label)
+	add_child(node)
+
+
+func _add_starwood_tree(at: Vector3) -> void:
+	var node := Node3D.new()
+	node.position = at
+	var trunk_mat := StandardMaterial3D.new()
+	trunk_mat.albedo_color = Color(0.46, 0.44, 0.54)
+	var trunk := MeshInstance3D.new()
+	var trunk_mesh := CylinderMesh.new()
+	trunk_mesh.top_radius = 0.30
+	trunk_mesh.bottom_radius = 0.46
+	trunk_mesh.height = 2.8
+	trunk.mesh = trunk_mesh
+	trunk.position.y = 1.4
+	trunk.material_override = trunk_mat
+	node.add_child(trunk)
+	var canopy_mat := StandardMaterial3D.new()
+	canopy_mat.albedo_color = Color(0.38, 0.62, 0.86)
+	canopy_mat.emission_enabled = true
+	canopy_mat.emission = Color(0.14, 0.28, 0.46)
+	var canopy := MeshInstance3D.new()
+	var canopy_mesh := SphereMesh.new()
+	canopy_mesh.radius = 1.45
+	canopy_mesh.height = 2.7
+	canopy.mesh = canopy_mesh
+	canopy.position.y = 3.2
+	canopy.material_override = canopy_mat
+	node.add_child(canopy)
+	var label := Label3D.new()
+	label.text = "Petrified Starwood Grove"
+	label.position.y = 4.7
+	label.billboard = BaseMaterial3D.BILLBOARD_ENABLED
+	label.font_size = 22
+	node.add_child(label)
+	add_child(node)
+
+
+func _add_glowcap_cluster(at: Vector3) -> void:
+	var node := Node3D.new()
+	node.position = at
+	var cap_mat := StandardMaterial3D.new()
+	cap_mat.albedo_color = Color(0.24, 0.86, 0.76)
+	cap_mat.emission_enabled = true
+	cap_mat.emission = Color(0.10, 0.45, 0.38)
+	var cap := MeshInstance3D.new()
+	var cap_mesh := SphereMesh.new()
+	cap_mesh.radius = 0.48
+	cap_mesh.height = 0.55
+	cap.mesh = cap_mesh
+	cap.position.y = 0.52
+	cap.material_override = cap_mat
+	node.add_child(cap)
+	var label := Label3D.new()
+	label.text = "Bioluminescent Glowcap Cluster"
+	label.position.y = 1.25
+	label.billboard = BaseMaterial3D.BILLBOARD_ENABLED
+	label.font_size = 22
+	node.add_child(label)
+	add_child(node)
+
+
+func _add_sunblossom_patch(at: Vector3) -> void:
+	var node := Node3D.new()
+	node.position = at
+	var bloom_mat := StandardMaterial3D.new()
+	bloom_mat.albedo_color = Color(0.96, 0.72, 0.18)
+	bloom_mat.emission_enabled = true
+	bloom_mat.emission = Color(0.45, 0.28, 0.04)
+	var bloom := MeshInstance3D.new()
+	var bloom_mesh := SphereMesh.new()
+	bloom_mesh.radius = 0.46
+	bloom_mesh.height = 0.60
+	bloom.mesh = bloom_mesh
+	bloom.position.y = 0.50
+	bloom.material_override = bloom_mat
+	node.add_child(bloom)
+	var label := Label3D.new()
+	label.text = "Solaris Sunblossom Patch"
+	label.position.y = 1.25
+	label.billboard = BaseMaterial3D.BILLBOARD_ENABLED
+	label.font_size = 22
+	node.add_child(label)
+	add_child(node)
+
+
+func _add_tuber_bed(at: Vector3) -> void:
+	var node := Node3D.new()
+	node.position = at
+	var soil_mat := StandardMaterial3D.new()
+	soil_mat.albedo_color = Color(0.34, 0.24, 0.14)
+	var bed := MeshInstance3D.new()
+	var bed_mesh := BoxMesh.new()
+	bed_mesh.size = Vector3(1.5, 0.24, 1.5)
+	bed.mesh = bed_mesh
+	bed.position.y = 0.12
+	bed.material_override = soil_mat
+	node.add_child(bed)
+	var label := Label3D.new()
+	label.text = "Irrigated Heart-Tuber Bed"
+	label.position.y = 1.15
+	label.billboard = BaseMaterial3D.BILLBOARD_ENABLED
+	label.font_size = 22
+	node.add_child(label)
+	add_child(node)
+
+
+func _add_starberry_arbor(at: Vector3) -> void:
+	var node := Node3D.new()
+	node.position = at
+	var vine_mat := StandardMaterial3D.new()
+	vine_mat.albedo_color = Color(0.68, 0.24, 0.56)
+	var arbor := MeshInstance3D.new()
+	var arbor_mesh := BoxMesh.new()
+	arbor_mesh.size = Vector3(1.4, 1.1, 0.9)
+	arbor.mesh = arbor_mesh
+	arbor.position.y = 0.55
+	arbor.material_override = vine_mat
+	node.add_child(arbor)
+	var label := Label3D.new()
+	label.text = "Hydroponic Starberry Arbor"
+	label.position.y = 1.45
+	label.billboard = BaseMaterial3D.BILLBOARD_ENABLED
+	label.font_size = 22
+	node.add_child(label)
+	add_child(node)
+
+
+func _add_circuit_relay(at: Vector3) -> void:
+	var node := Node3D.new()
+	node.position = at
+	var relay_mat := StandardMaterial3D.new()
+	relay_mat.albedo_color = Color(0.28, 0.52, 0.58)
+	var pylon := MeshInstance3D.new()
+	var pylon_mesh := BoxMesh.new()
+	pylon_mesh.size = Vector3(0.75, 1.35, 0.75)
+	pylon.mesh = pylon_mesh
+	pylon.position.y = 0.68
+	pylon.material_override = relay_mat
+	node.add_child(pylon)
+	var label := Label3D.new()
+	label.text = "Abandoned Relay Array"
+	label.position.y = 1.65
+	label.billboard = BaseMaterial3D.BILLBOARD_ENABLED
+	label.font_size = 22
+	node.add_child(label)
+	add_child(node)
+
+
+func _add_orbital_pod_wreckage(at: Vector3) -> void:
+	var node := Node3D.new()
+	node.position = at
+	var hull_mat := StandardMaterial3D.new()
+	hull_mat.albedo_color = Color(0.52, 0.56, 0.66)
+	var pod := MeshInstance3D.new()
+	var pod_mesh := SphereMesh.new()
+	pod_mesh.radius = 0.78
+	pod_mesh.height = 1.30
+	pod.mesh = pod_mesh
+	pod.position.y = 0.60
+	pod.material_override = hull_mat
+	node.add_child(pod)
+	var label := Label3D.new()
+	label.text = "Crashed Orbital Pod Wreckage"
+	label.position.y = 1.65
 	label.billboard = BaseMaterial3D.BILLBOARD_ENABLED
 	label.font_size = 22
 	node.add_child(label)
@@ -1850,6 +2067,10 @@ func _update_interaction_hint() -> void:
 
 
 func _select_forge_recipe() -> String:
+	if int(current_inventory.get("iron_bar", 0)) >= 2 and int(current_inventory.get("boar_tusk", 0)) >= 2 and int(current_inventory.get("ironwood_log", 0)) >= 1:
+		return "colossus-breaker-greataxe"
+	if int(current_inventory.get("iron_bar", 0)) >= 2 and int(current_inventory.get("ironwood_log", 0)) >= 1:
+		return "vanguard-cleaver"
 	if int(current_inventory.get("titanium_bar", 0)) >= 2 and int(current_inventory.get("sentinel_core", 0)) >= 1 and int(current_inventory.get("salvaged_power_cell", 0)) >= 1:
 		return "titanium-carbine"
 	if int(current_inventory.get("stalker_chitin", 0)) >= 3 and int(current_inventory.get("iron_bar", 0)) >= 2:
@@ -1872,6 +2093,12 @@ func _select_forge_recipe() -> String:
 
 
 func _select_workbench_recipe() -> String:
+	if int(current_inventory.get("ironwood_log", 0)) >= 2 and int(current_inventory.get("circuit_board", 0)) >= 1 and int(current_inventory.get("copper_bar", 0)) >= 1:
+		return "skirmisher-repeater-bow"
+	if int(current_inventory.get("ironwood_log", 0)) >= 2 and int(current_inventory.get("aether_crystal", 0)) >= 1:
+		return "crystal-channeled-rod"
+	if int(current_inventory.get("tuber_root", 0)) >= 2 and int(current_inventory.get("glowcap_fungus", 0)) >= 1:
+		return "hearty-tuber-stew"
 	if int(current_inventory.get("bacta_gel", 0)) >= 2 and int(current_inventory.get("stalker_venom_sac", 0)) >= 1 and int(current_inventory.get("aether_crystal", 0)) >= 1:
 		return "advanced-medpack"
 	if int(current_inventory.get("bacta_gel", 0)) >= 1 and int(current_inventory.get("frontier_grain", 0)) >= 2 and int(current_inventory.get("aether_crystal", 0)) >= 1:
@@ -4645,8 +4872,68 @@ func _on_skills_completed(result: int, response_code: int, _headers: PackedStrin
 			detail.text = str(experience) + " XP • " + str(remaining) + " to level " + str(level + 1)
 		detail.add_theme_font_size_override("font_size", 11)
 		skill_column.add_child(detail)
+		var unlock_summary := _describe_skill_progression_unlocks(str(skill_id), level)
+		if not unlock_summary.is_empty():
+			var unlock_label := Label.new()
+			unlock_label.text = unlock_summary
+			unlock_label.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+			unlock_label.add_theme_font_size_override("font_size", 11)
+			skill_column.add_child(unlock_label)
 		skills_list.add_child(skill_column)
 	skills_status_label.text = str(CORE_SKILL_IDS.size()) + " core skills • progression updates after server actions"
+
+
+func _describe_skill_progression_unlocks(skill_id: String, current_level: int) -> String:
+	var recipe_station_by_output: Dictionary = {}
+	for recipe in recipe_catalog:
+		if recipe is Dictionary:
+			var station_label := "Forge" if str(recipe.get("stationId", "")) == "frontier-forge" else "Workbench"
+			var req_sk := str(recipe.get("skillId", "")).capitalize()
+			var req_lv := int(recipe.get("requiredLevel", 1))
+			var outputs: Variant = recipe.get("outputs", [])
+			if outputs is Array:
+				for out in outputs:
+					if out is Dictionary:
+						recipe_station_by_output[str(out.get("itemId", ""))] = "%s (%s Lv %d)" % [station_label, req_sk, req_lv]
+	var unlocked: Array[String] = []
+	var next_unlock := ""
+	var next_level := 999
+	for node in gathering_catalog:
+		if node is Dictionary and str(node.get("skillId", "")) == skill_id:
+			var req := int(node.get("requiredLevel", 1))
+			var entry := "Lv %d Harvest: %s" % [req, str(node.get("name", node.get("id", "")))]
+			if req <= current_level:
+				unlocked.append(entry)
+			elif req < next_level:
+				next_level = req
+				next_unlock = entry
+	for recipe in recipe_catalog:
+		if recipe is Dictionary and str(recipe.get("skillId", "")) == skill_id:
+			var req := int(recipe.get("requiredLevel", 1))
+			var st := "Forge" if str(recipe.get("stationId", "")) == "frontier-forge" else "Workbench"
+			var entry := "Lv %d %s: %s" % [req, st, str(recipe.get("name", recipe.get("id", "")))]
+			if req <= current_level:
+				unlocked.append(entry)
+			elif req < next_level:
+				next_level = req
+				next_unlock = entry
+	for item in market_catalog:
+		if item is Dictionary and str(item.get("requiredSkillId", "")) == skill_id and str(item.get("equipmentSlot", "")) != "":
+			var req := int(item.get("requiredSkillLevel", 1))
+			var item_id := str(item.get("id", ""))
+			var source := str(recipe_station_by_output.get(item_id, "Monster Drop / Merchant"))
+			var entry := "Lv %d Equip: %s [%s]" % [req, str(item.get("name", item_id)), source]
+			if req <= current_level:
+				unlocked.append(entry)
+			elif req < next_level:
+				next_level = req
+				next_unlock = entry
+	var lines: Array[String] = []
+	if unlocked.size() > 0:
+		lines.append("Unlocked -> " + unlocked[unlocked.size() - 1])
+	if not next_unlock.is_empty():
+		lines.append("Next -> " + next_unlock)
+	return "\n".join(lines)
 
 
 func _experience_for_level(level: int) -> int:

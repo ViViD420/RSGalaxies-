@@ -1820,3 +1820,20 @@ The procedural placement algorithm is deterministic by design and now has direct
     - `godot --headless --path . --script tests/interaction_hint_smoke_test.gd`: PASS (0 `SCRIPT ERROR:` / `ERROR:` lines).
     - `godot --headless --path . --script tests/player_controller_smoke_test.gd`: PASS (0 `SCRIPT ERROR:` / `ERROR:` lines).
     - `godot --headless --editor --path . --quit`: PASS (0 `SCRIPT ERROR:` / `ERROR:` lines).
+
+## Full 18-Skill Level Milestone Unlocks & Coinciding Attainment Chains — 2026-11-18
+
+- **Remote synchronization of previous checkpoint:**
+  - Attached `ViViD420/RSGalaxies-` and pushed commit `ded412f` (`Sync verified Tier 1-10 core expansion, HAM/attributes, Godot panels, and Antigravity skill`) to `origin/main`.
+- **Core progression expansion (every skill unlocks level-gated rewards with coinciding gathering/crafting/loot attainment paths):**
+  - `server/internal/game/gathering.go`: Expanded from 23 to **31 gathering nodes** by adding Tier 2 (Lv 2) and Tier 4 (Lv 4) nodes for all 4 non-mining gathering skills:
+    - **Woodcutting:** `ironwood-001` (`Ironwood Timber Stand`, Lv 2 -> `ironwood_log`), `starwood-001` (`Petrified Starwood Grove`, Lv 4 -> `petrified_starwood`).
+    - **Foraging:** `glowcap-001` (`Bioluminescent Glowcap Cluster`, Lv 2 -> `glowcap_fungus`), `sunblossom-001` (`Solaris Sunblossom Patch`, Lv 4 -> `sunblossom_petal`).
+    - **Farming:** `tuber-001` (`Irrigated Heart-Tuber Bed`, Lv 2 -> `tuber_root`), `starberry-001` (`Hydroponic Starberry Arbor`, Lv 4 -> `starberry_cluster`).
+    - **Scavenging:** `circuit-001` (`Abandoned Relay Array`, Lv 2 -> `circuit_board`), `capacitor-001` (`Crashed Orbital Pod Wreckage`, Lv 4 -> `quantum_capacitor`).
+  - `server/internal/game/items.go`: Expanded from 104 to **126 item definitions** (+8 gathering resources, +12 level-gated weapons/armor across `melee`, `ranged`, `strength`, `defense`, `unarmed`, `pistols`, and `magic`, and +2 culinary meals `hearty_tuber_stew` and `starberry_ambrosia`).
+  - `server/internal/game/crafting.go`: Expanded from 51 to **65 crafting recipes** so every new weapon, armor piece, and meal is craftable at `frontier-forge` or `frontier-workbench` using obtainable resources.
+  - `server/internal/game/loot.go`: Added weighted bonus drops for `studded_frontier_vest`, `vanguard_cleaver`, `colossus_breaker_greataxe`, `skirmisher_repeater_bow`, `circuit_board`, `titan_harness`, and `pulse_needler_pistol` across starter-zone monster harvest tables so milestone gear is also attainable through PvE combat.
+  - `server/internal/game/combat.go`: Updated `Player.AttackEnemy` so weapons gated directly on parent combat skills (`melee` or `ranged`) resolve their combat style (`blades` / `rifles`) and parent skill scaling (`melee` / `ranged`) cleanly without bleeding `strength` XP into `ranged`.
+  - `server/internal/game/crafting_test.go` & `server/internal/httpapi/server_test.go`: Added `TestEveryCoreSkillHasMilestoneUnlocksAndObtainableItemChains` verifying that all 18 skills have Level 2+ unlocks and every equippable item has at least one attainment source (crafting recipe, monster loot drop, or merchant), and updated HTTP catalog assertions (`31` nodes, `126` items, `65` recipes).
+  - `client/scripts/main.gd` & `client/tests/interaction_hint_smoke_test.gd`: Added 3D node visuals for all 8 new gathering nodes, updated `_select_forge_recipe()` and `_select_workbench_recipe()`, and added `_describe_skill_progression_unlocks()` to the `SKILLS` panel so each skill displays its unlocked and next milestone reward plus how to obtain it.

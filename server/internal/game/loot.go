@@ -44,7 +44,7 @@ var lootTableDefinitions = []LootTableDefinition{
 	{ID: "frontier-boar-harvest", Version: 1, GuaranteedDrops: []LootTableDrop{
 		{ItemID: "boar_hide", MinQuantity: 1, MaxQuantity: 1},
 	}, BonusRolls: []LootTableRoll{
-		{Drops: []LootTableDrop{{ItemID: "boar_tusk", Weight: 1500, MinQuantity: 1, MaxQuantity: 2}}},
+		{Drops: []LootTableDrop{{ItemID: "boar_tusk", Weight: 1500, MinQuantity: 1, MaxQuantity: 2}, {ItemID: "studded_frontier_vest", Weight: 800, MinQuantity: 1, MaxQuantity: 1}}},
 	}},
 	{ID: "frontier-rat-common", Version: 1, Drops: []LootTableDrop{
 		{ItemID: "rat_pelt", Weight: 7000, MinQuantity: 1, MaxQuantity: 1},
@@ -63,17 +63,17 @@ var lootTableDefinitions = []LootTableDefinition{
 	{ID: "canyon-stalker-harvest", Version: 1, GuaranteedDrops: []LootTableDrop{
 		{ItemID: "stalker_chitin", MinQuantity: 1, MaxQuantity: 2},
 	}, BonusRolls: []LootTableRoll{
-		{Drops: []LootTableDrop{{ItemID: "stalker_venom_sac", Weight: 2500, MinQuantity: 1, MaxQuantity: 2}}},
+		{Drops: []LootTableDrop{{ItemID: "stalker_venom_sac", Weight: 2500, MinQuantity: 1, MaxQuantity: 2}, {ItemID: "vanguard_cleaver", Weight: 900, MinQuantity: 1, MaxQuantity: 1}}},
 	}},
 	{ID: "ash-hound-harvest", Version: 1, GuaranteedDrops: []LootTableDrop{
 		{ItemID: "hound_fang", MinQuantity: 1, MaxQuantity: 2},
 	}, BonusRolls: []LootTableRoll{
-		{Drops: []LootTableDrop{{ItemID: "aether_crystal", Weight: 2000, MinQuantity: 1, MaxQuantity: 1}}},
+		{Drops: []LootTableDrop{{ItemID: "aether_crystal", Weight: 2000, MinQuantity: 1, MaxQuantity: 1}, {ItemID: "colossus_breaker_greataxe", Weight: 900, MinQuantity: 1, MaxQuantity: 1}}},
 	}},
 	{ID: "ruin-sentinel-harvest", Version: 1, GuaranteedDrops: []LootTableDrop{
 		{ItemID: "salvaged_scrap", MinQuantity: 1, MaxQuantity: 3},
 	}, BonusRolls: []LootTableRoll{
-		{Drops: []LootTableDrop{{ItemID: "sentinel_core", Weight: 2200, MinQuantity: 1, MaxQuantity: 1}}},
+		{Drops: []LootTableDrop{{ItemID: "sentinel_core", Weight: 2200, MinQuantity: 1, MaxQuantity: 1}, {ItemID: "skirmisher_repeater_bow", Weight: 1000, MinQuantity: 1, MaxQuantity: 1}}},
 	}},
 	{ID: "mire-drake-harvest", Version: 1, GuaranteedDrops: []LootTableDrop{
 		{ItemID: "drake_scale", MinQuantity: 1, MaxQuantity: 2},
@@ -93,7 +93,7 @@ var lootTableDefinitions = []LootTableDefinition{
 	{ID: "feral-drone-harvest", Version: 1, GuaranteedDrops: []LootTableDrop{
 		{ItemID: "salvaged_scrap", MinQuantity: 2, MaxQuantity: 3},
 	}, BonusRolls: []LootTableRoll{
-		{Drops: []LootTableDrop{{ItemID: "scavenger_servo", Weight: 2500, MinQuantity: 1, MaxQuantity: 2}}},
+		{Drops: []LootTableDrop{{ItemID: "scavenger_servo", Weight: 2500, MinQuantity: 1, MaxQuantity: 2}, {ItemID: "circuit_board", Weight: 2200, MinQuantity: 1, MaxQuantity: 2}}},
 	}},
 	{ID: "obsidian-wyrm-harvest", Version: 1, GuaranteedDrops: []LootTableDrop{
 		{ItemID: "wyrm_carapace", MinQuantity: 1, MaxQuantity: 2},
@@ -103,12 +103,12 @@ var lootTableDefinitions = []LootTableDefinition{
 	{ID: "thornback-behemoth-harvest", Version: 1, GuaranteedDrops: []LootTableDrop{
 		{ItemID: "behemoth_horn", MinQuantity: 1, MaxQuantity: 2},
 	}, BonusRolls: []LootTableRoll{
-		{Drops: []LootTableDrop{{ItemID: "orichalcum_ore", Weight: 2200, MinQuantity: 1, MaxQuantity: 2}}},
+		{Drops: []LootTableDrop{{ItemID: "orichalcum_ore", Weight: 2200, MinQuantity: 1, MaxQuantity: 2}, {ItemID: "titan_harness", Weight: 850, MinQuantity: 1, MaxQuantity: 1}}},
 	}},
 	{ID: "void-reaver-harvest", Version: 1, GuaranteedDrops: []LootTableDrop{
 		{ItemID: "reaver_plasma_coil", MinQuantity: 1, MaxQuantity: 2},
 	}, BonusRolls: []LootTableRoll{
-		{Drops: []LootTableDrop{{ItemID: "void_quartz", Weight: 2000, MinQuantity: 1, MaxQuantity: 1}}},
+		{Drops: []LootTableDrop{{ItemID: "void_quartz", Weight: 2000, MinQuantity: 1, MaxQuantity: 1}, {ItemID: "pulse_needler_pistol", Weight: 900, MinQuantity: 1, MaxQuantity: 1}}},
 	}},
 	{ID: "star-golem-harvest", Version: 1, GuaranteedDrops: []LootTableDrop{
 		{ItemID: "neutronium_ore", MinQuantity: 1, MaxQuantity: 2},

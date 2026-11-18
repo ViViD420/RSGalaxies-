@@ -288,3 +288,9 @@ Client Action #183 (run 42604378304) passed; #182 (42604361140) passed. Client #
 - [ ] Verify the 18-node / 86-item / 43-recipe / 14-enemy catalog expansion in `server.yml` and the `FRONTIER WORLD ATLAS & DIRECTORY` panel, `Med/Stim` quick-use action, keyboard hotkeys, and autorun toggle in `client.yml`.
 
 - [ ] Verify the 23-node / 104-item / 51-recipe / 19-enemy catalog expansion in `server.yml` and the `OPTIONS, CAMERA & CONTROLS` panel, First-Person/Third-Person camera toggle, and `reset_camera_behind_character()` in `client.yml`.
+
+## All-18-Skill Level Milestones & Coinciding Attainment Loops — 2026-11-18
+
+- [x] Add Lv 2 & Lv 4 gathering nodes for `woodcutting` (`ironwood-001`, `starwood-001`), `foraging` (`glowcap-001`, `sunblossom-001`), `farming` (`tuber-001`, `starberry-001`), and `scavenging` (`circuit-001`, `capacitor-001`) bringing the starter zone to **31 gathering nodes**.
+- [x] Add milestone weapons, armor, and culinary meals across `melee`, `ranged`, `strength`, `defense`, `unarmed`, `pistols`, `magic`, and `cooking` (**126 items** and **65 recipes** total) with dual attainment via crafting stations and monster harvest loot tables.
+- [x] Display current and next skill level unlocks with attainment sources in the Godot `SKILLS` panel (`_describe_skill_progression_unlocks`).

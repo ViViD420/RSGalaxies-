@@ -133,8 +133,14 @@ func (p *Player) AttackEnemy(enemy EnemyDefinition, state EnemyState, now time.T
 	styleSkillID := "unarmed"
 	if weaponID := p.Equipment["main_hand"]; weaponID != "" {
 		if weapon, exists := FindItem(weaponID); exists {
-			if weaponSkill, known := skillDefinition(weapon.RequiredSkillID); known && weaponSkill.ParentID != "" {
-				styleSkillID = weapon.RequiredSkillID
+			if weaponSkill, known := skillDefinition(weapon.RequiredSkillID); known {
+				if weaponSkill.ParentID != "" {
+					styleSkillID = weapon.RequiredSkillID
+				} else if weapon.RequiredSkillID == "ranged" {
+					styleSkillID = "rifles"
+				} else if weapon.RequiredSkillID == "melee" {
+					styleSkillID = "blades"
+				}
 			}
 		}
 	}

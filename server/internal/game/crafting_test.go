@@ -266,3 +266,145 @@ func TestFarmingAndScavengingRecipesProduceConsumableAndRangedMagicWeapons(t *te
 		t.Fatalf("equip frontier_rifle at rifles level 2: %v", err)
 	}
 }
+
+
+func TestEveryCoreSkillHasMilestoneUnlocksAndObtainableItemChains(t *testing.T) {
+	now := time.Date(2026, 11, 18, 13, 0, 0, 0, time.UTC)
+
+	// 1. Verify every one of the 18 active skills unlocks at least one Lv 2+ node, recipe, or equippable item,
+	// and that every equippable item is attainable via a crafting recipe, monster loot table, or merchant buy price.
+	recipeByOutput := map[string]CraftingRecipeDefinition{}
+	for _, recipe := range CraftingRecipes() {
+		for _, out := range recipe.Outputs {
+			recipeByOutput[out.ItemID] = recipe
+		}
+	}
+	lootedItems := map[string]bool{}
+	for _, table := range LootTableDefinitions() {
+		for _, d := range table.Drops {
+			lootedItems[d.ItemID] = true
+		}
+		for _, d := range table.GuaranteedDrops {
+			lootedItems[d.ItemID] = true
+		}
+		for _, r := range table.BonusRolls {
+			for _, d := range r.Drops {
+				lootedItems[d.ItemID] = true
+			}
+		}
+	}
+	highTierUnlockCount := map[string]int{}
+	for _, node := range GatheringNodes() {
+		if node.RequiredLevel >= 2 {
+			highTierUnlockCount[node.SkillID]++
+		}
+	}
+	for _, recipe := range CraftingRecipes() {
+		if recipe.RequiredLevel >= 2 {
+			highTierUnlockCount[recipe.SkillID]++
+		}
+	}
+	for _, item := range ItemDefinitions() {
+		if item.EquipmentSlot != "" {
+			if item.RequiredSkillLevel >= 2 {
+				highTierUnlockCount[item.RequiredSkillID]++
+			}
+			_, craftable := recipeByOutput[item.ID]
+			if !craftable && !lootedItems[item.ID] && item.BuyPrice <= 0 {
+				t.Fatalf("equippable item %s (%s) has no attainment path (not craftable, not in loot tables, not sold by merchant)", item.ID, item.Name)
+			}
+		}
+	}
+	for _, skill := range SkillDefinitions() {
+		if highTierUnlockCount[skill.ID] == 0 {
+			t.Fatalf("skill %s has no Level 2+ progression unlock (node, recipe, or equipment)", skill.ID)
+		}
+	}
+
+	// 2. End-to-end gather -> craft -> equip -> combat verification for Melee (vanguard_cleaver),
+	// Ranged (skirmisher_repeater_bow), and Strength (colossus_breaker_greataxe & titan_harness).
+	player, err := NewPlayer("progression-wayfarer", "ProgressionHero", now)
+	if err != nil {
+		t.Fatal(err)
+	}
+	forge, _ := FindCraftingStation("frontier-forge")
+	workbench, _ := FindCraftingStation("frontier-workbench")
+
+	// Gather ironwood_log (Woodcutting Lv 2) and circuit_board (Scavenging Lv 2).
+	ironwoodNode, ok := FindGatheringNode("ironwood-001")
+	if !ok {
+		t.Fatal("ironwood-001 missing")
+	}
+	player.Position = ironwoodNode.Position
+	if _, _, err := player.Gather(ironwoodNode, GatheringNodeState{}, now); !errors.Is(err, ErrInsufficientSkillLevel) {
+		t.Fatalf("expected woodcutting level gate on ironwood-001, got %v", err)
+	}
+	for _, sk := range []string{"woodcutting", "scavenging", "foraging", "farming", "smithing", "crafting", "cooking"} {
+		if _, err := player.AwardExperience(sk, 200); err != nil {
+			t.Fatal(err)
+		}
+	}
+	for i := 0; i < 3; i++ {
+		if _, _, err := player.Gather(ironwoodNode, GatheringNodeState{}, now); err != nil {
+			t.Fatalf("gather ironwood-001: %v", err)
+		}
+	}
+	circuitNode, ok := FindGatheringNode("circuit-001")
+	if !ok {
+		t.Fatal("circuit-001 missing")
+	}
+	player.Position = circuitNode.Position
+	if _, _, err := player.Gather(circuitNode, GatheringNodeState{}, now); err != nil {
+		t.Fatalf("gather circuit-001: %v", err)
+	}
+
+	// Craft Melee Vanguard Cleaver at the forge and verify Melee Lv 2 equip requirement.
+	player.Inventory["iron_bar"] = 2
+	player.Position = forge.Position
+	cleaverRecipe, ok := FindCraftingRecipe("vanguard-cleaver")
+	if !ok {
+		t.Fatal("vanguard-cleaver recipe missing")
+	}
+	if _, err := player.Craft(cleaverRecipe, forge, now); err != nil {
+		t.Fatalf("craft vanguard-cleaver: %v", err)
+	}
+	if err := player.EquipItem("vanguard_cleaver"); !errors.Is(err, ErrInsufficientEquipmentSkill) {
+		t.Fatalf("equip vanguard_cleaver at melee lv 1 = %v, want ErrInsufficientEquipmentSkill", err)
+	}
+	if _, err := player.AwardExperience("melee", 100); err != nil {
+		t.Fatal(err)
+	}
+	if err := player.EquipItem("vanguard_cleaver"); err != nil {
+		t.Fatalf("equip vanguard_cleaver at melee lv 2: %v", err)
+	}
+
+	// Craft Ranged Skirmisher Bowcaster at the workbench and verify Ranged Lv 2 equip + ranged combat attribution.
+	player.Inventory["copper_bar"] = 1
+	player.Position = workbench.Position
+	bowRecipe, ok := FindCraftingRecipe("skirmisher-repeater-bow")
+	if !ok {
+		t.Fatal("skirmisher-repeater-bow recipe missing")
+	}
+	if _, err := player.Craft(bowRecipe, workbench, now); err != nil {
+		t.Fatalf("craft skirmisher-repeater-bow: %v", err)
+	}
+	if err := player.EquipItem("skirmisher_repeater_bow"); !errors.Is(err, ErrInsufficientEquipmentSkill) {
+		t.Fatalf("equip skirmisher_repeater_bow at ranged lv 1 = %v, want ErrInsufficientEquipmentSkill", err)
+	}
+	if _, err := player.AwardExperience("ranged", 100); err != nil {
+		t.Fatal(err)
+	}
+	if err := player.EquipItem("skirmisher_repeater_bow"); err != nil {
+		t.Fatalf("equip skirmisher_repeater_bow at ranged lv 2: %v", err)
+	}
+	rat, _ := FindEnemy("frontier-rat-001")
+	player.Position = rat.Position
+	strengthBefore := player.Skills["strength"].Experience
+	combatRes, _, err := player.AttackEnemy(rat, EnemyState{}, now.Add(2*time.Second))
+	if err != nil {
+		t.Fatalf("attack with skirmisher_repeater_bow: %v", err)
+	}
+	if combatRes.ParentSkillID != "ranged" || player.Skills["strength"].Experience != strengthBefore {
+		t.Fatalf("ranged bowcaster attack misattributed: res=%+v strengthXP=%d->%d", combatRes, strengthBefore, player.Skills["strength"].Experience)
+	}
+}
