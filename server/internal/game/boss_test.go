@@ -31,11 +31,13 @@ func bossInput(encounterID string, health int, now time.Time, targetX float64) B
 
 func TestBossEncounterCatalogIsValidAndDefensivelyCopied(t *testing.T) {
 	definitions := BossEncounterDefinitions()
-	if len(definitions) != 1 {
-		t.Fatalf("boss definition count=%d, want 1", len(definitions))
+	if len(definitions) != 2 {
+		t.Fatalf("boss definition count=%d, want 2", len(definitions))
 	}
-	if err := ValidateBossEncounterDefinition(definitions[0]); err != nil {
-		t.Fatalf("catalog definition is invalid: %v", err)
+	for _, def := range definitions {
+		if err := ValidateBossEncounterDefinition(def); err != nil {
+			t.Fatalf("catalog definition %s is invalid: %v", def.EnemyID, err)
+		}
 	}
 	definitions[0].Phases[0].AbilityIDs[0] = "corrupted"
 	definitions[0].Abilities[0].Damage = 999
@@ -310,4 +312,87 @@ func TestStonebackColossusIsRegisteredWithBossAndRewardDefinitions(t *testing.T)
 		t.Fatalf("Stoneback loot table %q is missing", enemy.LootTableID)
 	}
 }
+
+func TestKraytJadSovereignThreePhaseBossEncounterAndLootTable(t *testing.T) {
+	enemy, ok := FindEnemy("krayt-jad-sovereign")
+	if !ok {
+		t.Fatal("Ancient Krayt-Jad Sovereign is missing from the enemy catalog")
+	}
+	if enemy.MaxHealth != 320 || enemy.Defense != 8 || enemy.Experience != 1200 ||
+		enemy.Attack != 0 || enemy.LootTableID != "krayt-jad-sovereign-harvest" ||
+		enemy.Position.ZoneID != DefaultWorldZoneID || enemy.RespawnSeconds != 300 {
+		t.Fatalf("unexpected Krayt-Jad Sovereign enemy definition: %+v", enemy)
+	}
+	definition, ok := FindBossEncounterForEnemy(enemy.ID)
+	if !ok || definition.ID != "krayt-jad-sovereign" || len(definition.Phases) != 3 {
+		t.Fatalf("Krayt-Jad Sovereign boss definition = %+v, found=%v", definition, ok)
+	}
+
+	start := time.Date(2026, 11, 18, 15, 0, 0, 0, time.UTC)
+	input := func(health int, now time.Time) BossEncounterInput {
+		return BossEncounterInput{
+			EncounterID:    "krayt-jad-cycle-1",
+			Health:         health,
+			MaxHealth:      enemy.MaxHealth,
+			BossPosition:   enemy.Position,
+			TargetPosition: WorldPosition{ZoneID: DefaultWorldZoneID, X: enemy.Position.X + 2.0, Z: enemy.Position.Z},
+			Now:            now,
+		}
+	}
+
+	// Phase 1 (100% HP -> armored-carapace, starts rancor-cleave)
+	p1, err := AdvanceBossEncounter(definition, BossEncounterState{}, input(320, start))
+	if err != nil {
+		t.Fatal(err)
+	}
+	if p1.State.PhaseID != "armored-carapace" || !p1.AbilityStarted || p1.AbilityID != "rancor-cleave" {
+		t.Fatalf("phase 1 start = %+v", p1)
+	}
+	p1Resolved, err := AdvanceBossEncounter(definition, p1.State, input(320, start.Add(1500*time.Millisecond)))
+	if err != nil {
+		t.Fatal(err)
+	}
+	if !p1Resolved.AbilityResolved || p1Resolved.AbilityID != "rancor-cleave" || p1Resolved.Damage != 16 {
+		t.Fatalf("phase 1 rancor-cleave resolution = %+v", p1Resolved)
+	}
+
+	// Phase 2 (<= 65% HP -> 200/320 = 62.5% -> molten-fury)
+	p2Transition, err := AdvanceBossEncounter(definition, p1Resolved.State, input(200, start.Add(2*time.Second)))
+	if err != nil {
+		t.Fatal(err)
+	}
+	if !p2Transition.PhaseChanged || p2Transition.State.PhaseID != "molten-fury" {
+		t.Fatalf("phase 2 transition = %+v", p2Transition)
+	}
+
+	// Phase 3 (<= 30% HP -> 90/320 = 28.125% -> sovereign-cataclysm)
+	p3Transition, err := AdvanceBossEncounter(definition, p2Transition.State, input(90, start.Add(3*time.Second)))
+	if err != nil {
+		t.Fatal(err)
+	}
+	if !p3Transition.PhaseChanged || p3Transition.State.PhaseID != "sovereign-cataclysm" {
+		t.Fatalf("phase 3 transition = %+v", p3Transition)
+	}
+
+	// Verify multi-roll boss loot table produces guaranteed boss core + scales + 3 independent bonus rolls
+	drops, err := RollLootTableDrops(enemy.LootTableID, []LootRollInput{
+		{DropRoll: 0, QuantityRoll: 9999}, // Guaranteed 1: sovereign_jad_fire_core x2
+		{DropRoll: 0, QuantityRoll: 9999}, // Guaranteed 2: ancient_krayt_dragon_scale x4
+		{DropRoll: 0, QuantityRoll: 9999}, // Bonus 1: krayt_wyrm_pearl x2
+		{DropRoll: 0, QuantityRoll: 0},    // Bonus 2: krayt_fang_whip_blade x1
+		{DropRoll: 0, QuantityRoll: 0},    // Bonus 3: torva_gorax_warplate x1
+	})
+	if err != nil {
+		t.Fatalf("roll krayt-jad-sovereign-harvest: %v", err)
+	}
+	if len(drops) != 5 ||
+		drops[0] != (ItemQuantity{ItemID: "sovereign_jad_fire_core", Quantity: 2}) ||
+		drops[1] != (ItemQuantity{ItemID: "ancient_krayt_dragon_scale", Quantity: 4}) ||
+		drops[2] != (ItemQuantity{ItemID: "krayt_wyrm_pearl", Quantity: 2}) ||
+		drops[3] != (ItemQuantity{ItemID: "krayt_fang_whip_blade", Quantity: 1}) ||
+		drops[4] != (ItemQuantity{ItemID: "torva_gorax_warplate", Quantity: 1}) {
+		t.Fatalf("unexpected Krayt-Jad Sovereign boss drops: %+v", drops)
+	}
+}
+
 

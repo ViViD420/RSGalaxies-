@@ -83,6 +83,22 @@ var bossEncounterDefinitions = []BossEncounterDefinition{
 			{ID: "ground-shatter", TelegraphDuration: 2 * time.Second, Cooldown: 8 * time.Second, MinRange: 0, MaxRange: 6, Damage: 12},
 		},
 	},
+	{
+		ID: "krayt-jad-sovereign",
+		Version: 1,
+		EnemyID: "krayt-jad-sovereign",
+		Phases: []BossPhaseDefinition{
+			{ID: "armored-carapace", EnterAtOrBelowPercent: 100, AbilityIDs: []string{"rancor-cleave", "venom-acid-spit"}},
+			{ID: "molten-fury", EnterAtOrBelowPercent: 65, AbilityIDs: []string{"rancor-cleave", "venom-acid-spit", "jad-magma-slam"}},
+			{ID: "sovereign-cataclysm", EnterAtOrBelowPercent: 30, AbilityIDs: []string{"rancor-cleave", "jad-magma-slam", "krayt-singularity-roar"}},
+		},
+		Abilities: []BossAbilityDefinition{
+			{ID: "rancor-cleave", TelegraphDuration: 1500 * time.Millisecond, Cooldown: 4 * time.Second, MinRange: 0, MaxRange: 3.8, Damage: 16},
+			{ID: "venom-acid-spit", TelegraphDuration: 1800 * time.Millisecond, Cooldown: 6 * time.Second, MinRange: 0, MaxRange: 6.0, Damage: 20},
+			{ID: "jad-magma-slam", TelegraphDuration: 2000 * time.Millisecond, Cooldown: 7 * time.Second, MinRange: 0, MaxRange: 5.5, Damage: 25},
+			{ID: "krayt-singularity-roar", TelegraphDuration: 2200 * time.Millisecond, Cooldown: 9 * time.Second, MinRange: 0, MaxRange: 7.0, Damage: 30},
+		},
+	},
 }
 
 func BossEncounterDefinitions() []BossEncounterDefinition {

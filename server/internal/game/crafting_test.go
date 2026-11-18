@@ -295,12 +295,16 @@ func TestEveryCoreSkillHasMilestoneUnlocksAndObtainableItemChains(t *testing.T) 
 	}
 	highTierUnlockCount := map[string]int{}
 	tierSixPlusUnlockCount := map[string]int{}
+	tierTenUnlockCount := map[string]int{}
 	for _, node := range GatheringNodes() {
 		if node.RequiredLevel >= 2 {
 			highTierUnlockCount[node.SkillID]++
 		}
 		if node.RequiredLevel >= 6 {
 			tierSixPlusUnlockCount[node.SkillID]++
+		}
+		if node.RequiredLevel >= 10 {
+			tierTenUnlockCount[node.SkillID]++
 		}
 	}
 	for _, recipe := range CraftingRecipes() {
@@ -310,6 +314,9 @@ func TestEveryCoreSkillHasMilestoneUnlocksAndObtainableItemChains(t *testing.T) 
 		if recipe.RequiredLevel >= 6 {
 			tierSixPlusUnlockCount[recipe.SkillID]++
 		}
+		if recipe.RequiredLevel >= 10 {
+			tierTenUnlockCount[recipe.SkillID]++
+		}
 	}
 	for _, item := range ItemDefinitions() {
 		if item.EquipmentSlot != "" {
@@ -318,6 +325,9 @@ func TestEveryCoreSkillHasMilestoneUnlocksAndObtainableItemChains(t *testing.T) 
 			}
 			if item.RequiredSkillLevel >= 6 {
 				tierSixPlusUnlockCount[item.RequiredSkillID]++
+			}
+			if item.RequiredSkillLevel >= 10 {
+				tierTenUnlockCount[item.RequiredSkillID]++
 			}
 			_, craftable := recipeByOutput[item.ID]
 			if !craftable && !lootedItems[item.ID] && item.BuyPrice <= 0 {
@@ -332,14 +342,20 @@ func TestEveryCoreSkillHasMilestoneUnlocksAndObtainableItemChains(t *testing.T) 
 		if tierSixPlusUnlockCount[skill.ID] == 0 {
 			t.Fatalf("skill %s has no Level 6+ progression unlock (node, recipe, or equipment)", skill.ID)
 		}
+		if tierTenUnlockCount[skill.ID] == 0 {
+			t.Fatalf("skill %s has no Level 10 capstone unlock (node, recipe, or equipment)", skill.ID)
+		}
 	}
 	for _, dualID := range []string{
 		"overlord_siege_maul", "abyssal_artillery_cannon", "juggernaut_war_plate", "dreadnought_aegis_helm",
 		"sovereign_greatsword", "solaris_halberd", "chronite_kinetic_gauntlets", "cryo_pulse_blaster",
 		"elderwood_longbow", "sunfire_focus_scepter",
+		"gorax_titan_maul", "zaryte_bowcaster_cannon", "torva_gorax_warplate", "elysian_spirit_cuirass",
+		"infernal_jad_greathelm", "krayt_fang_whip_blade", "noxious_acklay_halberd", "beskar_dragon_claws",
+		"westar_armadyl_blaster", "twisted_wroshyr_longbow", "tumeken_ichor_scepter",
 	} {
 		if _, craftable := recipeByOutput[dualID]; !craftable || !lootedItems[dualID] {
-			t.Fatalf("tier 6-8 masterwork item %s missing dual attainment: craftable=%v looted=%v", dualID, craftable, lootedItems[dualID])
+			t.Fatalf("masterwork/apex item %s missing dual attainment: craftable=%v looted=%v", dualID, craftable, lootedItems[dualID])
 		}
 	}
 

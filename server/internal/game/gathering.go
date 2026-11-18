@@ -86,6 +86,12 @@ var gatheringNodes = []GatheringNodeDefinition{
 	{ID: "celestialfruit-001", Name: "Celestial Nectar Orchard", SkillID: "farming", RequiredLevel: 8, ResourceID: "celestial_nectar_fruit", Experience: 240, Position: WorldPosition{ZoneID: DefaultWorldZoneID, X: -42, Z: -14}, InteractionRange: 3, MaxCharges: 2, RespawnSeconds: 145},
 	{ID: "servoarray-001", Name: "Derelict Mech Chassis", SkillID: "scavenging", RequiredLevel: 6, ResourceID: "titan_actuator_coil", Experience: 165, Position: WorldPosition{ZoneID: DefaultWorldZoneID, X: -16, Z: -32}, InteractionRange: 3, MaxCharges: 2, RespawnSeconds: 115},
 	{ID: "singularity-001", Name: "Shattered Warp Core Wreckage", SkillID: "scavenging", RequiredLevel: 8, ResourceID: "singularity_core_cell", Experience: 245, Position: WorldPosition{ZoneID: DefaultWorldZoneID, X: 32, Z: 42}, InteractionRange: 3, MaxCharges: 2, RespawnSeconds: 150},
+	// Tier 10 Capstone Gathering Nodes Across All 5 Gathering Skills (+5 nodes -> 44 total)
+	{ID: "runite-banite-001", Name: "Runic Banite Monolith", SkillID: "mining", RequiredLevel: 10, ResourceID: "runic_banite_ore", Experience: 340, Position: WorldPosition{ZoneID: DefaultWorldZoneID, X: -46, Z: 16}, InteractionRange: 3, MaxCharges: 2, RespawnSeconds: 185},
+	{ID: "elder-wroshyr-001", Name: "Elder Wroshyr-Heart Great-Tree", SkillID: "woodcutting", RequiredLevel: 10, ResourceID: "elder_wroshyr_timber", Experience: 330, Position: WorldPosition{ZoneID: DefaultWorldZoneID, X: 46, Z: -18}, InteractionRange: 3, MaxCharges: 2, RespawnSeconds: 180},
+	{ID: "torstol-bloom-001", Name: "Torstol-Bacta Sovereign Patch", SkillID: "foraging", RequiredLevel: 10, ResourceID: "sovereign_torstol_leaf", Experience: 330, Position: WorldPosition{ZoneID: DefaultWorldZoneID, X: -28, Z: 44}, InteractionRange: 3, MaxCharges: 2, RespawnSeconds: 180},
+	{ID: "spirit-guarana-001", Name: "Spirit-Muja Sacred Arbor", SkillID: "farming", RequiredLevel: 10, ResourceID: "spirit_muja_fruit", Experience: 330, Position: WorldPosition{ZoneID: DefaultWorldZoneID, X: 28, Z: -42}, InteractionRange: 3, MaxCharges: 2, RespawnSeconds: 180},
+	{ID: "rakatan-hypercore-001", Name: "Ancient Hyper-Gate Relic", SkillID: "scavenging", RequiredLevel: 10, ResourceID: "hypergate_relic_core", Experience: 340, Position: WorldPosition{ZoneID: DefaultWorldZoneID, X: -14, Z: 46}, InteractionRange: 3, MaxCharges: 2, RespawnSeconds: 185},
 }
 
 func GatheringNodes() []GatheringNodeDefinition {

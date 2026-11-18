@@ -186,6 +186,71 @@ var lootTableDefinitions = []LootTableDefinition{
 			{ItemID: "dreadnought_aegis_helm", Weight: 450, MinQuantity: 1, MaxQuantity: 1},
 		}},
 	}},
+	// Tier 9-10 Elite Frontier Monster & Level 10 Apex Boss Harvest Tables (+5 tables -> 31 total)
+	{ID: "dune-krayt-drake-harvest", Version: 1, GuaranteedDrops: []LootTableDrop{
+		{ItemID: "krayt_wyrm_pearl", MinQuantity: 1, MaxQuantity: 2},
+	}, BonusRolls: []LootTableRoll{
+		{Drops: []LootTableDrop{
+			{ItemID: "runic_banite_ore", Weight: 2200, MinQuantity: 1, MaxQuantity: 2},
+			{ItemID: "krayt_fang_whip_blade", Weight: 450, MinQuantity: 1, MaxQuantity: 1},
+			{ItemID: "westar_armadyl_blaster", Weight: 450, MinQuantity: 1, MaxQuantity: 1},
+		}},
+	}},
+	{ID: "dathomir-hexweaver-harvest", Version: 1, GuaranteedDrops: []LootTableDrop{
+		{ItemID: "ichor_spirit_sigil", MinQuantity: 1, MaxQuantity: 2},
+	}, BonusRolls: []LootTableRoll{
+		{Drops: []LootTableDrop{
+			{ItemID: "sovereign_torstol_leaf", Weight: 2200, MinQuantity: 1, MaxQuantity: 2},
+			{ItemID: "tumeken_ichor_scepter", Weight: 450, MinQuantity: 1, MaxQuantity: 1},
+			{ItemID: "elysian_spirit_cuirass", Weight: 450, MinQuantity: 1, MaxQuantity: 1},
+		}},
+	}},
+	{ID: "acklay-reaper-harvest", Version: 1, GuaranteedDrops: []LootTableDrop{
+		{ItemID: "noxious_reaper_limb", MinQuantity: 1, MaxQuantity: 2},
+	}, BonusRolls: []LootTableRoll{
+		{Drops: []LootTableDrop{
+			{ItemID: "elder_wroshyr_timber", Weight: 2200, MinQuantity: 1, MaxQuantity: 2},
+			{ItemID: "noxious_acklay_halberd", Weight: 450, MinQuantity: 1, MaxQuantity: 1},
+			{ItemID: "zaryte_bowcaster_cannon", Weight: 450, MinQuantity: 1, MaxQuantity: 1},
+		}},
+	}},
+	{ID: "gorax-behemoth-harvest", Version: 1, GuaranteedDrops: []LootTableDrop{
+		{ItemID: "bandosian_gorax_tasset", MinQuantity: 1, MaxQuantity: 2},
+	}, BonusRolls: []LootTableRoll{
+		{Drops: []LootTableDrop{
+			{ItemID: "hypergate_relic_core", Weight: 2200, MinQuantity: 1, MaxQuantity: 2},
+			{ItemID: "gorax_titan_maul", Weight: 450, MinQuantity: 1, MaxQuantity: 1},
+			{ItemID: "torva_gorax_warplate", Weight: 450, MinQuantity: 1, MaxQuantity: 1},
+			{ItemID: "beskar_dragon_claws", Weight: 450, MinQuantity: 1, MaxQuantity: 1},
+		}},
+	}},
+	{ID: "krayt-jad-sovereign-harvest", Version: 1, GuaranteedDrops: []LootTableDrop{
+		{ItemID: "sovereign_jad_fire_core", MinQuantity: 1, MaxQuantity: 2},
+		{ItemID: "ancient_krayt_dragon_scale", MinQuantity: 2, MaxQuantity: 4},
+	}, BonusRolls: []LootTableRoll{
+		{Drops: []LootTableDrop{
+			{ItemID: "krayt_wyrm_pearl", Weight: 2800, MinQuantity: 1, MaxQuantity: 2},
+			{ItemID: "ichor_spirit_sigil", Weight: 2400, MinQuantity: 1, MaxQuantity: 2},
+			{ItemID: "noxious_reaper_limb", Weight: 2400, MinQuantity: 1, MaxQuantity: 2},
+			{ItemID: "bandosian_gorax_tasset", Weight: 2400, MinQuantity: 1, MaxQuantity: 2},
+		}},
+		{Drops: []LootTableDrop{
+			{ItemID: "krayt_fang_whip_blade", Weight: 900, MinQuantity: 1, MaxQuantity: 1},
+			{ItemID: "noxious_acklay_halberd", Weight: 900, MinQuantity: 1, MaxQuantity: 1},
+			{ItemID: "beskar_dragon_claws", Weight: 900, MinQuantity: 1, MaxQuantity: 1},
+			{ItemID: "westar_armadyl_blaster", Weight: 900, MinQuantity: 1, MaxQuantity: 1},
+			{ItemID: "twisted_wroshyr_longbow", Weight: 900, MinQuantity: 1, MaxQuantity: 1},
+			{ItemID: "tumeken_ichor_scepter", Weight: 900, MinQuantity: 1, MaxQuantity: 1},
+			{ItemID: "gorax_titan_maul", Weight: 900, MinQuantity: 1, MaxQuantity: 1},
+			{ItemID: "zaryte_bowcaster_cannon", Weight: 900, MinQuantity: 1, MaxQuantity: 1},
+		}},
+		{Drops: []LootTableDrop{
+			{ItemID: "torva_gorax_warplate", Weight: 1200, MinQuantity: 1, MaxQuantity: 1},
+			{ItemID: "elysian_spirit_cuirass", Weight: 1200, MinQuantity: 1, MaxQuantity: 1},
+			{ItemID: "infernal_jad_greathelm", Weight: 1200, MinQuantity: 1, MaxQuantity: 1},
+			{ItemID: "overload_bacta_flask", Weight: 2400, MinQuantity: 1, MaxQuantity: 2},
+		}},
+	}},
 }
 
 func LootTableDefinitions() []LootTableDefinition {

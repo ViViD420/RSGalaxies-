@@ -146,6 +146,10 @@ func _run_interaction_hint_smoke_test() -> void:
 	if str(main_node.call("_select_forge_recipe")) != "sovereign-greatsword":
 		_fail("Forge recipe selector did not prioritize sovereign-greatsword for Tier 8 Blades progression.")
 		return
+	main_node.set("current_inventory", {"runic_banite_bar": 2, "krayt_wyrm_pearl": 1, "hypergate_relic_core": 1})
+	if str(main_node.call("_select_forge_recipe")) != "krayt-fang-whip-blade":
+		_fail("Forge recipe selector did not prioritize krayt-fang-whip-blade for Tier 10 Blades progression.")
+		return
 	main_node.set("current_inventory", {"ironwood_log": 2, "circuit_board": 1, "copper_bar": 1})
 	if str(main_node.call("_select_workbench_recipe")) != "skirmisher-repeater-bow":
 		_fail("Workbench recipe selector did not prioritize skirmisher-repeater-bow for Ranged progression.")
@@ -154,19 +158,25 @@ func _run_interaction_hint_smoke_test() -> void:
 	if str(main_node.call("_select_workbench_recipe")) != "elderwood-longbow":
 		_fail("Workbench recipe selector did not prioritize elderwood-longbow for Tier 8 Rifles progression.")
 		return
+	main_node.set("current_inventory", {"sovereign_torstol_leaf": 2, "spirit_muja_fruit": 1, "sovereign_jad_fire_core": 1})
+	if str(main_node.call("_select_workbench_recipe")) != "overload-bacta-flask":
+		_fail("Workbench recipe selector did not prioritize overload-bacta-flask for Tier 10 Cooking progression.")
+		return
 	main_node.set("market_catalog", [
 		{"id": "vanguard_cleaver", "name": "Melee Vanguard Cleaver", "equipmentSlot": "main_hand", "requiredSkillId": "melee", "requiredSkillLevel": 2},
 		{"id": "warlord_shock_maul", "name": "Melee Warlord Shock Maul", "equipmentSlot": "main_hand", "requiredSkillId": "melee", "requiredSkillLevel": 4},
-		{"id": "overlord_siege_maul", "name": "Melee Overlord Siege Maul", "equipmentSlot": "main_hand", "requiredSkillId": "melee", "requiredSkillLevel": 7}
+		{"id": "overlord_siege_maul", "name": "Melee Overlord Siege Maul", "equipmentSlot": "main_hand", "requiredSkillId": "melee", "requiredSkillLevel": 7},
+		{"id": "gorax_titan_maul", "name": "Gorax Titan Shock-Maul", "equipmentSlot": "main_hand", "requiredSkillId": "melee", "requiredSkillLevel": 10}
 	])
 	main_node.set("recipe_catalog", [
 		{"id": "vanguard-cleaver", "name": "Forge Melee Vanguard Cleaver", "skillId": "smithing", "requiredLevel": 2, "stationId": "frontier-forge", "outputs": [{"itemId": "vanguard_cleaver", "quantity": 1}]},
 		{"id": "warlord-shock-maul", "name": "Forge Melee Warlord Shock Maul", "skillId": "smithing", "requiredLevel": 4, "stationId": "frontier-forge", "outputs": [{"itemId": "warlord_shock_maul", "quantity": 1}]},
-		{"id": "overlord-siege-maul", "name": "Forge Melee Overlord Siege Maul", "skillId": "smithing", "requiredLevel": 7, "stationId": "frontier-forge", "outputs": [{"itemId": "overlord_siege_maul", "quantity": 1}]}
+		{"id": "overlord-siege-maul", "name": "Forge Melee Overlord Siege Maul", "skillId": "smithing", "requiredLevel": 7, "stationId": "frontier-forge", "outputs": [{"itemId": "overlord_siege_maul", "quantity": 1}]},
+		{"id": "gorax-titan-maul", "name": "Forge Gorax Titan Shock-Maul", "skillId": "smithing", "requiredLevel": 10, "stationId": "frontier-forge", "outputs": [{"itemId": "gorax_titan_maul", "quantity": 1}]}
 	])
-	var melee_unlock_text := str(main_node.call("_describe_skill_progression_unlocks", "melee", 4))
-	if not melee_unlock_text.contains("Melee Warlord Shock Maul") or not melee_unlock_text.contains("Melee Overlord Siege Maul"):
-		_fail("Skill unlock summary did not report Lv 4 unlocked and Lv 7 next Melee equipment milestones: " + melee_unlock_text)
+	var melee_unlock_text := str(main_node.call("_describe_skill_progression_unlocks", "melee", 7))
+	if not melee_unlock_text.contains("Melee Overlord Siege Maul") or not melee_unlock_text.contains("Gorax Titan Shock-Maul"):
+		_fail("Skill unlock summary did not report Lv 7 unlocked and Lv 10 next Melee equipment milestones: " + melee_unlock_text)
 		return
 
 	print("PASS: contextual interaction hints select the nearest gathering target, show range guidance, expose pending state, hide before character selection, select station recipes, build Crafting Schematics, Character Vitals, World Atlas and Options panels, sync HAM/Secondary attributes and report malformed/startup errors.")

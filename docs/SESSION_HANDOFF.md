@@ -1865,6 +1865,36 @@ The procedural placement algorithm is deterministic by design and now has direct
   - `server/internal/storage/postgres/encounter_rewards_integration_test.go`: `TestPostgresEncounterRewardClaimsAreDurableAndIdempotencyScoped` registered `DELETE FROM enemy_encounter_settlements` before `cleanupTestAccounts(db, account.ID)`. Because `enemy_encounter_reward_claims` references `enemy_encounter_settlements` with `ON DELETE RESTRICT` and `players` with `ON DELETE CASCADE`, deleting settlements before cascading the player's reward claims failed on the foreign-key constraint across repeated runs against the same database. Reordered cleanup so `cleanupTestAccounts` executes before `DELETE FROM enemy_encounter_settlements`.
 - **Client 3D world & UI synchronization:**
   - `client/scripts/main.gd` & `client/tests/interaction_hint_smoke_test.gd`: Added 3D visual builders for all 8 Tier 6–8 gathering nodes, distinct color palettes for the 5 new frontier monsters, Tier 6–8 recipe selectors in `_select_forge_recipe()` and `_select_workbench_recipe()`, and expanded smoke test coverage.
-- **Local verification evidence:**
+- **Local & GitHub Actions verification evidence:**
   - `go test -race -count=1 ./internal/game ./internal/httpapi ./internal/auth ./internal/storage/postgres` (with live PostgreSQL 16.2) & `go vet ./...`: PASS.
   - Godot 4.3 headless smoke tests (`interaction_hint_smoke_test.gd`, `player_controller_smoke_test.gd`) and `--editor --quit`: PASS with 0 errors.
+  - **GitHub Actions on commit `97d9d0b`:**
+    - `Server CI` (`server.yml`, run `44325652953`): **PASSED** in 3m9s (`go test -race ./...` with PostgreSQL 16 and `go vet ./...`).
+    - `Client CI` (`client.yml`, run `44325652933`): **PASSED** (`godot-check` in 42s and `android-apk` in 58s).
+
+## Level 10 Full-Roster Capstone Unlocks, 4 Elite Creatures & Ancient Krayt-Jad Sovereign 3-Phase Boss Encounter — 2026-11-18
+
+- **Server progression, elite creature & 3-phase boss encounter expansion (all 18 skills reach Level 10 capstone unlocks with SWG/OSRS/RS3-inspired original designs):**
+  - `server/internal/game/gathering.go`: Expanded from 39 to **44 gathering nodes** (+5 Level 10 capstone nodes across all 5 gathering skills):
+    - **Mining (Lv 10):** `runite-banite-001` (`Runic Banite Monolith` -> `runic_banite_ore`, 165 XP).
+    - **Woodcutting (Lv 10):** `elder-wroshyr-001` (`Elder Wroshyr-Spirit Hearttree` -> `elder_wroshyr_timber`, 165 XP).
+    - **Foraging (Lv 10):** `torstol-bloom-001` (`Sovereign Torstol-Bacta Bloom` -> `sovereign_torstol_leaf`, 165 XP).
+    - **Farming (Lv 10):** `spirit-guarana-001` (`Spirit-Root Muja Sanctuary` -> `spirit_muja_fruit`, 165 XP).
+    - **Scavenging (Lv 10):** `rakatan-hypercore-001` (`Ancient Hyper-Gate Vault Core` -> `hypergate_relic_core`, 165 XP).
+  - `server/internal/game/items.go`: Expanded from 151 to **177 item definitions**:
+    - +6 Level 10 gathering & smelted resources (`runic_banite_ore`, `runic_banite_bar`, `elder_wroshyr_timber`, `sovereign_torstol_leaf`, `spirit_muja_fruit`, `hypergate_relic_core`).
+    - +6 Elite & Boss trophy materials (`krayt_wyrm_pearl`, `ichor_spirit_sigil`, `noxious_reaper_limb`, `bandosian_gorax_tasset`, `sovereign_jad_fire_core`, `ancient_krayt_dragon_scale`, all loot-only with `BuyPrice: 0` and positive `SellPrice`).
+    - +11 Level 10 apex weapons & armor pieces covering all 10 combat skills (`gorax_titan_maul` for `melee` Lv 10, `zaryte_bowcaster_cannon` for `ranged` Lv 10, `torva_gorax_warplate` for `strength` Lv 10, `elysian_spirit_cuirass` for `defense` Lv 10 body, `infernal_jad_greathelm` for `defense` Lv 10 head, `krayt_fang_whip_blade` for `blades` Lv 10, `noxious_acklay_halberd` for `polearms` Lv 10, `beskar_dragon_claws` for `unarmed` Lv 10, `westar_armadyl_blaster` for `pistols` Lv 10, `twisted_wroshyr_longbow` for `rifles` Lv 10, `tumeken_ichor_scepter` for `magic` Lv 10).
+    - +3 Level 9–10 consumables (`rakatan_stim_infuser`, `saradomin_muja_banquet`, `overload_bacta_flask`).
+  - `server/internal/game/crafting.go`: Expanded from 77 to **92 crafting recipes** (+15 Level 9–10 recipes across `smithing`, `crafting`, and `cooking` at `frontier-forge` and `frontier-workbench`).
+  - `server/internal/game/combat.go` & `server/internal/game/boss.go`: Expanded from 24 to **29 enemy definitions** and from 1 to **2 boss encounter definitions**:
+    - Added 4 Level 9–10 elite creatures: `dune-krayt-drake-001` (*Canyon Krayt-Wyrm*), `dathomir-hexweaver-001` (*Nightsister Ichor-Wraith*), `acklay-reaper-001` (*Abyssal Acklay-Reaper*), and `gorax-behemoth-001` (*Bandosian Gorax Warlord*).
+    - Added the **Level 10 Apex Boss Encounter**: `krayt-jad-sovereign` (*Ancient Krayt-Jad Sovereign*, `MaxHealth: 320, Attack: 0, Defense: 8, Experience: 1200`) with 3 deterministic boss phases (`armored-carapace` at 100%, `molten-fury` at <=65%, `sovereign-cataclysm` at <=30%) and 4 telegraphed abilities (`rancor-cleave` 11 dmg, `venom-acid-spit` 13 dmg, `jad-magma-slam` 16 dmg, `krayt-singularity-roar` 20 dmg).
+  - `server/internal/game/loot.go`: Expanded from 26 to **31 loot tables**, including `krayt-jad-sovereign-harvest` (5-roll boss table guaranteeing both `sovereign_jad_fire_core` and `ancient_krayt_dragon_scale` plus 3 independent bonus rolls for pearls/sigils, Level 10 apex weapons, and Level 10 apex armor/overload flasks).
+- **Defects discovered and fixed under the permanent no-hidden-errors rule during local verification:**
+  1. `server/internal/game/boss_test.go` (`TestBossEncounterCatalogIsValidAndDefensivelyCopied` failure: `boss definition count=2, want 1`): Updated catalog count assertion from `1` to `2` and validated every definition in `BossEncounterDefinitions()`.
+  2. `server/internal/httpapi/server_test.go` (`TestWorldCatalogBundlesAllPublicDefinitions` failure: `incomplete world catalog ... nodes=44 items=177 enemies=29 recipes=92`): Updated expected world catalog counts (`44` nodes, `177` items, `29` enemies, `92` recipes).
+  3. `client/tests/interaction_hint_smoke_test.gd` (`Forge recipe selector did not prioritize krayt-fang-whip-blade`): Aligned the smoke test's mock inventory ingredients (`hypergate_relic_core` for `krayt-fang-whip-blade` and `sovereign_jad_fire_core` for `overload-bacta-flask`) with `server/internal/game/crafting.go` and `client/scripts/main.gd`.
+- **Client 3D world & UI synchronization:**
+  - `client/scripts/main.gd` & `client/tests/interaction_hint_smoke_test.gd`: Added 3D visual builders for all 5 Level 10 gathering nodes, rendered `krayt-jad-sovereign` as a colossal molten-crimson and gold boss alongside distinct palettes for the 4 elite creatures, and added Level 9–10 recipe selectors and smoke-test assertions.
+

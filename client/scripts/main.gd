@@ -393,6 +393,32 @@ func _build_gathering_node_visuals() -> void:
 				_add_circuit_relay(at)
 			"quantum_capacitor":
 				_add_orbital_pod_wreckage(at)
+			"aether_bough_timber":
+				_add_elderwood_tree(at)
+			"voidbark_heartwood":
+				_add_voidbark_tree(at)
+			"cryo_lotus_petal":
+				_add_frostlotus_bloom(at)
+			"astral_mycelium":
+				_add_astralspore_colony(at)
+			"auric_grain_sheaf":
+				_add_goldengrain_field(at)
+			"celestial_nectar_fruit":
+				_add_celestialfruit_orchard(at)
+			"titan_actuator_coil":
+				_add_servoarray_chassis(at)
+			"singularity_core_cell":
+				_add_singularity_wreckage(at)
+			"runic_banite_ore":
+				_add_runic_banite_monolith(at)
+			"elder_wroshyr_timber":
+				_add_elder_wroshyr_tree(at)
+			"sovereign_torstol_leaf":
+				_add_torstol_bloom_patch(at)
+			"spirit_muja_fruit":
+				_add_spirit_muja_arbor(at)
+			"hypergate_relic_core":
+				_add_rakatan_hypercore_relic(at)
 			_:
 				_add_generic_gathering_node(at, str(node.get("name", "Resource Node")))
 
@@ -1352,6 +1378,139 @@ func _add_singularity_wreckage(at: Vector3) -> void:
 	add_child(node)
 
 
+func _add_runic_banite_monolith(at: Vector3) -> void:
+	var node := Node3D.new()
+	node.position = at
+	var mat := StandardMaterial3D.new()
+	mat.albedo_color = Color(0.18, 0.78, 0.86)
+	mat.emission_enabled = true
+	mat.emission = Color(0.08, 0.42, 0.52)
+	mat.roughness = 0.22
+	var spire := MeshInstance3D.new()
+	var mesh := CylinderMesh.new()
+	mesh.top_radius = 0.24
+	mesh.bottom_radius = 0.72
+	mesh.height = 2.25
+	spire.mesh = mesh
+	spire.position.y = 1.12
+	spire.material_override = mat
+	node.add_child(spire)
+	var label := Label3D.new()
+	label.text = "Runic Banite Monolith"
+	label.position.y = 2.55
+	label.billboard = BaseMaterial3D.BILLBOARD_ENABLED
+	label.font_size = 22
+	node.add_child(label)
+	add_child(node)
+
+
+func _add_elder_wroshyr_tree(at: Vector3) -> void:
+	var node := Node3D.new()
+	node.position = at
+	var trunk_mat := StandardMaterial3D.new()
+	trunk_mat.albedo_color = Color(0.36, 0.22, 0.12)
+	var canopy_mat := StandardMaterial3D.new()
+	canopy_mat.albedo_color = Color(0.16, 0.68, 0.44)
+	canopy_mat.emission_enabled = true
+	canopy_mat.emission = Color(0.06, 0.28, 0.16)
+	var trunk := MeshInstance3D.new()
+	var trunk_mesh := CylinderMesh.new()
+	trunk_mesh.top_radius = 0.42
+	trunk_mesh.bottom_radius = 0.68
+	trunk_mesh.height = 3.1
+	trunk.mesh = trunk_mesh
+	trunk.position.y = 1.55
+	trunk.material_override = trunk_mat
+	node.add_child(trunk)
+	var canopy := MeshInstance3D.new()
+	var canopy_mesh := SphereMesh.new()
+	canopy_mesh.radius = 1.95
+	canopy_mesh.height = 2.8
+	canopy.mesh = canopy_mesh
+	canopy.position.y = 3.65
+	canopy.material_override = canopy_mat
+	node.add_child(canopy)
+	var label := Label3D.new()
+	label.text = "Elder Wroshyr-Heart Great-Tree"
+	label.position.y = 5.35
+	label.billboard = BaseMaterial3D.BILLBOARD_ENABLED
+	label.font_size = 22
+	node.add_child(label)
+	add_child(node)
+
+
+func _add_torstol_bloom_patch(at: Vector3) -> void:
+	var node := Node3D.new()
+	node.position = at
+	var mat := StandardMaterial3D.new()
+	mat.albedo_color = Color(0.24, 0.92, 0.56)
+	mat.emission_enabled = true
+	mat.emission = Color(0.10, 0.48, 0.24)
+	var bloom := MeshInstance3D.new()
+	var mesh := SphereMesh.new()
+	mesh.radius = 0.72
+	mesh.height = 1.15
+	bloom.mesh = mesh
+	bloom.position.y = 0.58
+	bloom.material_override = mat
+	node.add_child(bloom)
+	var label := Label3D.new()
+	label.text = "Torstol-Bacta Sovereign Patch"
+	label.position.y = 1.55
+	label.billboard = BaseMaterial3D.BILLBOARD_ENABLED
+	label.font_size = 22
+	node.add_child(label)
+	add_child(node)
+
+
+func _add_spirit_muja_arbor(at: Vector3) -> void:
+	var node := Node3D.new()
+	node.position = at
+	var mat := StandardMaterial3D.new()
+	mat.albedo_color = Color(0.98, 0.78, 0.24)
+	mat.emission_enabled = true
+	mat.emission = Color(0.46, 0.34, 0.08)
+	var arbor := MeshInstance3D.new()
+	var mesh := BoxMesh.new()
+	mesh.size = Vector3(1.65, 1.45, 1.15)
+	arbor.mesh = mesh
+	arbor.position.y = 0.72
+	arbor.material_override = mat
+	node.add_child(arbor)
+	var label := Label3D.new()
+	label.text = "Spirit-Muja Sacred Arbor"
+	label.position.y = 1.85
+	label.billboard = BaseMaterial3D.BILLBOARD_ENABLED
+	label.font_size = 22
+	node.add_child(label)
+	add_child(node)
+
+
+func _add_rakatan_hypercore_relic(at: Vector3) -> void:
+	var node := Node3D.new()
+	node.position = at
+	var mat := StandardMaterial3D.new()
+	mat.albedo_color = Color(0.92, 0.34, 0.78)
+	mat.emission_enabled = true
+	mat.emission = Color(0.48, 0.14, 0.40)
+	var relic := MeshInstance3D.new()
+	var mesh := CylinderMesh.new()
+	mesh.top_radius = 0.55
+	mesh.bottom_radius = 0.75
+	mesh.height = 1.85
+	relic.mesh = mesh
+	relic.position.y = 0.92
+	relic.material_override = mat
+	node.add_child(relic)
+	var label := Label3D.new()
+	label.text = "Ancient Hyper-Gate Relic"
+	label.position.y = 2.25
+	label.billboard = BaseMaterial3D.BILLBOARD_ENABLED
+	label.font_size = 22
+	node.add_child(label)
+	add_child(node)
+
+
 func _add_generic_gathering_node(at: Vector3, node_name: String) -> void:
 	var root := Node3D.new()
 	root.position = at
@@ -2284,6 +2443,20 @@ func _update_interaction_hint() -> void:
 
 
 func _select_forge_recipe() -> String:
+	if int(current_inventory.get("ancient_krayt_dragon_scale", 0)) >= 2 and int(current_inventory.get("ichor_spirit_sigil", 0)) >= 1 and int(current_inventory.get("runic_banite_bar", 0)) >= 1:
+		return "elysian-spirit-cuirass"
+	if int(current_inventory.get("sovereign_jad_fire_core", 0)) >= 1 and int(current_inventory.get("ancient_krayt_dragon_scale", 0)) >= 1 and int(current_inventory.get("runic_banite_bar", 0)) >= 1:
+		return "infernal-jad-greathelm"
+	if int(current_inventory.get("runic_banite_bar", 0)) >= 2 and int(current_inventory.get("krayt_wyrm_pearl", 0)) >= 1 and int(current_inventory.get("hypergate_relic_core", 0)) >= 1:
+		return "krayt-fang-whip-blade"
+	if int(current_inventory.get("runic_banite_bar", 0)) >= 1 and int(current_inventory.get("noxious_reaper_limb", 0)) >= 2 and int(current_inventory.get("elder_wroshyr_timber", 0)) >= 1:
+		return "noxious-acklay-halberd"
+	if int(current_inventory.get("runic_banite_bar", 0)) >= 2 and int(current_inventory.get("bandosian_gorax_tasset", 0)) >= 2:
+		return "torva-gorax-warplate"
+	if int(current_inventory.get("runic_banite_bar", 0)) >= 2 and int(current_inventory.get("bandosian_gorax_tasset", 0)) >= 1 and int(current_inventory.get("elder_wroshyr_timber", 0)) >= 1:
+		return "gorax-titan-maul"
+	if int(current_inventory.get("runic_banite_ore", 0)) >= 2 and int(current_inventory.get("nova_prism", 0)) >= 1:
+		return "runic-banite-bar"
 	if int(current_inventory.get("chronite_bar", 0)) >= 2 and int(current_inventory.get("ancient_heartwood_sap", 0)) >= 1 and int(current_inventory.get("voidbark_heartwood", 0)) >= 1:
 		return "sovereign-greatsword"
 	if int(current_inventory.get("abyssal_bar", 0)) >= 1 and int(current_inventory.get("abyssal_behemoth_plate", 0)) >= 2 and int(current_inventory.get("chronite_bar", 0)) >= 1:
@@ -2320,6 +2493,22 @@ func _select_forge_recipe() -> String:
 
 
 func _select_workbench_recipe() -> String:
+	if int(current_inventory.get("elder_wroshyr_timber", 0)) >= 2 and int(current_inventory.get("sovereign_jad_fire_core", 0)) >= 1 and int(current_inventory.get("hypergate_relic_core", 0)) >= 1:
+		return "twisted-wroshyr-longbow"
+	if int(current_inventory.get("ichor_spirit_sigil", 0)) >= 1 and int(current_inventory.get("sovereign_jad_fire_core", 0)) >= 1 and int(current_inventory.get("elder_wroshyr_timber", 0)) >= 2:
+		return "tumeken-ichor-scepter"
+	if int(current_inventory.get("runic_banite_bar", 0)) >= 1 and int(current_inventory.get("ancient_krayt_dragon_scale", 0)) >= 2 and int(current_inventory.get("hypergate_relic_core", 0)) >= 1:
+		return "beskar-dragon-claws"
+	if int(current_inventory.get("elder_wroshyr_timber", 0)) >= 2 and int(current_inventory.get("hypergate_relic_core", 0)) >= 1 and int(current_inventory.get("noxious_reaper_limb", 0)) >= 1:
+		return "zaryte-bowcaster-cannon"
+	if int(current_inventory.get("hypergate_relic_core", 0)) >= 1 and int(current_inventory.get("krayt_wyrm_pearl", 0)) >= 1 and int(current_inventory.get("runic_banite_bar", 0)) >= 1:
+		return "westar-armadyl-blaster"
+	if int(current_inventory.get("sovereign_torstol_leaf", 0)) >= 2 and int(current_inventory.get("spirit_muja_fruit", 0)) >= 1 and int(current_inventory.get("sovereign_jad_fire_core", 0)) >= 1:
+		return "overload-bacta-flask"
+	if int(current_inventory.get("spirit_muja_fruit", 0)) >= 2 and int(current_inventory.get("sovereign_torstol_leaf", 0)) >= 1 and int(current_inventory.get("bacta_gel", 0)) >= 1:
+		return "saradomin-muja-banquet"
+	if int(current_inventory.get("bacta_gel", 0)) >= 2 and int(current_inventory.get("hypergate_relic_core", 0)) >= 1 and int(current_inventory.get("sovereign_torstol_leaf", 0)) >= 1:
+		return "rakatan-stim-infuser"
 	if int(current_inventory.get("voidbark_heartwood", 0)) >= 2 and int(current_inventory.get("singularity_core_cell", 0)) >= 1 and int(current_inventory.get("chronite_bar", 0)) >= 1:
 		return "elderwood-longbow"
 	if int(current_inventory.get("aether_bough_timber", 0)) >= 1 and int(current_inventory.get("astral_mycelium", 0)) >= 2 and int(current_inventory.get("solaris_fire_gland", 0)) >= 1:

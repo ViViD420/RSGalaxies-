@@ -85,6 +85,12 @@ var enemyDefinitions = []EnemyDefinition{
 	{ID: "solar-drake-001", Name: "Solaris Sun-Drake", MaxHealth: 122, Attack: 15, Defense: 6, Experience: 295, LootTableID: "solar-drake-harvest", Position: WorldPosition{ZoneID: DefaultWorldZoneID, X: 14, Z: 36}, InteractionRange: 3, RespawnSeconds: 140},
 	{ID: "chrono-stalker-001", Name: "Temporal Phase-Hound", MaxHealth: 136, Attack: 16, Defense: 6, Experience: 335, LootTableID: "chrono-stalker-harvest", Position: WorldPosition{ZoneID: DefaultWorldZoneID, X: -18, Z: -38}, InteractionRange: 3, RespawnSeconds: 155},
 	{ID: "abyssal-goliath-001", Name: "Abyssal Chasm Goliath", MaxHealth: 160, Attack: 18, Defense: 7, Experience: 395, LootTableID: "abyssal-goliath-harvest", Position: WorldPosition{ZoneID: DefaultWorldZoneID, X: -40, Z: -36}, InteractionRange: 3, RespawnSeconds: 175},
+	// Tier 9-10 Elite Frontier Creatures & Level 10 Multi-Phase Apex Boss (+5 enemies -> 29 total)
+	{ID: "dune-krayt-drake-001", Name: "Canyon Krayt-Wyrm", MaxHealth: 175, Attack: 19, Defense: 7, Experience: 450, LootTableID: "dune-krayt-drake-harvest", Position: WorldPosition{ZoneID: DefaultWorldZoneID, X: 46, Z: 10}, InteractionRange: 3, RespawnSeconds: 185},
+	{ID: "dathomir-hexweaver-001", Name: "Night-Coven Hexweaver", MaxHealth: 168, Attack: 20, Defense: 6, Experience: 460, LootTableID: "dathomir-hexweaver-harvest", Position: WorldPosition{ZoneID: DefaultWorldZoneID, X: -44, Z: -8}, InteractionRange: 3, RespawnSeconds: 185},
+	{ID: "acklay-reaper-001", Name: "Geonosian Chitin-Reaper", MaxHealth: 182, Attack: 20, Defense: 7, Experience: 480, LootTableID: "acklay-reaper-harvest", Position: WorldPosition{ZoneID: DefaultWorldZoneID, X: 22, Z: 44}, InteractionRange: 3, RespawnSeconds: 190},
+	{ID: "gorax-behemoth-001", Name: "Endor Crag-Gorax", MaxHealth: 198, Attack: 21, Defense: 8, Experience: 530, LootTableID: "gorax-behemoth-harvest", Position: WorldPosition{ZoneID: DefaultWorldZoneID, X: -44, Z: 42}, InteractionRange: 3, RespawnSeconds: 200},
+	{ID: "krayt-jad-sovereign", Name: "Ancient Krayt-Jad Sovereign", MaxHealth: 320, Attack: 0, Defense: 8, Experience: 1200, LootTableID: "krayt-jad-sovereign-harvest", Position: WorldPosition{ZoneID: DefaultWorldZoneID, X: 0, Z: -44}, InteractionRange: 4, RespawnSeconds: 300},
 }
 
 func EnemyDefinitions() []EnemyDefinition {
