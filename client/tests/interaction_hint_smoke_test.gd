@@ -158,6 +158,14 @@ func _run_interaction_hint_smoke_test() -> void:
 	if str(main_node.call("_select_forge_recipe")) != "zaros-starforge-godsword":
 		_fail("Forge recipe selector did not prioritize zaros-starforge-godsword for Tier 20 Blades progression.")
 		return
+	main_node.set("current_inventory", {"promethium_stygium_bar": 2, "massassi_chronote_relic": 1, "massassi_kalgerion_horn": 1})
+	if str(main_node.call("_select_forge_recipe")) != "stygium-shadow-lightsaber":
+		_fail("Forge recipe selector did not prioritize stygium-shadow-lightsaber for Tier 25 Blades progression.")
+		return
+	main_node.set("current_inventory", {"primal_kyber_bar": 2, "zamorak_nihilus_chaos_core": 1, "infinity_gate_matrix": 1})
+	if str(main_node.call("_select_forge_recipe")) != "ek-zekkil-kyber-greatsaber":
+		_fail("Forge recipe selector did not prioritize ek-zekkil-kyber-greatsaber for Tier 30 Blades progression.")
+		return
 	main_node.set("current_inventory", {"ironwood_log": 2, "circuit_board": 1, "copper_bar": 1})
 	if str(main_node.call("_select_workbench_recipe")) != "skirmisher-repeater-bow":
 		_fail("Workbench recipe selector did not prioritize skirmisher-repeater-bow for Ranged progression.")
@@ -174,13 +182,19 @@ func _run_interaction_hint_smoke_test() -> void:
 	if str(main_node.call("_select_workbench_recipe")) != "elder-overload-dragon-salve":
 		_fail("Workbench recipe selector did not prioritize elder-overload-dragon-salve for Tier 20 Cooking progression.")
 		return
+	main_node.set("current_inventory", {"bloodweed_vong_spore": 2, "celestial_mortis_melon": 2, "zamorak_nihilus_chaos_core": 1})
+	if str(main_node.call("_select_workbench_recipe")) != "supreme-elder-mortis-ambrosia":
+		_fail("Workbench recipe selector did not prioritize supreme-elder-mortis-ambrosia for Tier 30 Cooking progression.")
+		return
 	main_node.set("market_catalog", [
 		{"id": "vanguard_cleaver", "name": "Melee Vanguard Cleaver", "equipmentSlot": "main_hand", "requiredSkillId": "melee", "requiredSkillLevel": 2},
 		{"id": "warlord_shock_maul", "name": "Melee Warlord Shock Maul", "equipmentSlot": "main_hand", "requiredSkillId": "melee", "requiredSkillLevel": 4},
 		{"id": "overlord_siege_maul", "name": "Melee Overlord Siege Maul", "equipmentSlot": "main_hand", "requiredSkillId": "melee", "requiredSkillLevel": 7},
 		{"id": "gorax_titan_maul", "name": "Gorax Titan Shock-Maul", "equipmentSlot": "main_hand", "requiredSkillId": "melee", "requiredSkillLevel": 10},
 		{"id": "dharok_rancor_greataxe", "name": "Dharok-Rancor Bone Greataxe", "equipmentSlot": "main_hand", "requiredSkillId": "melee", "requiredSkillLevel": 15},
-		{"id": "elder_maul_of_vitur", "name": "Primordial Krayt-Vitur Warmaul", "equipmentSlot": "main_hand", "requiredSkillId": "melee", "requiredSkillLevel": 20}
+		{"id": "elder_maul_of_vitur", "name": "Primordial Krayt-Vitur Warmaul", "equipmentSlot": "main_hand", "requiredSkillId": "melee", "requiredSkillLevel": 20},
+		{"id": "kalgerion_massassi_warmaul", "name": "Kal'gerion-Massassi Obsidian Warmaul", "equipmentSlot": "main_hand", "requiredSkillId": "melee", "requiredSkillLevel": 25},
+		{"id": "primal_zillo_seismic_maul", "name": "Primal Zillo-Maul of Tectonic Ruin", "equipmentSlot": "main_hand", "requiredSkillId": "melee", "requiredSkillLevel": 30}
 	])
 	main_node.set("recipe_catalog", [
 		{"id": "vanguard-cleaver", "name": "Forge Melee Vanguard Cleaver", "skillId": "smithing", "requiredLevel": 2, "stationId": "frontier-forge", "outputs": [{"itemId": "vanguard_cleaver", "quantity": 1}]},
@@ -188,11 +202,13 @@ func _run_interaction_hint_smoke_test() -> void:
 		{"id": "overlord-siege-maul", "name": "Forge Melee Overlord Siege Maul", "skillId": "smithing", "requiredLevel": 7, "stationId": "frontier-forge", "outputs": [{"itemId": "overlord_siege_maul", "quantity": 1}]},
 		{"id": "gorax-titan-maul", "name": "Forge Gorax Titan Shock-Maul", "skillId": "smithing", "requiredLevel": 10, "stationId": "frontier-forge", "outputs": [{"itemId": "gorax_titan_maul", "quantity": 1}]},
 		{"id": "dharok-rancor-greataxe", "name": "Forge Dharok-Rancor Bone Greataxe", "skillId": "smithing", "requiredLevel": 15, "stationId": "frontier-forge", "outputs": [{"itemId": "dharok_rancor_greataxe", "quantity": 1}]},
-		{"id": "elder-maul-of-vitur", "name": "Forge Primordial Krayt-Vitur Warmaul", "skillId": "smithing", "requiredLevel": 20, "stationId": "frontier-forge", "outputs": [{"itemId": "elder_maul_of_vitur", "quantity": 1}]}
+		{"id": "elder-maul-of-vitur", "name": "Forge Primordial Krayt-Vitur Warmaul", "skillId": "smithing", "requiredLevel": 20, "stationId": "frontier-forge", "outputs": [{"itemId": "elder_maul_of_vitur", "quantity": 1}]},
+		{"id": "kalgerion-massassi-warmaul", "name": "Forge Kal'gerion-Massassi Obsidian Warmaul", "skillId": "smithing", "requiredLevel": 25, "stationId": "frontier-forge", "outputs": [{"itemId": "kalgerion_massassi_warmaul", "quantity": 1}]},
+		{"id": "primal-zillo-seismic-maul", "name": "Forge Primal Zillo-Maul of Tectonic Ruin", "skillId": "smithing", "requiredLevel": 30, "stationId": "frontier-forge", "outputs": [{"itemId": "primal_zillo_seismic_maul", "quantity": 1}]}
 	])
-	var melee_unlock_text := str(main_node.call("_describe_skill_progression_unlocks", "melee", 15))
-	if not melee_unlock_text.contains("Dharok-Rancor Bone Greataxe") or not melee_unlock_text.contains("Primordial Krayt-Vitur Warmaul"):
-		_fail("Skill unlock summary did not report Lv 15 unlocked and Lv 20 next Melee equipment milestones: " + melee_unlock_text)
+	var melee_unlock_text := str(main_node.call("_describe_skill_progression_unlocks", "melee", 25))
+	if not melee_unlock_text.contains("Kal'gerion-Massassi Obsidian Warmaul") or not melee_unlock_text.contains("Primal Zillo-Maul of Tectonic Ruin"):
+		_fail("Skill unlock summary did not report Lv 25 unlocked and Lv 30 next Melee equipment milestones: " + melee_unlock_text)
 		return
 
 	print("PASS: contextual interaction hints select the nearest gathering target, show range guidance, expose pending state, hide before character selection, select station recipes, build Crafting Schematics, Character Vitals, World Atlas and Options panels, sync HAM/Secondary attributes and report malformed/startup errors.")

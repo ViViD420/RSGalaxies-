@@ -31,8 +31,8 @@ func bossInput(encounterID string, health int, now time.Time, targetX float64) B
 
 func TestBossEncounterCatalogIsValidAndDefensivelyCopied(t *testing.T) {
 	definitions := BossEncounterDefinitions()
-	if len(definitions) != 3 {
-		t.Fatalf("boss definition count=%d, want 3", len(definitions))
+	if len(definitions) != 4 {
+		t.Fatalf("boss definition count=%d, want 4", len(definitions))
 	}
 	for _, def := range definitions {
 		if err := ValidateBossEncounterDefinition(def); err != nil {
@@ -477,5 +477,84 @@ func TestTzKalMythosaurEmperorThreePhaseBossEncounterAndLootTable(t *testing.T) 
 	}
 }
 
+func TestZamorakZilloApocalypseThreePhaseBossEncounterAndLootTable(t *testing.T) {
+	enemy, ok := FindEnemy("zamorak-zillo-apocalypse")
+	if !ok {
+		t.Fatal("zamorak-zillo-apocalypse missing from enemy catalog")
+	}
+	if enemy.MaxHealth != 1100 || enemy.Defense != 22 || enemy.Experience != 4800 ||
+		enemy.Attack != 0 || enemy.LootTableID != "zamorak-zillo-apocalypse-harvest" ||
+		enemy.Position.ZoneID != DefaultWorldZoneID || enemy.RespawnSeconds != 540 {
+		t.Fatalf("unexpected Zamorakian Zillo-Nihilus Worldbreaker enemy definition: %+v", enemy)
+	}
+	definition, ok := FindBossEncounterForEnemy(enemy.ID)
+	if !ok || definition.ID != "zamorak-zillo-apocalypse" || len(definition.Phases) != 3 {
+		t.Fatalf("Zamorakian Zillo-Nihilus Worldbreaker boss definition = %+v, found=%v", definition, ok)
+	}
 
+	start := time.Date(2026, 11, 18, 17, 0, 0, 0, time.UTC)
+	input := func(health int, now time.Time) BossEncounterInput {
+		return BossEncounterInput{
+			EncounterID:    "zamorak-zillo-cycle-1",
+			Health:         health,
+			MaxHealth:      enemy.MaxHealth,
+			BossPosition:   enemy.Position,
+			TargetPosition: WorldPosition{ZoneID: DefaultWorldZoneID, X: enemy.Position.X + 2.0, Z: enemy.Position.Z},
+			Now:            now,
+		}
+	}
 
+	// Phase 1 (100% HP -> tectonic-dominion, starts zillo-tectonic-tail-crush)
+	p1, err := AdvanceBossEncounter(definition, BossEncounterState{}, input(1100, start))
+	if err != nil {
+		t.Fatal(err)
+	}
+	if p1.State.PhaseID != "tectonic-dominion" || !p1.AbilityStarted || p1.AbilityID != "zillo-tectonic-tail-crush" {
+		t.Fatalf("phase 1 start = %+v", p1)
+	}
+	p1Resolved, err := AdvanceBossEncounter(definition, p1.State, input(1100, start.Add(1500*time.Millisecond)))
+	if err != nil {
+		t.Fatal(err)
+	}
+	if !p1Resolved.AbilityResolved || p1Resolved.AbilityID != "zillo-tectonic-tail-crush" || p1Resolved.Damage != 34 {
+		t.Fatalf("phase 1 zillo-tectonic-tail-crush resolution = %+v", p1Resolved)
+	}
+
+	// Phase 2 (<= 65% HP -> 700/1100 = 63.6% -> chaos-edict-ascension)
+	p2Transition, err := AdvanceBossEncounter(definition, p1Resolved.State, input(700, start.Add(2*time.Second)))
+	if err != nil {
+		t.Fatal(err)
+	}
+	if !p2Transition.PhaseChanged || p2Transition.State.PhaseID != "chaos-edict-ascension" {
+		t.Fatalf("phase 2 transition = %+v", p2Transition)
+	}
+
+	// Phase 3 (<= 30% HP -> 320/1100 = 29.1% -> worldbreaker-cataclysm)
+	p3Transition, err := AdvanceBossEncounter(definition, p2Transition.State, input(320, start.Add(3*time.Second)))
+	if err != nil {
+		t.Fatal(err)
+	}
+	if !p3Transition.PhaseChanged || p3Transition.State.PhaseID != "worldbreaker-cataclysm" {
+		t.Fatalf("phase 3 transition = %+v", p3Transition)
+	}
+
+	// Verify 5-roll boss loot table produces guaranteed chaos core + sovereign horns + 3 independent bonus rolls
+	drops, err := RollLootTableDrops(enemy.LootTableID, []LootRollInput{
+		{DropRoll: 0, QuantityRoll: 9999}, // Guaranteed 1: zamorak_nihilus_chaos_core x2
+		{DropRoll: 0, QuantityRoll: 9999}, // Guaranteed 2: zillo_leviathan_sovereign_horn x4
+		{DropRoll: 0, QuantityRoll: 9999}, // Bonus 1: vonduun_amphistaff_chitin x2
+		{DropRoll: 0, QuantityRoll: 0},    // Bonus 2: ek_zekkil_kyber_greatsaber x1
+		{DropRoll: 0, QuantityRoll: 0},    // Bonus 3: zillo_tectonic_bulwark_cuirass x1
+	})
+	if err != nil {
+		t.Fatalf("roll zamorak-zillo-apocalypse-harvest: %v", err)
+	}
+	if len(drops) != 5 ||
+		drops[0] != (ItemQuantity{ItemID: "zamorak_nihilus_chaos_core", Quantity: 2}) ||
+		drops[1] != (ItemQuantity{ItemID: "zillo_leviathan_sovereign_horn", Quantity: 4}) ||
+		drops[2] != (ItemQuantity{ItemID: "vonduun_amphistaff_chitin", Quantity: 2}) ||
+		drops[3] != (ItemQuantity{ItemID: "ek_zekkil_kyber_greatsaber", Quantity: 1}) ||
+		drops[4] != (ItemQuantity{ItemID: "zillo_tectonic_bulwark_cuirass", Quantity: 1}) {
+		t.Fatalf("unexpected Zamorakian Zillo-Nihilus Worldbreaker boss drops: %+v", drops)
+	}
+}

@@ -115,6 +115,22 @@ var bossEncounterDefinitions = []BossEncounterDefinition{
 			{ID: "omnium-supernova-pulse", TelegraphDuration: 2200 * time.Millisecond, Cooldown: 9 * time.Second, MinRange: 0, MaxRange: 7.5, Damage: 42},
 		},
 	},
+	{
+		ID:      "zamorak-zillo-apocalypse",
+		Version: 1,
+		EnemyID: "zamorak-zillo-apocalypse",
+		Phases: []BossPhaseDefinition{
+			{ID: "tectonic-dominion", EnterAtOrBelowPercent: 100, AbilityIDs: []string{"zillo-tectonic-tail-crush", "nihilus-void-siphon"}},
+			{ID: "chaos-edict-ascension", EnterAtOrBelowPercent: 65, AbilityIDs: []string{"zillo-tectonic-tail-crush", "nihilus-void-siphon", "kyber-chaos-obliteration"}},
+			{ID: "worldbreaker-cataclysm", EnterAtOrBelowPercent: 30, AbilityIDs: []string{"zillo-tectonic-tail-crush", "kyber-chaos-obliteration", "mortis-singularity-edict"}},
+		},
+		Abilities: []BossAbilityDefinition{
+			{ID: "zillo-tectonic-tail-crush", TelegraphDuration: 1500 * time.Millisecond, Cooldown: 4 * time.Second, MinRange: 0, MaxRange: 4.2, Damage: 34},
+			{ID: "nihilus-void-siphon", TelegraphDuration: 1800 * time.Millisecond, Cooldown: 6 * time.Second, MinRange: 0, MaxRange: 6.8, Damage: 40},
+			{ID: "kyber-chaos-obliteration", TelegraphDuration: 2000 * time.Millisecond, Cooldown: 7 * time.Second, MinRange: 0, MaxRange: 6.2, Damage: 48},
+			{ID: "mortis-singularity-edict", TelegraphDuration: 2200 * time.Millisecond, Cooldown: 9 * time.Second, MinRange: 0, MaxRange: 8.0, Damage: 58},
+		},
+	},
 }
 
 func BossEncounterDefinitions() []BossEncounterDefinition {

@@ -325,6 +325,81 @@ var lootTableDefinitions = []LootTableDefinition{
 			{ItemID: "elder_overload_dragon_salve", Weight: 2400, MinQuantity: 1, MaxQuantity: 2},
 		}},
 	}},
+	// Tier 24-30 Elite Creature & Level 30 Worldbreaker Boss Harvest Tables (+5 tables -> 41 total)
+	{ID: "yuuzhan-vonduun-stalker-harvest", Version: 1, GuaranteedDrops: []LootTableDrop{
+		{ItemID: "vonduun_amphistaff_chitin", MinQuantity: 1, MaxQuantity: 2},
+	}, BonusRolls: []LootTableRoll{
+		{Drops: []LootTableDrop{
+			{ItemID: "promethium_stygium_ore", Weight: 2000, MinQuantity: 1, MaxQuantity: 2},
+			{ItemID: "amphistaff_noxious_glaive", Weight: 450, MinQuantity: 1, MaxQuantity: 1},
+			{ItemID: "cryptbloom_vonduun_greathelm", Weight: 450, MinQuantity: 1, MaxQuantity: 1},
+			{ItemID: "cinderbane_teras_gauntlets", Weight: 450, MinQuantity: 1, MaxQuantity: 1},
+			{ItemID: "pernix_umbaran_bowcaster", Weight: 450, MinQuantity: 1, MaxQuantity: 1},
+			{ItemID: "stygium_shadow_lightsaber", Weight: 450, MinQuantity: 1, MaxQuantity: 1},
+		}},
+	}},
+	{ID: "yavin-massassi-warlord-harvest", Version: 1, GuaranteedDrops: []LootTableDrop{
+		{ItemID: "massassi_kalgerion_horn", MinQuantity: 1, MaxQuantity: 2},
+	}, BonusRolls: []LootTableRoll{
+		{Drops: []LootTableDrop{
+			{ItemID: "umbaran_crystal_timber", Weight: 2000, MinQuantity: 1, MaxQuantity: 2},
+			{ItemID: "kalgerion_massassi_warmaul", Weight: 450, MinQuantity: 1, MaxQuantity: 1},
+			{ItemID: "vestments_massassi_warplate", Weight: 450, MinQuantity: 1, MaxQuantity: 1},
+			{ItemID: "virtus_chronote_scepter", Weight: 450, MinQuantity: 1, MaxQuantity: 1},
+			{ItemID: "decimation_umbaran_sniper", Weight: 450, MinQuantity: 1, MaxQuantity: 1},
+			{ItemID: "shadow_hk_dual_disruptors", Weight: 450, MinQuantity: 1, MaxQuantity: 1},
+		}},
+	}},
+	{ID: "hk-nex-praetorian-harvest", Version: 1, GuaranteedDrops: []LootTableDrop{
+		{ItemID: "hk_nex_assassin_core", MinQuantity: 1, MaxQuantity: 2},
+	}, BonusRolls: []LootTableRoll{
+		{Drops: []LootTableDrop{
+			{ItemID: "primal_kyber_ore", Weight: 2000, MinQuantity: 1, MaxQuantity: 2},
+			{ItemID: "primal_beskar_juggernaut_plate", Weight: 450, MinQuantity: 1, MaxQuantity: 1},
+			{ItemID: "praetorian_infinity_blasters", Weight: 450, MinQuantity: 1, MaxQuantity: 1},
+			{ItemID: "zaryte_solak_singularity_rifle", Weight: 450, MinQuantity: 1, MaxQuantity: 1},
+			{ItemID: "ek_zekkil_kyber_greatsaber", Weight: 450, MinQuantity: 1, MaxQuantity: 1},
+		}},
+	}},
+	{ID: "zillo-vorago-behemoth-harvest", Version: 1, GuaranteedDrops: []LootTableDrop{
+		{ItemID: "zillo_vorago_tectonic_plate", MinQuantity: 1, MaxQuantity: 2},
+	}, BonusRolls: []LootTableRoll{
+		{Drops: []LootTableDrop{
+			{ItemID: "solak_anima_heartwood", Weight: 2000, MinQuantity: 1, MaxQuantity: 2},
+			{ItemID: "primal_zillo_seismic_maul", Weight: 450, MinQuantity: 1, MaxQuantity: 1},
+			{ItemID: "solak_zillo_sovereign_halberd", Weight: 450, MinQuantity: 1, MaxQuantity: 1},
+			{ItemID: "vorago_seismic_kyber_talons", Weight: 450, MinQuantity: 1, MaxQuantity: 1},
+			{ItemID: "bolg_infinity_bowcaster", Weight: 450, MinQuantity: 1, MaxQuantity: 1},
+			{ItemID: "zillo_tectonic_bulwark_cuirass", Weight: 450, MinQuantity: 1, MaxQuantity: 1},
+		}},
+	}},
+	{ID: "zamorak-zillo-apocalypse-harvest", Version: 1, GuaranteedDrops: []LootTableDrop{
+		{ItemID: "zamorak_nihilus_chaos_core", MinQuantity: 1, MaxQuantity: 2},
+		{ItemID: "zillo_leviathan_sovereign_horn", MinQuantity: 2, MaxQuantity: 4},
+	}, BonusRolls: []LootTableRoll{
+		{Drops: []LootTableDrop{
+			{ItemID: "vonduun_amphistaff_chitin", Weight: 2500, MinQuantity: 1, MaxQuantity: 2},
+			{ItemID: "massassi_kalgerion_horn", Weight: 2500, MinQuantity: 1, MaxQuantity: 2},
+			{ItemID: "hk_nex_assassin_core", Weight: 2500, MinQuantity: 1, MaxQuantity: 2},
+			{ItemID: "zillo_vorago_tectonic_plate", Weight: 2500, MinQuantity: 1, MaxQuantity: 2},
+		}},
+		{Drops: []LootTableDrop{
+			{ItemID: "ek_zekkil_kyber_greatsaber", Weight: 900, MinQuantity: 1, MaxQuantity: 1},
+			{ItemID: "solak_zillo_sovereign_halberd", Weight: 900, MinQuantity: 1, MaxQuantity: 1},
+			{ItemID: "zaryte_solak_singularity_rifle", Weight: 900, MinQuantity: 1, MaxQuantity: 1},
+			{ItemID: "omnipower_chaos_holostaff", Weight: 900, MinQuantity: 1, MaxQuantity: 1},
+			{ItemID: "primal_zillo_seismic_maul", Weight: 900, MinQuantity: 1, MaxQuantity: 1},
+			{ItemID: "bolg_infinity_bowcaster", Weight: 900, MinQuantity: 1, MaxQuantity: 1},
+			{ItemID: "vorago_seismic_kyber_talons", Weight: 900, MinQuantity: 1, MaxQuantity: 1},
+			{ItemID: "praetorian_infinity_blasters", Weight: 900, MinQuantity: 1, MaxQuantity: 1},
+		}},
+		{Drops: []LootTableDrop{
+			{ItemID: "zillo_tectonic_bulwark_cuirass", Weight: 1200, MinQuantity: 1, MaxQuantity: 1},
+			{ItemID: "nihilus_chaos_sovereign_crown", Weight: 1200, MinQuantity: 1, MaxQuantity: 1},
+			{ItemID: "primal_beskar_juggernaut_plate", Weight: 1200, MinQuantity: 1, MaxQuantity: 1},
+			{ItemID: "supreme_elder_mortis_ambrosia", Weight: 2400, MinQuantity: 1, MaxQuantity: 2},
+		}},
+	}},
 }
 
 func LootTableDefinitions() []LootTableDefinition {

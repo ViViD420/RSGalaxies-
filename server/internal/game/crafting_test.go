@@ -298,6 +298,8 @@ func TestEveryCoreSkillHasMilestoneUnlocksAndObtainableItemChains(t *testing.T) 
 	tierTenUnlockCount := map[string]int{}
 	tierFourteenUnlockCount := map[string]int{}
 	tierTwentyUnlockCount := map[string]int{}
+	tierTwentyFourUnlockCount := map[string]int{}
+	tierThirtyUnlockCount := map[string]int{}
 	for _, node := range GatheringNodes() {
 		if node.RequiredLevel >= 2 {
 			highTierUnlockCount[node.SkillID]++
@@ -313,6 +315,12 @@ func TestEveryCoreSkillHasMilestoneUnlocksAndObtainableItemChains(t *testing.T) 
 		}
 		if node.RequiredLevel >= 20 {
 			tierTwentyUnlockCount[node.SkillID]++
+		}
+		if node.RequiredLevel >= 24 {
+			tierTwentyFourUnlockCount[node.SkillID]++
+		}
+		if node.RequiredLevel >= 30 {
+			tierThirtyUnlockCount[node.SkillID]++
 		}
 	}
 	for _, recipe := range CraftingRecipes() {
@@ -331,6 +339,12 @@ func TestEveryCoreSkillHasMilestoneUnlocksAndObtainableItemChains(t *testing.T) 
 		if recipe.RequiredLevel >= 20 {
 			tierTwentyUnlockCount[recipe.SkillID]++
 		}
+		if recipe.RequiredLevel >= 24 {
+			tierTwentyFourUnlockCount[recipe.SkillID]++
+		}
+		if recipe.RequiredLevel >= 30 {
+			tierThirtyUnlockCount[recipe.SkillID]++
+		}
 	}
 	for _, item := range ItemDefinitions() {
 		if item.EquipmentSlot != "" {
@@ -348,6 +362,12 @@ func TestEveryCoreSkillHasMilestoneUnlocksAndObtainableItemChains(t *testing.T) 
 			}
 			if item.RequiredSkillLevel >= 20 {
 				tierTwentyUnlockCount[item.RequiredSkillID]++
+			}
+			if item.RequiredSkillLevel >= 24 {
+				tierTwentyFourUnlockCount[item.RequiredSkillID]++
+			}
+			if item.RequiredSkillLevel >= 30 {
+				tierThirtyUnlockCount[item.RequiredSkillID]++
 			}
 			_, craftable := recipeByOutput[item.ID]
 			if !craftable && !lootedItems[item.ID] && item.BuyPrice <= 0 {
@@ -371,6 +391,12 @@ func TestEveryCoreSkillHasMilestoneUnlocksAndObtainableItemChains(t *testing.T) 
 		if tierTwentyUnlockCount[skill.ID] == 0 {
 			t.Fatalf("skill %s has no Level 20 capstone unlock (node, recipe, or equipment)", skill.ID)
 		}
+		if tierTwentyFourUnlockCount[skill.ID] == 0 {
+			t.Fatalf("skill %s has no Level 24-25 vanguard unlock (node, recipe, or equipment)", skill.ID)
+		}
+		if tierThirtyUnlockCount[skill.ID] == 0 {
+			t.Fatalf("skill %s has no Level 30 capstone unlock (node, recipe, or equipment)", skill.ID)
+		}
 	}
 	for _, dualID := range []string{
 		"overlord_siege_maul", "abyssal_artillery_cannon", "juggernaut_war_plate", "dreadnought_aegis_helm",
@@ -385,6 +411,12 @@ func TestEveryCoreSkillHasMilestoneUnlocksAndObtainableItemChains(t *testing.T) 
 		"elder_maul_of_vitur", "eldritch_starforge_bowcaster", "masterwork_animica_warplate", "justiciar_mandalore_hauberk",
 		"zuk_infernal_beskar_crown", "zaros_starforge_godsword", "vitur_mythosaur_scythe", "telos_anima_talons",
 		"leng_starforge_blasters", "bofa_bloodwood_railgun", "fractured_armadyl_holostaff",
+		"kalgerion_massassi_warmaul", "pernix_umbaran_bowcaster", "vestments_massassi_warplate", "cryptbloom_vonduun_greathelm",
+		"stygium_shadow_lightsaber", "amphistaff_noxious_glaive", "cinderbane_teras_gauntlets", "shadow_hk_dual_disruptors",
+		"decimation_umbaran_sniper", "virtus_chronote_scepter",
+		"primal_zillo_seismic_maul", "bolg_infinity_bowcaster", "primal_beskar_juggernaut_plate", "zillo_tectonic_bulwark_cuirass",
+		"nihilus_chaos_sovereign_crown", "ek_zekkil_kyber_greatsaber", "solak_zillo_sovereign_halberd", "vorago_seismic_kyber_talons",
+		"praetorian_infinity_blasters", "zaryte_solak_singularity_rifle", "omnipower_chaos_holostaff",
 	} {
 		if _, craftable := recipeByOutput[dualID]; !craftable || !lootedItems[dualID] {
 			t.Fatalf("masterwork/apex item %s missing dual attainment: craftable=%v looted=%v", dualID, craftable, lootedItems[dualID])

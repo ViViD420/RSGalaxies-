@@ -439,6 +439,26 @@ func _build_gathering_node_visuals() -> void:
 				_add_golden_dragon_conservatory(at)
 			"starforge_omnium_core":
 				_add_starforge_reliquary(at)
+			"promethium_stygium_ore":
+				_add_promethium_stygium_rift(at)
+			"umbaran_crystal_timber":
+				_add_umbaran_crystal_grove(at)
+			"arbuck_zevrona_herb":
+				_add_arbuck_zevrona_thicket(at)
+			"obsidian_lava_lychee":
+				_add_mustafar_lavafruit_conservatory(at)
+			"massassi_chronote_relic":
+				_add_massassi_chronote_obelisk(at)
+			"primal_kyber_ore":
+				_add_primal_kyber_monolith(at)
+			"solak_anima_heartwood":
+				_add_solak_anima_bough(at)
+			"bloodweed_vong_spore":
+				_add_bloodweed_vong_hive(at)
+			"celestial_mortis_melon":
+				_add_golden_ambrosia_sanctuary(at)
+			"infinity_gate_matrix":
+				_add_infinity_holocron_vault(at)
 			_:
 				_add_generic_gathering_node(at, str(node.get("name", "Resource Node")))
 
@@ -1772,6 +1792,250 @@ func _add_starforge_reliquary(at: Vector3) -> void:
 	add_child(node)
 
 
+func _add_promethium_stygium_rift(at: Vector3) -> void:
+	var node := Node3D.new()
+	node.position = at
+	var mat := StandardMaterial3D.new()
+	mat.albedo_color = Color(0.68, 0.14, 0.28)
+	mat.emission_enabled = true
+	mat.emission = Color(0.32, 0.04, 0.14)
+	var rock := MeshInstance3D.new()
+	var mesh := CylinderMesh.new()
+	mesh.top_radius = 0.28
+	mesh.bottom_radius = 0.88
+	mesh.height = 1.9
+	rock.mesh = mesh
+	rock.position.y = 0.95
+	rock.material_override = mat
+	node.add_child(rock)
+	var label := Label3D.new()
+	label.text = "Promethium-Stygium Prism Rift"
+	label.position.y = 2.25
+	label.billboard = BaseMaterial3D.BILLBOARD_ENABLED
+	label.font_size = 22
+	node.add_child(label)
+	add_child(node)
+
+
+func _add_umbaran_crystal_grove(at: Vector3) -> void:
+	var node := Node3D.new()
+	node.position = at
+	var mat := StandardMaterial3D.new()
+	mat.albedo_color = Color(0.24, 0.68, 0.88)
+	mat.emission_enabled = true
+	mat.emission = Color(0.08, 0.28, 0.42)
+	var trunk := MeshInstance3D.new()
+	var mesh := CylinderMesh.new()
+	mesh.top_radius = 0.34
+	mesh.bottom_radius = 0.56
+	mesh.height = 2.25
+	trunk.mesh = mesh
+	trunk.position.y = 1.12
+	trunk.material_override = mat
+	node.add_child(trunk)
+	var label := Label3D.new()
+	label.text = "Umbaran Crystal-Pine Grove"
+	label.position.y = 2.55
+	label.billboard = BaseMaterial3D.BILLBOARD_ENABLED
+	label.font_size = 22
+	node.add_child(label)
+	add_child(node)
+
+
+func _add_arbuck_zevrona_thicket(at: Vector3) -> void:
+	var node := Node3D.new()
+	node.position = at
+	var mat := StandardMaterial3D.new()
+	mat.albedo_color = Color(0.34, 0.86, 0.54)
+	mat.emission_enabled = true
+	mat.emission = Color(0.10, 0.36, 0.22)
+	var bloom := MeshInstance3D.new()
+	var mesh := SphereMesh.new()
+	mesh.radius = 0.72
+	mesh.height = 1.15
+	bloom.mesh = mesh
+	bloom.position.y = 0.62
+	bloom.material_override = mat
+	node.add_child(bloom)
+	var label := Label3D.new()
+	label.text = "Arbuck-Zevrona Spore Thicket"
+	label.position.y = 1.65
+	label.billboard = BaseMaterial3D.BILLBOARD_ENABLED
+	label.font_size = 22
+	node.add_child(label)
+	add_child(node)
+
+
+func _add_mustafar_lavafruit_conservatory(at: Vector3) -> void:
+	var node := Node3D.new()
+	node.position = at
+	var mat := StandardMaterial3D.new()
+	mat.albedo_color = Color(0.92, 0.38, 0.14)
+	mat.emission_enabled = true
+	mat.emission = Color(0.44, 0.14, 0.04)
+	var cactus := MeshInstance3D.new()
+	var mesh := CylinderMesh.new()
+	mesh.top_radius = 0.42
+	mesh.bottom_radius = 0.52
+	mesh.height = 1.65
+	cactus.mesh = mesh
+	cactus.position.y = 0.82
+	cactus.material_override = mat
+	node.add_child(cactus)
+	var label := Label3D.new()
+	label.text = "Mustafar Obsidian Lavafruit Conservatory"
+	label.position.y = 2.05
+	label.billboard = BaseMaterial3D.BILLBOARD_ENABLED
+	label.font_size = 22
+	node.add_child(label)
+	add_child(node)
+
+
+func _add_massassi_chronote_obelisk(at: Vector3) -> void:
+	var node := Node3D.new()
+	node.position = at
+	var mat := StandardMaterial3D.new()
+	mat.albedo_color = Color(0.58, 0.26, 0.84)
+	mat.emission_enabled = true
+	mat.emission = Color(0.24, 0.08, 0.42)
+	var obelisk := MeshInstance3D.new()
+	var mesh := BoxMesh.new()
+	mesh.size = Vector3(0.95, 1.95, 0.95)
+	obelisk.mesh = mesh
+	obelisk.position.y = 0.98
+	obelisk.material_override = mat
+	node.add_child(obelisk)
+	var label := Label3D.new()
+	label.text = "Massassi Chronote Obelisk Vault"
+	label.position.y = 2.35
+	label.billboard = BaseMaterial3D.BILLBOARD_ENABLED
+	label.font_size = 22
+	node.add_child(label)
+	add_child(node)
+
+
+func _add_primal_kyber_monolith(at: Vector3) -> void:
+	var node := Node3D.new()
+	node.position = at
+	var mat := StandardMaterial3D.new()
+	mat.albedo_color = Color(0.94, 0.22, 0.36)
+	mat.emission_enabled = true
+	mat.emission = Color(0.52, 0.08, 0.18)
+	var crystal := MeshInstance3D.new()
+	var mesh := CylinderMesh.new()
+	mesh.top_radius = 0.22
+	mesh.bottom_radius = 0.96
+	mesh.height = 2.35
+	crystal.mesh = mesh
+	crystal.position.y = 1.18
+	crystal.material_override = mat
+	node.add_child(crystal)
+	var label := Label3D.new()
+	label.text = "Primal Kyber-Novite Monolith"
+	label.position.y = 2.68
+	label.billboard = BaseMaterial3D.BILLBOARD_ENABLED
+	label.font_size = 22
+	node.add_child(label)
+	add_child(node)
+
+
+func _add_solak_anima_bough(at: Vector3) -> void:
+	var node := Node3D.new()
+	node.position = at
+	var mat := StandardMaterial3D.new()
+	mat.albedo_color = Color(0.28, 0.88, 0.72)
+	mat.emission_enabled = true
+	mat.emission = Color(0.10, 0.42, 0.32)
+	var tree := MeshInstance3D.new()
+	var mesh := CylinderMesh.new()
+	mesh.top_radius = 0.46
+	mesh.bottom_radius = 0.72
+	mesh.height = 2.65
+	tree.mesh = mesh
+	tree.position.y = 1.32
+	tree.material_override = mat
+	node.add_child(tree)
+	var label := Label3D.new()
+	label.text = "Solak Anima-Wroshyr Worldtree Bough"
+	label.position.y = 2.95
+	label.billboard = BaseMaterial3D.BILLBOARD_ENABLED
+	label.font_size = 22
+	node.add_child(label)
+	add_child(node)
+
+
+func _add_bloodweed_vong_hive(at: Vector3) -> void:
+	var node := Node3D.new()
+	node.position = at
+	var mat := StandardMaterial3D.new()
+	mat.albedo_color = Color(0.84, 0.14, 0.34)
+	mat.emission_enabled = true
+	mat.emission = Color(0.42, 0.04, 0.16)
+	var hive := MeshInstance3D.new()
+	var mesh := SphereMesh.new()
+	mesh.radius = 0.82
+	mesh.height = 1.35
+	hive.mesh = mesh
+	hive.position.y = 0.72
+	hive.material_override = mat
+	node.add_child(hive)
+	var label := Label3D.new()
+	label.text = "Wilderness Bloodweed-Vong Spore Hive"
+	label.position.y = 1.85
+	label.billboard = BaseMaterial3D.BILLBOARD_ENABLED
+	label.font_size = 22
+	node.add_child(label)
+	add_child(node)
+
+
+func _add_golden_ambrosia_sanctuary(at: Vector3) -> void:
+	var node := Node3D.new()
+	node.position = at
+	var mat := StandardMaterial3D.new()
+	mat.albedo_color = Color(0.96, 0.82, 0.24)
+	mat.emission_enabled = true
+	mat.emission = Color(0.48, 0.36, 0.08)
+	var dome := MeshInstance3D.new()
+	var mesh := SphereMesh.new()
+	mesh.radius = 0.88
+	mesh.height = 1.55
+	dome.mesh = mesh
+	dome.position.y = 0.82
+	dome.material_override = mat
+	node.add_child(dome)
+	var label := Label3D.new()
+	label.text = "Celestial Mortis-Ambrosia Melon Sanctuary"
+	label.position.y = 2.05
+	label.billboard = BaseMaterial3D.BILLBOARD_ENABLED
+	label.font_size = 22
+	node.add_child(label)
+	add_child(node)
+
+
+func _add_infinity_holocron_vault(at: Vector3) -> void:
+	var node := Node3D.new()
+	node.position = at
+	var mat := StandardMaterial3D.new()
+	mat.albedo_color = Color(0.42, 0.86, 0.98)
+	mat.emission_enabled = true
+	mat.emission = Color(0.18, 0.44, 0.62)
+	var core := MeshInstance3D.new()
+	var mesh := SphereMesh.new()
+	mesh.radius = 0.98
+	mesh.height = 1.96
+	core.mesh = mesh
+	core.position.y = 1.12
+	core.material_override = mat
+	node.add_child(core)
+	var label := Label3D.new()
+	label.text = "Kwa Infinity-Gate Holocron Vault"
+	label.position.y = 2.55
+	label.billboard = BaseMaterial3D.BILLBOARD_ENABLED
+	label.font_size = 22
+	node.add_child(label)
+	add_child(node)
+
+
 func _add_generic_gathering_node(at: Vector3, node_name: String) -> void:
 	var root := Node3D.new()
 	root.position = at
@@ -1811,9 +2075,13 @@ func _add_enemy_visual(enemy_id: String, at: Vector3, enemy_name: String, max_he
 	var creature := Node3D.new()
 	creature.name = "Enemy_" + enemy_id
 	creature.position = at
-	var is_boss := enemy_id == "stoneback-colossus" or enemy_id == "krayt-jad-sovereign" or enemy_id == "tzkal-mythosaur-emperor"
+	var is_boss := enemy_id == "stoneback-colossus" or enemy_id == "krayt-jad-sovereign" or enemy_id == "tzkal-mythosaur-emperor" or enemy_id == "zamorak-zillo-apocalypse"
 	var hide_material := StandardMaterial3D.new()
-	if enemy_id == "tzkal-mythosaur-emperor":
+	if enemy_id == "zamorak-zillo-apocalypse":
+		hide_material.albedo_color = Color(0.72, 0.08, 0.24)
+		hide_material.emission_enabled = true
+		hide_material.emission = Color(0.48, 0.04, 0.18)
+	elif enemy_id == "tzkal-mythosaur-emperor":
 		hide_material.albedo_color = Color(0.88, 0.64, 0.16)
 		hide_material.emission_enabled = true
 		hide_material.emission = Color(0.46, 0.24, 0.04)
@@ -1881,6 +2149,14 @@ func _add_enemy_visual(enemy_id: String, at: Vector3, enemy_name: String, max_he
 		hide_material.albedo_color = Color(0.62, 0.66, 0.74)
 	elif enemy_id.begins_with("mythosaur-reaper"):
 		hide_material.albedo_color = Color(0.82, 0.24, 0.36)
+	elif enemy_id.begins_with("yuuzhan-vonduun-stalker"):
+		hide_material.albedo_color = Color(0.28, 0.78, 0.42)
+	elif enemy_id.begins_with("yavin-massassi-warlord"):
+		hide_material.albedo_color = Color(0.76, 0.22, 0.18)
+	elif enemy_id.begins_with("hk-nex-praetorian"):
+		hide_material.albedo_color = Color(0.48, 0.24, 0.78)
+	elif enemy_id.begins_with("zillo-vorago-behemoth"):
+		hide_material.albedo_color = Color(0.34, 0.42, 0.54)
 	else:
 		hide_material.albedo_color = Color(0.48, 0.30, 0.18) if max_health < 20 else Color(0.32, 0.25, 0.18)
 	hide_material.roughness = 0.92
@@ -2728,6 +3004,32 @@ func _update_interaction_hint() -> void:
 
 
 func _select_forge_recipe() -> String:
+	if int(current_inventory.get("primal_kyber_bar", 0)) >= 2 and int(current_inventory.get("zillo_leviathan_sovereign_horn", 0)) >= 1 and int(current_inventory.get("zillo_vorago_tectonic_plate", 0)) >= 1:
+		return "zillo-tectonic-bulwark-cuirass"
+	if int(current_inventory.get("zamorak_nihilus_chaos_core", 0)) >= 1 and int(current_inventory.get("zillo_leviathan_sovereign_horn", 0)) >= 1 and int(current_inventory.get("primal_kyber_bar", 0)) >= 1:
+		return "nihilus-chaos-sovereign-crown"
+	if int(current_inventory.get("primal_kyber_bar", 0)) >= 2 and int(current_inventory.get("zamorak_nihilus_chaos_core", 0)) >= 1 and int(current_inventory.get("infinity_gate_matrix", 0)) >= 1:
+		return "ek-zekkil-kyber-greatsaber"
+	if int(current_inventory.get("primal_kyber_bar", 0)) >= 1 and int(current_inventory.get("zillo_vorago_tectonic_plate", 0)) >= 2 and int(current_inventory.get("solak_anima_heartwood", 0)) >= 1:
+		return "solak-zillo-sovereign-halberd"
+	if int(current_inventory.get("primal_kyber_bar", 0)) >= 2 and int(current_inventory.get("zillo_vorago_tectonic_plate", 0)) >= 2:
+		return "primal-beskar-juggernaut-plate"
+	if int(current_inventory.get("primal_kyber_bar", 0)) >= 2 and int(current_inventory.get("zillo_vorago_tectonic_plate", 0)) >= 1 and int(current_inventory.get("solak_anima_heartwood", 0)) >= 1:
+		return "primal-zillo-seismic-maul"
+	if int(current_inventory.get("primal_kyber_ore", 0)) >= 2 and int(current_inventory.get("promethium_stygium_bar", 0)) >= 1:
+		return "primal-kyber-bar"
+	if int(current_inventory.get("promethium_stygium_bar", 0)) >= 2 and int(current_inventory.get("massassi_chronote_relic", 0)) >= 1 and int(current_inventory.get("massassi_kalgerion_horn", 0)) >= 1:
+		return "stygium-shadow-lightsaber"
+	if int(current_inventory.get("promethium_stygium_bar", 0)) >= 1 and int(current_inventory.get("vonduun_amphistaff_chitin", 0)) >= 2 and int(current_inventory.get("umbaran_crystal_timber", 0)) >= 1:
+		return "amphistaff-noxious-glaive"
+	if int(current_inventory.get("promethium_stygium_bar", 0)) >= 2 and int(current_inventory.get("massassi_kalgerion_horn", 0)) >= 2:
+		return "vestments-massassi-warplate"
+	if int(current_inventory.get("promethium_stygium_bar", 0)) >= 1 and int(current_inventory.get("vonduun_amphistaff_chitin", 0)) >= 2:
+		return "cryptbloom-vonduun-greathelm"
+	if int(current_inventory.get("promethium_stygium_bar", 0)) >= 2 and int(current_inventory.get("massassi_kalgerion_horn", 0)) >= 1 and int(current_inventory.get("umbaran_crystal_timber", 0)) >= 1:
+		return "kalgerion-massassi-warmaul"
+	if int(current_inventory.get("promethium_stygium_ore", 0)) >= 2 and int(current_inventory.get("primordial_animica_bar", 0)) >= 1:
+		return "promethium-stygium-bar"
 	if int(current_inventory.get("primordial_animica_bar", 0)) >= 2 and int(current_inventory.get("mythosaur_leviathan_crest", 0)) >= 1 and int(current_inventory.get("basilisk_beskar_core", 0)) >= 1:
 		return "justiciar-mandalore-hauberk"
 	if int(current_inventory.get("tzkal_infernal_heart", 0)) >= 1 and int(current_inventory.get("mythosaur_leviathan_crest", 0)) >= 1 and int(current_inventory.get("primordial_animica_bar", 0)) >= 1:
@@ -2804,6 +3106,34 @@ func _select_forge_recipe() -> String:
 
 
 func _select_workbench_recipe() -> String:
+	if int(current_inventory.get("solak_anima_heartwood", 0)) >= 2 and int(current_inventory.get("infinity_gate_matrix", 0)) >= 1 and int(current_inventory.get("zamorak_nihilus_chaos_core", 0)) >= 1:
+		return "zaryte-solak-singularity-rifle"
+	if int(current_inventory.get("zamorak_nihilus_chaos_core", 0)) >= 1 and int(current_inventory.get("infinity_gate_matrix", 0)) >= 1 and int(current_inventory.get("solak_anima_heartwood", 0)) >= 2:
+		return "omnipower-chaos-holostaff"
+	if int(current_inventory.get("primal_kyber_bar", 0)) >= 1 and int(current_inventory.get("zillo_leviathan_sovereign_horn", 0)) >= 1 and int(current_inventory.get("infinity_gate_matrix", 0)) >= 1:
+		return "vorago-seismic-kyber-talons"
+	if int(current_inventory.get("solak_anima_heartwood", 0)) >= 2 and int(current_inventory.get("infinity_gate_matrix", 0)) >= 1 and int(current_inventory.get("zillo_vorago_tectonic_plate", 0)) >= 1:
+		return "bolg-infinity-bowcaster"
+	if int(current_inventory.get("infinity_gate_matrix", 0)) >= 1 and int(current_inventory.get("hk_nex_assassin_core", 0)) >= 1 and int(current_inventory.get("primal_kyber_bar", 0)) >= 1:
+		return "praetorian-infinity-blasters"
+	if int(current_inventory.get("bloodweed_vong_spore", 0)) >= 2 and int(current_inventory.get("celestial_mortis_melon", 0)) >= 2 and int(current_inventory.get("zamorak_nihilus_chaos_core", 0)) >= 1:
+		return "supreme-elder-mortis-ambrosia"
+	if int(current_inventory.get("infinity_gate_matrix", 0)) >= 1 and int(current_inventory.get("bloodweed_vong_spore", 0)) >= 2 and int(current_inventory.get("bacta_gel", 0)) >= 1:
+		return "infinity-kyber-med-core"
+	if int(current_inventory.get("umbaran_crystal_timber", 0)) >= 2 and int(current_inventory.get("massassi_chronote_relic", 0)) >= 1 and int(current_inventory.get("promethium_stygium_bar", 0)) >= 1:
+		return "decimation-umbaran-sniper"
+	if int(current_inventory.get("umbaran_crystal_timber", 0)) >= 2 and int(current_inventory.get("massassi_chronote_relic", 0)) >= 1 and int(current_inventory.get("arbuck_zevrona_herb", 0)) >= 1:
+		return "virtus-chronote-scepter"
+	if int(current_inventory.get("vonduun_amphistaff_chitin", 0)) >= 2 and int(current_inventory.get("promethium_stygium_bar", 0)) >= 1 and int(current_inventory.get("massassi_chronote_relic", 0)) >= 1:
+		return "cinderbane-teras-gauntlets"
+	if int(current_inventory.get("umbaran_crystal_timber", 0)) >= 2 and int(current_inventory.get("massassi_chronote_relic", 0)) >= 1 and int(current_inventory.get("vonduun_amphistaff_chitin", 0)) >= 1:
+		return "pernix-umbaran-bowcaster"
+	if int(current_inventory.get("massassi_chronote_relic", 0)) >= 2 and int(current_inventory.get("hk_nex_assassin_core", 0)) >= 1 and int(current_inventory.get("promethium_stygium_bar", 0)) >= 1:
+		return "shadow-hk-dual-disruptors"
+	if int(current_inventory.get("obsidian_lava_lychee", 0)) >= 2 and int(current_inventory.get("arbuck_zevrona_herb", 0)) >= 1 and int(current_inventory.get("bacta_gel", 0)) >= 1:
+		return "vulcan-lava-lychee-nectar"
+	if int(current_inventory.get("arbuck_zevrona_herb", 0)) >= 2 and int(current_inventory.get("bacta_gel", 0)) >= 1 and int(current_inventory.get("massassi_chronote_relic", 0)) >= 1:
+		return "arbuck-stygium-trauma-stim"
 	if int(current_inventory.get("elder_bloodwood_timber", 0)) >= 2 and int(current_inventory.get("starforge_omnium_core", 0)) >= 1 and int(current_inventory.get("tzkal_infernal_heart", 0)) >= 1:
 		return "bofa-bloodwood-railgun"
 	if int(current_inventory.get("tzkal_infernal_heart", 0)) >= 1 and int(current_inventory.get("starforge_omnium_core", 0)) >= 1 and int(current_inventory.get("elder_bloodwood_timber", 0)) >= 2:

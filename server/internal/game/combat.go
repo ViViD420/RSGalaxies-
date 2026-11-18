@@ -97,6 +97,12 @@ var enemyDefinitions = []EnemyDefinition{
 	{ID: "mandalore-basilisk-001", Name: "Imperial Basilisk-Nex War-Droid", MaxHealth: 310, Attack: 26, Defense: 12, Experience: 820, LootTableID: "mandalore-basilisk-harvest", Position: WorldPosition{ZoneID: DefaultWorldZoneID, X: 48, Z: -28}, InteractionRange: 3, RespawnSeconds: 240},
 	{ID: "mythosaur-reaper-001", Name: "Abyssal Mythosaur Bone-Stalker", MaxHealth: 340, Attack: 28, Defense: 13, Experience: 920, LootTableID: "mythosaur-reaper-harvest", Position: WorldPosition{ZoneID: DefaultWorldZoneID, X: 48, Z: 28}, InteractionRange: 3, RespawnSeconds: 255},
 	{ID: "tzkal-mythosaur-emperor", Name: "TzKal-Mythosaur Star-Forge Emperor", MaxHealth: 620, Attack: 0, Defense: 14, Experience: 2600, LootTableID: "tzkal-mythosaur-emperor-harvest", Position: WorldPosition{ZoneID: DefaultWorldZoneID, X: 0, Z: 54}, InteractionRange: 4, RespawnSeconds: 420},
+	// Tier 24-30 Elite Frontier Creatures & Level 30 Multi-Phase Worldbreaker Boss (+5 enemies -> 39 total)
+	{ID: "yuuzhan-vonduun-stalker-001", Name: "Vonduun-Kalphite Bio-Ravager", MaxHealth: 410, Attack: 31, Defense: 15, Experience: 1180, LootTableID: "yuuzhan-vonduun-stalker-harvest", Position: WorldPosition{ZoneID: DefaultWorldZoneID, X: -56, Z: 18}, InteractionRange: 3, RespawnSeconds: 265},
+	{ID: "yavin-massassi-warlord-001", Name: "Massassi Kal'gerion War-Daemon", MaxHealth: 450, Attack: 33, Defense: 16, Experience: 1320, LootTableID: "yavin-massassi-warlord-harvest", Position: WorldPosition{ZoneID: DefaultWorldZoneID, X: -56, Z: -18}, InteractionRange: 3, RespawnSeconds: 275},
+	{ID: "hk-nex-praetorian-001", Name: "HK-Nex Shadow Praetorian", MaxHealth: 510, Attack: 36, Defense: 18, Experience: 1560, LootTableID: "hk-nex-praetorian-harvest", Position: WorldPosition{ZoneID: DefaultWorldZoneID, X: 56, Z: -18}, InteractionRange: 3, RespawnSeconds: 290},
+	{ID: "zillo-vorago-behemoth-001", Name: "Zillo-Vorago Seismic Behemoth", MaxHealth: 570, Attack: 38, Defense: 20, Experience: 1780, LootTableID: "zillo-vorago-behemoth-harvest", Position: WorldPosition{ZoneID: DefaultWorldZoneID, X: 56, Z: 18}, InteractionRange: 3, RespawnSeconds: 310},
+	{ID: "zamorak-zillo-apocalypse", Name: "Zamorakian Zillo-Nihilus Worldbreaker", MaxHealth: 1100, Attack: 0, Defense: 22, Experience: 4800, LootTableID: "zamorak-zillo-apocalypse-harvest", Position: WorldPosition{ZoneID: DefaultWorldZoneID, X: -60, Z: 0}, InteractionRange: 4, RespawnSeconds: 540},
 }
 
 func EnemyDefinitions() []EnemyDefinition {
