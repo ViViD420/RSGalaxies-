@@ -23,13 +23,15 @@ func TestPostgresEncounterRewardClaimsAreDurableAndIdempotencyScoped(t *testing.
 	player, err := game.NewPlayer(playerID, "RewardClaim", now)
 	if err != nil { t.Fatal(err) }
 	if err := repo.CreateCharacter(ctx, account.ID, player); err != nil { t.Fatal(err) }
-	t.Cleanup(func() {
-		_, _ = db.ExecContext(context.Background(), "DELETE FROM enemy_encounter_settlements WHERE enemy_id=$1", "reward-claim-test-enemy")
-		cleanupTestAccounts(db, account.ID)
-	})
-
 	const enemyID = "reward-claim-test-enemy"
 	const encounterID = "reward-claim-test-cycle"
+	_, _ = db.ExecContext(ctx, "DELETE FROM enemy_encounter_reward_claims WHERE enemy_id=$1", enemyID)
+	_, _ = db.ExecContext(ctx, "DELETE FROM enemy_encounter_settlements WHERE enemy_id=$1", enemyID)
+	t.Cleanup(func() {
+		cleanupTestAccounts(db, account.ID)
+		_, _ = db.ExecContext(context.Background(), "DELETE FROM enemy_encounter_settlements WHERE enemy_id=$1", enemyID)
+	})
+
 	if _, err := db.ExecContext(ctx, `INSERT INTO enemy_encounter_settlements(enemy_id,encounter_id,settled_at,reward_policy_version)
 		VALUES($1,$2,$3,1)`, enemyID, encounterID, now); err != nil { t.Fatal(err) }
 		if _, err := db.ExecContext(ctx, `INSERT INTO enemy_encounter_reward_claims(

@@ -1145,6 +1145,213 @@ func _add_orbital_pod_wreckage(at: Vector3) -> void:
 	add_child(node)
 
 
+func _add_elderwood_tree(at: Vector3) -> void:
+	var node := Node3D.new()
+	node.position = at
+	var trunk_mat := StandardMaterial3D.new()
+	trunk_mat.albedo_color = Color(0.62, 0.66, 0.74)
+	var trunk := MeshInstance3D.new()
+	var trunk_mesh := CylinderMesh.new()
+	trunk_mesh.top_radius = 0.32
+	trunk_mesh.bottom_radius = 0.48
+	trunk_mesh.height = 3.0
+	trunk.mesh = trunk_mesh
+	trunk.position.y = 1.5
+	trunk.material_override = trunk_mat
+	node.add_child(trunk)
+	var canopy_mat := StandardMaterial3D.new()
+	canopy_mat.albedo_color = Color(0.32, 0.82, 0.76)
+	canopy_mat.emission_enabled = true
+	canopy_mat.emission = Color(0.10, 0.34, 0.32)
+	var canopy := MeshInstance3D.new()
+	var canopy_mesh := SphereMesh.new()
+	canopy_mesh.radius = 1.55
+	canopy_mesh.height = 2.8
+	canopy.mesh = canopy_mesh
+	canopy.position.y = 3.4
+	canopy.material_override = canopy_mat
+	node.add_child(canopy)
+	var label := Label3D.new()
+	label.text = "Ancient Aether-Bough Tree"
+	label.position.y = 5.0
+	label.billboard = BaseMaterial3D.BILLBOARD_ENABLED
+	label.font_size = 22
+	node.add_child(label)
+	add_child(node)
+
+
+func _add_voidbark_tree(at: Vector3) -> void:
+	var node := Node3D.new()
+	node.position = at
+	var trunk_mat := StandardMaterial3D.new()
+	trunk_mat.albedo_color = Color(0.16, 0.14, 0.24)
+	var trunk := MeshInstance3D.new()
+	var trunk_mesh := CylinderMesh.new()
+	trunk_mesh.top_radius = 0.36
+	trunk_mesh.bottom_radius = 0.54
+	trunk_mesh.height = 3.2
+	trunk.mesh = trunk_mesh
+	trunk.position.y = 1.6
+	trunk.material_override = trunk_mat
+	node.add_child(trunk)
+	var canopy_mat := StandardMaterial3D.new()
+	canopy_mat.albedo_color = Color(0.58, 0.26, 0.82)
+	canopy_mat.emission_enabled = true
+	canopy_mat.emission = Color(0.28, 0.10, 0.44)
+	var canopy := MeshInstance3D.new()
+	var canopy_mesh := SphereMesh.new()
+	canopy_mesh.radius = 1.65
+	canopy_mesh.height = 2.9
+	canopy.mesh = canopy_mesh
+	canopy.position.y = 3.6
+	canopy.material_override = canopy_mat
+	node.add_child(canopy)
+	var label := Label3D.new()
+	label.text = "Abyssal Voidbark Great-Tree"
+	label.position.y = 5.2
+	label.billboard = BaseMaterial3D.BILLBOARD_ENABLED
+	label.font_size = 22
+	node.add_child(label)
+	add_child(node)
+
+
+func _add_frostlotus_bloom(at: Vector3) -> void:
+	var node := Node3D.new()
+	node.position = at
+	var mat := StandardMaterial3D.new()
+	mat.albedo_color = Color(0.68, 0.92, 0.98)
+	mat.emission_enabled = true
+	mat.emission = Color(0.22, 0.52, 0.68)
+	var bloom := MeshInstance3D.new()
+	var mesh := SphereMesh.new()
+	mesh.radius = 0.52
+	mesh.height = 0.64
+	bloom.mesh = mesh
+	bloom.position.y = 0.52
+	bloom.material_override = mat
+	node.add_child(bloom)
+	var label := Label3D.new()
+	label.text = "Cryo-Lotus Ridge Bloom"
+	label.position.y = 1.35
+	label.billboard = BaseMaterial3D.BILLBOARD_ENABLED
+	label.font_size = 22
+	node.add_child(label)
+	add_child(node)
+
+
+func _add_astralspore_colony(at: Vector3) -> void:
+	var node := Node3D.new()
+	node.position = at
+	var mat := StandardMaterial3D.new()
+	mat.albedo_color = Color(0.84, 0.46, 0.96)
+	mat.emission_enabled = true
+	mat.emission = Color(0.42, 0.18, 0.56)
+	var colony := MeshInstance3D.new()
+	var mesh := SphereMesh.new()
+	mesh.radius = 0.56
+	mesh.height = 0.72
+	colony.mesh = mesh
+	colony.position.y = 0.56
+	colony.material_override = mat
+	node.add_child(colony)
+	var label := Label3D.new()
+	label.text = "Astral Spore Colony"
+	label.position.y = 1.40
+	label.billboard = BaseMaterial3D.BILLBOARD_ENABLED
+	label.font_size = 22
+	node.add_child(label)
+	add_child(node)
+
+
+func _add_goldengrain_field(at: Vector3) -> void:
+	var node := Node3D.new()
+	node.position = at
+	var mat := StandardMaterial3D.new()
+	mat.albedo_color = Color(0.94, 0.78, 0.24)
+	var field := MeshInstance3D.new()
+	var mesh := BoxMesh.new()
+	mesh.size = Vector3(1.65, 0.65, 1.65)
+	field.mesh = mesh
+	field.position.y = 0.33
+	field.material_override = mat
+	node.add_child(field)
+	var label := Label3D.new()
+	label.text = "Terraced Auric Grain Field"
+	label.position.y = 1.35
+	label.billboard = BaseMaterial3D.BILLBOARD_ENABLED
+	label.font_size = 22
+	node.add_child(label)
+	add_child(node)
+
+
+func _add_celestialfruit_orchard(at: Vector3) -> void:
+	var node := Node3D.new()
+	node.position = at
+	var mat := StandardMaterial3D.new()
+	mat.albedo_color = Color(0.96, 0.54, 0.32)
+	mat.emission_enabled = true
+	mat.emission = Color(0.42, 0.20, 0.10)
+	var arbor := MeshInstance3D.new()
+	var mesh := BoxMesh.new()
+	mesh.size = Vector3(1.5, 1.25, 1.0)
+	arbor.mesh = mesh
+	arbor.position.y = 0.63
+	arbor.material_override = mat
+	node.add_child(arbor)
+	var label := Label3D.new()
+	label.text = "Celestial Nectar Orchard"
+	label.position.y = 1.60
+	label.billboard = BaseMaterial3D.BILLBOARD_ENABLED
+	label.font_size = 22
+	node.add_child(label)
+	add_child(node)
+
+
+func _add_servoarray_chassis(at: Vector3) -> void:
+	var node := Node3D.new()
+	node.position = at
+	var mat := StandardMaterial3D.new()
+	mat.albedo_color = Color(0.46, 0.52, 0.58)
+	var chassis := MeshInstance3D.new()
+	var mesh := BoxMesh.new()
+	mesh.size = Vector3(1.1, 1.2, 0.9)
+	chassis.mesh = mesh
+	chassis.position.y = 0.60
+	chassis.material_override = mat
+	node.add_child(chassis)
+	var label := Label3D.new()
+	label.text = "Derelict Mech Chassis"
+	label.position.y = 1.65
+	label.billboard = BaseMaterial3D.BILLBOARD_ENABLED
+	label.font_size = 22
+	node.add_child(label)
+	add_child(node)
+
+
+func _add_singularity_wreckage(at: Vector3) -> void:
+	var node := Node3D.new()
+	node.position = at
+	var mat := StandardMaterial3D.new()
+	mat.albedo_color = Color(0.36, 0.68, 0.96)
+	mat.emission_enabled = true
+	mat.emission = Color(0.16, 0.36, 0.62)
+	var core := MeshInstance3D.new()
+	var mesh := SphereMesh.new()
+	mesh.radius = 0.82
+	mesh.height = 1.45
+	core.mesh = mesh
+	core.position.y = 0.72
+	core.material_override = mat
+	node.add_child(core)
+	var label := Label3D.new()
+	label.text = "Shattered Warp Core Wreckage"
+	label.position.y = 1.85
+	label.billboard = BaseMaterial3D.BILLBOARD_ENABLED
+	label.font_size = 22
+	node.add_child(label)
+	add_child(node)
+
+
 func _add_generic_gathering_node(at: Vector3, node_name: String) -> void:
 	var root := Node3D.new()
 	root.position = at
@@ -1220,6 +1427,16 @@ func _add_enemy_visual(enemy_id: String, at: Vector3, enemy_name: String, max_he
 		hide_material.albedo_color = Color(0.36, 0.68, 0.92)
 	elif enemy_id.begins_with("apex-devourer"):
 		hide_material.albedo_color = Color(0.58, 0.12, 0.24)
+	elif enemy_id.begins_with("ironbark-treant"):
+		hide_material.albedo_color = Color(0.28, 0.52, 0.30)
+	elif enemy_id.begins_with("cryo-stalker"):
+		hide_material.albedo_color = Color(0.56, 0.88, 0.98)
+	elif enemy_id.begins_with("solar-drake"):
+		hide_material.albedo_color = Color(0.94, 0.58, 0.16)
+	elif enemy_id.begins_with("chrono-stalker"):
+		hide_material.albedo_color = Color(0.62, 0.44, 0.92)
+	elif enemy_id.begins_with("abyssal-goliath"):
+		hide_material.albedo_color = Color(0.18, 0.16, 0.28)
 	else:
 		hide_material.albedo_color = Color(0.48, 0.30, 0.18) if max_health < 20 else Color(0.32, 0.25, 0.18)
 	hide_material.roughness = 0.92
@@ -2067,6 +2284,16 @@ func _update_interaction_hint() -> void:
 
 
 func _select_forge_recipe() -> String:
+	if int(current_inventory.get("chronite_bar", 0)) >= 2 and int(current_inventory.get("ancient_heartwood_sap", 0)) >= 1 and int(current_inventory.get("voidbark_heartwood", 0)) >= 1:
+		return "sovereign-greatsword"
+	if int(current_inventory.get("abyssal_bar", 0)) >= 1 and int(current_inventory.get("abyssal_behemoth_plate", 0)) >= 2 and int(current_inventory.get("chronite_bar", 0)) >= 1:
+		return "dreadnought-aegis-helm"
+	if int(current_inventory.get("starsteel_bar", 0)) >= 2 and int(current_inventory.get("solaris_fire_gland", 0)) >= 1 and int(current_inventory.get("aether_bough_timber", 0)) >= 1:
+		return "solaris-halberd"
+	if int(current_inventory.get("neutronium_bar", 0)) >= 2 and int(current_inventory.get("titan_actuator_coil", 0)) >= 1 and int(current_inventory.get("glacial_core_shard", 0)) >= 1:
+		return "juggernaut-war-plate"
+	if int(current_inventory.get("neutronium_bar", 0)) >= 2 and int(current_inventory.get("titan_actuator_coil", 0)) >= 1 and int(current_inventory.get("aether_bough_timber", 0)) >= 1:
+		return "overlord-siege-maul"
 	if int(current_inventory.get("iron_bar", 0)) >= 2 and int(current_inventory.get("boar_tusk", 0)) >= 2 and int(current_inventory.get("ironwood_log", 0)) >= 1:
 		return "colossus-breaker-greataxe"
 	if int(current_inventory.get("iron_bar", 0)) >= 2 and int(current_inventory.get("ironwood_log", 0)) >= 1:
@@ -2093,6 +2320,20 @@ func _select_forge_recipe() -> String:
 
 
 func _select_workbench_recipe() -> String:
+	if int(current_inventory.get("voidbark_heartwood", 0)) >= 2 and int(current_inventory.get("singularity_core_cell", 0)) >= 1 and int(current_inventory.get("chronite_bar", 0)) >= 1:
+		return "elderwood-longbow"
+	if int(current_inventory.get("aether_bough_timber", 0)) >= 1 and int(current_inventory.get("astral_mycelium", 0)) >= 2 and int(current_inventory.get("solaris_fire_gland", 0)) >= 1:
+		return "sunfire-focus-scepter"
+	if int(current_inventory.get("chronite_bar", 0)) >= 1 and int(current_inventory.get("temporal_phase_tendril", 0)) >= 2 and int(current_inventory.get("singularity_core_cell", 0)) >= 1:
+		return "chronite-kinetic-gauntlets"
+	if int(current_inventory.get("aether_bough_timber", 0)) >= 2 and int(current_inventory.get("singularity_core_cell", 0)) >= 1 and int(current_inventory.get("neutronium_bar", 0)) >= 1:
+		return "abyssal-artillery-cannon"
+	if int(current_inventory.get("electrum_bar", 0)) >= 2 and int(current_inventory.get("glacial_core_shard", 0)) >= 1 and int(current_inventory.get("cryo_lotus_petal", 0)) >= 1:
+		return "cryo-pulse-blaster"
+	if int(current_inventory.get("celestial_nectar_fruit", 0)) >= 2 and int(current_inventory.get("astral_mycelium", 0)) >= 1 and int(current_inventory.get("ancient_heartwood_sap", 0)) >= 1:
+		return "astral-ambrosia-elixir"
+	if int(current_inventory.get("auric_grain_sheaf", 0)) >= 2 and int(current_inventory.get("cryo_lotus_petal", 0)) >= 1 and int(current_inventory.get("bacta_gel", 0)) >= 1:
+		return "auric-harvest-feast"
 	if int(current_inventory.get("ironwood_log", 0)) >= 2 and int(current_inventory.get("circuit_board", 0)) >= 1 and int(current_inventory.get("copper_bar", 0)) >= 1:
 		return "skirmisher-repeater-bow"
 	if int(current_inventory.get("ironwood_log", 0)) >= 2 and int(current_inventory.get("aether_crystal", 0)) >= 1:

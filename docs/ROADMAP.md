@@ -264,33 +264,38 @@ Client Action #183 (run 42604378304) passed; #182 (42604361140) passed. Client #
 - [ ] Perform non-headless visual and physical desktop/mobile touch review.
 
 
-## Android CI & Player Presentation State Machine — 2026-11-18 (written; CI pending)
+## Android CI & Player Presentation State Machine — 2026-11-18 (CI verified)
 
-- [ ] Verify `client/export_presets.cfg` Android preset and `.github/workflows/client.yml` `android-apk` artifact build in GitHub Actions.
-- [ ] Verify touch camera isolation and `PresentationState` (`IDLE`/`WALK`/`RUN`/`JUMP`/`FALL`/`LAND`/`ATTACK`/`GATHER`/`CRAFT`/`USE_ITEM`/`HIT`/`DEFEAT`/`RESPAWN`) in `godot-check` (`tests/player_controller_smoke_test.gd`) and on a physical Android device.
-
-
-## Full 18-Skill Gathering, Crafting & Combat Specialization Loop — 2026-11-18 (written; CI pending)
-
-- [ ] Verify server unit/integration tests and `go vet` in `server.yml` for `crop-001` (`farming`), `scrap-001` (`scavenging`), the 5 new workbench/forge recipes, ranged/magic parent attribution, and the 29-item / 6-node / 12-recipe world catalog.
-- [ ] Verify client smoke tests (`interaction_hint_smoke_test.gd` & `player_controller_smoke_test.gd`), Web export, and Android APK export in `client.yml`.
-
-- [ ] Verify the new `CRAFTING SCHEMATICS` browser panel (`_show_crafting_panel` / `_refresh_crafting_recipe_list`) in `client.yml` (`interaction_hint_smoke_test.gd`) and on desktop/Android viewports.
+- [x] Verify `client/export_presets.cfg` Android preset and `.github/workflows/client.yml` `android-apk` artifact build in GitHub Actions (verified in Client Action run `44320453334`).
+- [x] Verify touch camera isolation and `PresentationState` (`IDLE`/`WALK`/`RUN`/`JUMP`/`FALL`/`LAND`/`ATTACK`/`GATHER`/`CRAFT`/`USE_ITEM`/`HIT`/`DEFEAT`/`RESPAWN`) in `godot-check` (`tests/player_controller_smoke_test.gd`).
+- [ ] Perform physical Android device touch review.
 
 
-## Mining Ores/Crystals, Medical Packs, HAM + Secondary Attributes & New Monsters — 2026-11-18 (written; CI pending)
+## Full 18-Skill Gathering, Crafting & Combat Specialization Loop — 2026-11-18 (CI verified)
 
-- [ ] Verify Go unit/integration tests and `go vet` in `server.yml` for the 9 gathering nodes, 47 items, 23 recipes, 6 enemies, medical packs, attribute buffs, and `Constitution`/`Stamina`/`Willpower` regeneration.
-- [ ] Verify Godot client smoke tests, Web export, and Android APK build in `client.yml`.
+- [x] Verify server unit/integration tests and `go vet` in `server.yml` for `crop-001` (`farming`), `scrap-001` (`scavenging`), the 5 new workbench/forge recipes, ranged/magic parent attribution, and the world catalog (verified in Server Action run `44316193232`).
+- [x] Verify client smoke tests (`interaction_hint_smoke_test.gd` & `player_controller_smoke_test.gd`), Web export, and Android APK export in `client.yml` (verified in Client Action run `44320453334`).
+- [x] Verify the new `CRAFTING SCHEMATICS` browser panel (`_show_crafting_panel` / `_refresh_crafting_recipe_list`) in `client.yml` (`interaction_hint_smoke_test.gd`).
 
-- [ ] Verify the 13-node / 67-item / 34-recipe / 9-enemy catalog expansion in `server.yml` and the new `CHARACTER VITALS & ATTRIBUTES` panel, HAM HUD bars, and walk/run pace toggle in `client.yml`.
 
-- [ ] Verify the 18-node / 86-item / 43-recipe / 14-enemy catalog expansion in `server.yml` and the `FRONTIER WORLD ATLAS & DIRECTORY` panel, `Med/Stim` quick-use action, keyboard hotkeys, and autorun toggle in `client.yml`.
+## Mining Ores/Crystals, Medical Packs, HAM + Secondary Attributes & New Monsters — 2026-11-18 (CI verified)
 
-- [ ] Verify the 23-node / 104-item / 51-recipe / 19-enemy catalog expansion in `server.yml` and the `OPTIONS, CAMERA & CONTROLS` panel, First-Person/Third-Person camera toggle, and `reset_camera_behind_character()` in `client.yml`.
+- [x] Verify Go unit/integration tests and `go vet` in `server.yml` for gathering nodes, items, recipes, enemies, medical packs, attribute buffs, and `Constitution`/`Stamina`/`Willpower` regeneration.
+- [x] Verify Godot client smoke tests, Web export, and Android APK build in `client.yml`.
+- [x] Verify the `CHARACTER VITALS & ATTRIBUTES` panel, HAM HUD bars, and walk/run pace toggle in `client.yml`.
+- [x] Verify the `FRONTIER WORLD ATLAS & DIRECTORY` panel, `Med/Stim` quick-use action, keyboard hotkeys, and autorun toggle in `client.yml`.
+- [x] Verify the `OPTIONS, CAMERA & CONTROLS` panel, First-Person/Third-Person camera toggle, and `reset_camera_behind_character()` in `client.yml`.
 
 ## All-18-Skill Level Milestones & Coinciding Attainment Loops — 2026-11-18
 
 - [x] Add Lv 2 & Lv 4 gathering nodes for `woodcutting` (`ironwood-001`, `starwood-001`), `foraging` (`glowcap-001`, `sunblossom-001`), `farming` (`tuber-001`, `starberry-001`), and `scavenging` (`circuit-001`, `capacitor-001`) bringing the starter zone to **31 gathering nodes**.
 - [x] Add milestone weapons, armor, and culinary meals across `melee`, `ranged`, `strength`, `defense`, `unarmed`, `pistols`, `magic`, and `cooking` (**126 items** and **65 recipes** total) with dual attainment via crafting stations and monster harvest loot tables.
 - [x] Display current and next skill level unlocks with attainment sources in the Godot `SKILLS` panel (`_describe_skill_progression_unlocks`).
+
+## Tier 6–8 Full-Roster Progression, 5 Frontier Monsters & Dual-Attainment Masterwork Gear — 2026-11-18
+
+- [x] Expand starter-zone gathering nodes from 31 to **39 nodes** with Lv 6 and Lv 8 nodes for `woodcutting` (`elderwood-001`, `voidbark-001`), `foraging` (`frostlotus-001`, `astralspore-001`), `farming` (`goldengrain-001`, `celestialfruit-001`), and `scavenging` (`servoarray-001`, `singularity-001`).
+- [x] Expand item catalog from 126 to **151 items** (+8 Tier 6–8 gathering resources, +5 frontier monster materials, +10 Tier 6–8 masterwork weapons/armor covering all 10 combat skills, +2 culinary feasts) and crafting catalog from 65 to **77 recipes**.
+- [x] Expand enemy catalog from 19 to **24 enemies** (`ironbark-treant-001`, `cryo-stalker-001`, `solar-drake-001`, `chrono-stalker-001`, `abyssal-goliath-001`) and loot tables from 21 to **26 tables** so all 10 Tier 6–8 masterwork weapons and armor pieces have dual attainment (both craftable and monster-dropped).
+- [x] Add 3D visual builders, monster color palettes, and Tier 6–8 station recipe selectors in `client/scripts/main.gd` + regression coverage in `client/tests/interaction_hint_smoke_test.gd` and `server/internal/game/crafting_test.go`.
+

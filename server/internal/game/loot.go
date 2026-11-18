@@ -140,6 +140,52 @@ var lootTableDefinitions = []LootTableDefinition{
 	}, BonusRolls: []LootTableRoll{
 		{Drops: []LootTableDrop{{ItemID: "nova_prism", Weight: 1500, MinQuantity: 1, MaxQuantity: 1}}},
 	}},
+	// Tier 6-8 Frontier Monster Harvest Tables (+5 tables -> 26 total)
+	{ID: "ironbark-treant-harvest", Version: 1, GuaranteedDrops: []LootTableDrop{
+		{ItemID: "ancient_heartwood_sap", MinQuantity: 1, MaxQuantity: 2},
+	}, BonusRolls: []LootTableRoll{
+		{Drops: []LootTableDrop{
+			{ItemID: "aether_bough_timber", Weight: 2400, MinQuantity: 1, MaxQuantity: 2},
+			{ItemID: "sovereign_greatsword", Weight: 450, MinQuantity: 1, MaxQuantity: 1},
+			{ItemID: "elderwood_longbow", Weight: 450, MinQuantity: 1, MaxQuantity: 1},
+		}},
+	}},
+	{ID: "cryo-stalker-harvest", Version: 1, GuaranteedDrops: []LootTableDrop{
+		{ItemID: "glacial_core_shard", MinQuantity: 1, MaxQuantity: 2},
+	}, BonusRolls: []LootTableRoll{
+		{Drops: []LootTableDrop{
+			{ItemID: "cryo_lotus_petal", Weight: 2300, MinQuantity: 1, MaxQuantity: 2},
+			{ItemID: "cryo_pulse_blaster", Weight: 500, MinQuantity: 1, MaxQuantity: 1},
+			{ItemID: "juggernaut_war_plate", Weight: 450, MinQuantity: 1, MaxQuantity: 1},
+		}},
+	}},
+	{ID: "solar-drake-harvest", Version: 1, GuaranteedDrops: []LootTableDrop{
+		{ItemID: "solaris_fire_gland", MinQuantity: 1, MaxQuantity: 2},
+	}, BonusRolls: []LootTableRoll{
+		{Drops: []LootTableDrop{
+			{ItemID: "solarite_crystal", Weight: 2100, MinQuantity: 1, MaxQuantity: 2},
+			{ItemID: "solaris_halberd", Weight: 500, MinQuantity: 1, MaxQuantity: 1},
+			{ItemID: "sunfire_focus_scepter", Weight: 450, MinQuantity: 1, MaxQuantity: 1},
+		}},
+	}},
+	{ID: "chrono-stalker-harvest", Version: 1, GuaranteedDrops: []LootTableDrop{
+		{ItemID: "temporal_phase_tendril", MinQuantity: 1, MaxQuantity: 2},
+	}, BonusRolls: []LootTableRoll{
+		{Drops: []LootTableDrop{
+			{ItemID: "singularity_core_cell", Weight: 2000, MinQuantity: 1, MaxQuantity: 1},
+			{ItemID: "chronite_kinetic_gauntlets", Weight: 450, MinQuantity: 1, MaxQuantity: 1},
+			{ItemID: "overlord_siege_maul", Weight: 500, MinQuantity: 1, MaxQuantity: 1},
+		}},
+	}},
+	{ID: "abyssal-goliath-harvest", Version: 1, GuaranteedDrops: []LootTableDrop{
+		{ItemID: "abyssal_behemoth_plate", MinQuantity: 1, MaxQuantity: 2},
+	}, BonusRolls: []LootTableRoll{
+		{Drops: []LootTableDrop{
+			{ItemID: "voidbark_heartwood", Weight: 1900, MinQuantity: 1, MaxQuantity: 2},
+			{ItemID: "abyssal_artillery_cannon", Weight: 450, MinQuantity: 1, MaxQuantity: 1},
+			{ItemID: "dreadnought_aegis_helm", Weight: 450, MinQuantity: 1, MaxQuantity: 1},
+		}},
+	}},
 }
 
 func LootTableDefinitions() []LootTableDefinition {

@@ -575,9 +575,9 @@ func TestMarketCatalogIsPublicAndContainsServerPrices(t *testing.T) {
  if response.Code!=http.StatusOK{t.Fatalf("market catalog status=%d",response.Code)}
  var payload struct{Items []game.ItemDefinition `json:"items"`;StartingCoins int64 `json:"startingCoins"`}
  if err:=json.Unmarshal(response.Body.Bytes(),&payload);err!=nil{t.Fatal(err)}
- if len(payload.Items)!=126||payload.StartingCoins!=game.StartingCoins{t.Fatalf("unexpected market catalog: %+v",payload)}
+ if len(payload.Items)!=151||payload.StartingCoins!=game.StartingCoins{t.Fatalf("unexpected market catalog: %+v",payload)}
  if payload.Items[0].BuyPrice<=payload.Items[0].SellPrice{t.Fatal("merchant catalog should expose a grounded buy/sell spread")}
-	rareMaterials := map[string]bool{"rat_tooth":false,"boar_tusk":false,"stoneback_scale":false,"stoneback_plate":false,"stoneback_core":false}
+	rareMaterials := map[string]bool{"rat_tooth":false,"boar_tusk":false,"stoneback_scale":false,"stoneback_plate":false,"stoneback_core":false,"ancient_heartwood_sap":false,"glacial_core_shard":false,"solaris_fire_gland":false,"temporal_phase_tendril":false,"abyssal_behemoth_plate":false}
 	for _, item := range payload.Items {
 		if _, ok := rareMaterials[item.ID]; ok {
 			rareMaterials[item.ID] = item.BuyPrice == 0 && item.SellPrice > 0
@@ -610,7 +610,7 @@ func TestEnemyCatalogIsPublic(t *testing.T) {
  if response.Code!=http.StatusOK{t.Fatalf("enemy catalog status=%d body=%s",response.Code,response.Body.String())}
  var payload struct{Enemies []game.EnemyDefinition `json:"enemies"`}
  if err:=json.Unmarshal(response.Body.Bytes(),&payload);err!=nil{t.Fatal(err)}
- if len(payload.Enemies)!=19{t.Fatalf("enemy definitions=%d want=19",len(payload.Enemies))}
+ if len(payload.Enemies)!=24{t.Fatalf("enemy definitions=%d want=24",len(payload.Enemies))}
 }
 
 func (s *testCharacterStore) SendLocalChatForAccount(_ context.Context,accountID string,id game.PlayerID,message string,now time.Time)(game.ChatMessage,error){
@@ -773,7 +773,7 @@ func TestWorldCatalogBundlesAllPublicDefinitions(t *testing.T) {
 		StartingCoins int64 `json:"startingCoins"`
 	}
 	if err:=json.Unmarshal(response.Body.Bytes(),&payload);err!=nil{t.Fatal(err)}
-	if len(payload.Skills)!=18||len(payload.Zones)!=1||len(payload.Nodes)!=31||len(payload.Items)!=126||len(payload.Enemies)!=19||len(payload.Recipes)!=65||len(payload.Stations)!=2||payload.StartingCoins!=game.StartingCoins {
+	if len(payload.Skills)!=18||len(payload.Zones)!=1||len(payload.Nodes)!=39||len(payload.Items)!=151||len(payload.Enemies)!=24||len(payload.Recipes)!=77||len(payload.Stations)!=2||payload.StartingCoins!=game.StartingCoins {
 		t.Fatalf("incomplete world catalog skills=%d zones=%d nodes=%d items=%d enemies=%d recipes=%d stations=%d coins=%d",len(payload.Skills),len(payload.Zones),len(payload.Nodes),len(payload.Items),len(payload.Enemies),len(payload.Recipes),len(payload.Stations),payload.StartingCoins)
 	}
 }

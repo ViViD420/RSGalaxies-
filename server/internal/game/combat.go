@@ -79,6 +79,12 @@ var enemyDefinitions = []EnemyDefinition{
 	{ID: "magma-crusher-001", Name: "Magma Crusher", MaxHealth: 105, Attack: 13, Defense: 6, Experience: 240, LootTableID: "magma-crusher-harvest", Position: WorldPosition{ZoneID: DefaultWorldZoneID, X: 40, Z: -24}, InteractionRange: 3, RespawnSeconds: 130},
 	{ID: "rift-specter-001", Name: "Rift Specter", MaxHealth: 118, Attack: 15, Defense: 4, Experience: 280, LootTableID: "rift-specter-harvest", Position: WorldPosition{ZoneID: DefaultWorldZoneID, X: -42, Z: 18}, InteractionRange: 3, RespawnSeconds: 140},
 	{ID: "apex-devourer-001", Name: "Apex Rift Devourer", MaxHealth: 145, Attack: 17, Defense: 6, Experience: 360, LootTableID: "apex-devourer-harvest", Position: WorldPosition{ZoneID: DefaultWorldZoneID, X: 42, Z: 42}, InteractionRange: 3, RespawnSeconds: 165},
+	// Tier 6-8 Frontier Monsters (+5 enemies -> 24 total)
+	{ID: "ironbark-treant-001", Name: "Ironbark Ancient", MaxHealth: 92, Attack: 11, Defense: 5, Experience: 205, LootTableID: "ironbark-treant-harvest", Position: WorldPosition{ZoneID: DefaultWorldZoneID, X: 34, Z: -10}, InteractionRange: 3, RespawnSeconds: 115},
+	{ID: "cryo-stalker-001", Name: "Glacial Frost-Warden", MaxHealth: 108, Attack: 13, Defense: 5, Experience: 245, LootTableID: "cryo-stalker-harvest", Position: WorldPosition{ZoneID: DefaultWorldZoneID, X: -30, Z: -30}, InteractionRange: 3, RespawnSeconds: 125},
+	{ID: "solar-drake-001", Name: "Solaris Sun-Drake", MaxHealth: 122, Attack: 15, Defense: 6, Experience: 295, LootTableID: "solar-drake-harvest", Position: WorldPosition{ZoneID: DefaultWorldZoneID, X: 14, Z: 36}, InteractionRange: 3, RespawnSeconds: 140},
+	{ID: "chrono-stalker-001", Name: "Temporal Phase-Hound", MaxHealth: 136, Attack: 16, Defense: 6, Experience: 335, LootTableID: "chrono-stalker-harvest", Position: WorldPosition{ZoneID: DefaultWorldZoneID, X: -18, Z: -38}, InteractionRange: 3, RespawnSeconds: 155},
+	{ID: "abyssal-goliath-001", Name: "Abyssal Chasm Goliath", MaxHealth: 160, Attack: 18, Defense: 7, Experience: 395, LootTableID: "abyssal-goliath-harvest", Position: WorldPosition{ZoneID: DefaultWorldZoneID, X: -40, Z: -36}, InteractionRange: 3, RespawnSeconds: 175},
 }
 
 func EnemyDefinitions() []EnemyDefinition {

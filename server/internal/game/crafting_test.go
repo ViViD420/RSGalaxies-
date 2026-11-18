@@ -294,20 +294,30 @@ func TestEveryCoreSkillHasMilestoneUnlocksAndObtainableItemChains(t *testing.T) 
 		}
 	}
 	highTierUnlockCount := map[string]int{}
+	tierSixPlusUnlockCount := map[string]int{}
 	for _, node := range GatheringNodes() {
 		if node.RequiredLevel >= 2 {
 			highTierUnlockCount[node.SkillID]++
+		}
+		if node.RequiredLevel >= 6 {
+			tierSixPlusUnlockCount[node.SkillID]++
 		}
 	}
 	for _, recipe := range CraftingRecipes() {
 		if recipe.RequiredLevel >= 2 {
 			highTierUnlockCount[recipe.SkillID]++
 		}
+		if recipe.RequiredLevel >= 6 {
+			tierSixPlusUnlockCount[recipe.SkillID]++
+		}
 	}
 	for _, item := range ItemDefinitions() {
 		if item.EquipmentSlot != "" {
 			if item.RequiredSkillLevel >= 2 {
 				highTierUnlockCount[item.RequiredSkillID]++
+			}
+			if item.RequiredSkillLevel >= 6 {
+				tierSixPlusUnlockCount[item.RequiredSkillID]++
 			}
 			_, craftable := recipeByOutput[item.ID]
 			if !craftable && !lootedItems[item.ID] && item.BuyPrice <= 0 {
@@ -318,6 +328,18 @@ func TestEveryCoreSkillHasMilestoneUnlocksAndObtainableItemChains(t *testing.T) 
 	for _, skill := range SkillDefinitions() {
 		if highTierUnlockCount[skill.ID] == 0 {
 			t.Fatalf("skill %s has no Level 2+ progression unlock (node, recipe, or equipment)", skill.ID)
+		}
+		if tierSixPlusUnlockCount[skill.ID] == 0 {
+			t.Fatalf("skill %s has no Level 6+ progression unlock (node, recipe, or equipment)", skill.ID)
+		}
+	}
+	for _, dualID := range []string{
+		"overlord_siege_maul", "abyssal_artillery_cannon", "juggernaut_war_plate", "dreadnought_aegis_helm",
+		"sovereign_greatsword", "solaris_halberd", "chronite_kinetic_gauntlets", "cryo_pulse_blaster",
+		"elderwood_longbow", "sunfire_focus_scepter",
+	} {
+		if _, craftable := recipeByOutput[dualID]; !craftable || !lootedItems[dualID] {
+			t.Fatalf("tier 6-8 masterwork item %s missing dual attainment: craftable=%v looted=%v", dualID, craftable, lootedItems[dualID])
 		}
 	}
 
