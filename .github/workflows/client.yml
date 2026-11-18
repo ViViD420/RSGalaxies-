@@ -65,7 +65,7 @@ jobs:
           yes | "$SDKMANAGER" --sdk_root="$SDK_ROOT" "platform-tools" "build-tools;34.0.0" "platforms;android-34" >/dev/null
       - name: Install Godot 4.3, export templates, and debug keystore
         run: |
-          mkdir -p "$HOME/.local/bin" "$HOME/.local/share/godot/export_templates/4.3.stable" "$HOME/.config/godot" "$HOME/.android"
+          mkdir -p "$HOME/.local/bin" "$HOME/.local/share/godot/export_templates/4.3.stable" "$HOME/.local/share/godot/keystores" "$HOME/.config/godot" "$HOME/.android"
           curl -fsSL "https://github.com/godotengine/godot/releases/download/4.3-stable/Godot_v4.3-stable_linux.x86_64.zip" -o /tmp/godot.zip
           unzip -q /tmp/godot.zip -d /tmp/godot
           install -m 0755 /tmp/godot/Godot_v4.3-stable_linux.x86_64 "$HOME/.local/bin/godot"
@@ -73,19 +73,23 @@ jobs:
           curl -fsSL "https://github.com/godotengine/godot/releases/download/4.3-stable/Godot_v4.3-stable_export_templates.tpz" -o /tmp/godot-templates.tpz
           unzip -q /tmp/godot-templates.tpz -d /tmp/godot-templates
           cp -a /tmp/godot-templates/templates/. "$HOME/.local/share/godot/export_templates/4.3.stable/"
-          rm -f "$HOME/.android/debug.keystore"
+          rm -f "$HOME/.android/debug.keystore" "$HOME/.local/share/godot/keystores/debug.keystore"
           keytool -keyalg RSA -genkeypair -alias androiddebugkey -keypass android \
             -keystore "$HOME/.android/debug.keystore" -storepass android \
             -dname "CN=Android Debug,O=Android,C=US" -validity 9999
+          cp "$HOME/.android/debug.keystore" "$HOME/.local/share/godot/keystores/debug.keystore"
           cat <<EOF > "$HOME/.config/godot/editor_settings-4.3.tres"
           [gd_resource type="EditorSettings" format=3]
 
           [resource]
+          export/android/java_sdk_path = "${JAVA_HOME}"
           export/android/android_sdk_path = "${ANDROID_HOME}"
           export/android/debug_keystore = "${HOME}/.android/debug.keystore"
           export/android/debug_keystore_user = "androiddebugkey"
           export/android/debug_keystore_pass = "android"
+          export/android/shutdown_adb_on_exit = false
           EOF
+          sed -i 's/^[[:space:]]*//' "$HOME/.config/godot/editor_settings-4.3.tres"
       - name: Export Android Debug APK
         working-directory: client
         shell: bash
