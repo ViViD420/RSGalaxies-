@@ -55,13 +55,17 @@ jobs:
         with:
           distribution: temurin
           java-version: "17"
-      - uses: android-actions/setup-android@v3
       - name: Install Android SDK build-tools and platform
         run: |
-          yes | sdkmanager "platform-tools" "build-tools;34.0.0" "platforms;android-34" >/dev/null
+          SDK_ROOT="${ANDROID_HOME:-${ANDROID_SDK_ROOT:-/usr/local/lib/android/sdk}}"
+          echo "ANDROID_HOME=${SDK_ROOT}" >> "$GITHUB_ENV"
+          echo "ANDROID_SDK_ROOT=${SDK_ROOT}" >> "$GITHUB_ENV"
+          SDKMANAGER="$(find "$SDK_ROOT/cmdline-tools" -name sdkmanager -type f | sort -V | tail -n 1)"
+          yes | "$SDKMANAGER" --sdk_root="$SDK_ROOT" --licenses >/dev/null || true
+          yes | "$SDKMANAGER" --sdk_root="$SDK_ROOT" "platform-tools" "build-tools;34.0.0" "platforms;android-34" >/dev/null
       - name: Install Godot 4.3, export templates, and debug keystore
         run: |
-          mkdir -p "$HOME/.local/bin" "$HOME/.local/share/godot/export_templates/4.3.stable" "$HOME/.config/godot"
+          mkdir -p "$HOME/.local/bin" "$HOME/.local/share/godot/export_templates/4.3.stable" "$HOME/.config/godot" "$HOME/.android"
           curl -fsSL "https://github.com/godotengine/godot/releases/download/4.3-stable/Godot_v4.3-stable_linux.x86_64.zip" -o /tmp/godot.zip
           unzip -q /tmp/godot.zip -d /tmp/godot
           install -m 0755 /tmp/godot/Godot_v4.3-stable_linux.x86_64 "$HOME/.local/bin/godot"
@@ -69,6 +73,7 @@ jobs:
           curl -fsSL "https://github.com/godotengine/godot/releases/download/4.3-stable/Godot_v4.3-stable_export_templates.tpz" -o /tmp/godot-templates.tpz
           unzip -q /tmp/godot-templates.tpz -d /tmp/godot-templates
           cp -a /tmp/godot-templates/templates/. "$HOME/.local/share/godot/export_templates/4.3.stable/"
+          rm -f "$HOME/.android/debug.keystore"
           keytool -keyalg RSA -genkeypair -alias androiddebugkey -keypass android \
             -keystore "$HOME/.android/debug.keystore" -storepass android \
             -dname "CN=Android Debug,O=Android,C=US" -validity 9999
