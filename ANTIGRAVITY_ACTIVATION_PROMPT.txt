@@ -1,0 +1,22 @@
+RS GALAXIES — ANTIGRAVITY LOCAL-FIRST ACTIVATION
+
+Read and follow:
+- AGENTS.md
+- .agents/skills/rs-galaxies-ultimate-engineer/SKILL.md
+- .agents/skills/rs-galaxies-ultimate-engineer/workflows/01-resume-local-project.md
+
+IMPORTANT: Work in the EXISTING local RS Galaxies project folder. Gemini on my phone has already been improving files and storing changes locally. The local workspace is the primary source of truth. Do not assume GitHub is newer. Do not pull, reset, clean, checkout, rebase, merge, overwrite, or push until local and remote changes have been inspected and a safe plan is established. Preserve uncommitted and untracked work.
+
+FIRST:
+1. Confirm the active workspace root.
+2. Read docs/SESSION_HANDOFF.md completely if it exists.
+3. Read docs/ROADMAP.md, docs/ARCHITECTURE.md, AGENTS.md, and engine/project manifests.
+4. Inspect local Git status, branch, HEAD, recent commits, staged/unstaged changes, and untracked files.
+5. Identify actual engine, languages, server/client architecture, persistence, assets, and build/test commands.
+6. Compare handoff claims against actual code.
+7. Report the verified current state and exact unfinished task.
+
+THEN:
+Continue the exact unfinished task without restarting or recreating the project. Improve existing code where practical, preserve all established RS Galaxies requirements, maintain server-authoritative MMO systems, run real verification, inspect the final diff, and update docs/SESSION_HANDOFF.md after every meaningful milestone. Update ROADMAP and ARCHITECTURE only when their contents genuinely change.
+
+Never modify GalaxyMMO or reuse its proprietary code. Never claim tests, builds, commits, pushes, or CI passed without evidence. Minimize unnecessary questions and complete as much safe work as possible.

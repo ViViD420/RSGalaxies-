@@ -455,6 +455,11 @@ func (r *AccountRepository) UseItemForAccount(ctx context.Context,accountID stri
 func (r *AccountRepository) HeartbeatPresenceForAccount(ctx context.Context,accountID string,id game.PlayerID,now time.Time) error {
 	tx,err:=r.db.BeginTx(ctx,nil);if err!=nil{return err};defer tx.Rollback()
 	player,err:=r.lockOwnedPlayer(ctx,tx,accountID,id);if err!=nil{return err}
+	beforeH, beforeA, beforeM, beforeBuff := player.Health, player.Action, player.Mind, player.BuffExpiresAt
+	player.RegenerateVitals(now)
+	if player.Health != beforeH || player.Action != beforeA || player.Mind != beforeM || !player.BuffExpiresAt.Equal(beforeBuff) {
+		if err := updateOwnedPlayer(ctx, tx, accountID, player); err != nil { return err }
+	}
 	if err:=upsertZonePresence(ctx,tx,accountID,player,now);err!=nil{return err}
 	if _,err:=tx.ExecContext(ctx,`DELETE FROM zone_presence WHERE last_seen_at < $1`,now.UTC().Add(-5*time.Minute));err!=nil{return fmt.Errorf("prune stale character presence: %w",err)}
 	if err:=tx.Commit();err!=nil{return fmt.Errorf("commit character presence: %w",err)}

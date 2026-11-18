@@ -120,3 +120,43 @@ func TestReceiveBossAttackRejectsOutOfRangeAndInvalidAbility(t *testing.T) {
 	}
 }
 
+
+func TestRangedAndMagicSpecializationsAttributeParentSkillWithoutStrength(t *testing.T) {
+	now := time.Date(2026, 11, 18, 12, 0, 0, 0, time.UTC)
+	player, err := NewPlayer("ranged-caster", "RangedCaster", now.Add(-2*time.Second))
+	if err != nil {
+		t.Fatal(err)
+	}
+	enemy, ok := FindEnemy("frontier-rat-001")
+	if !ok {
+		t.Fatal("frontier rat missing")
+	}
+	player.Position = enemy.Position
+	player.Skills["ranged"] = SkillProgress{Level: 21}
+	player.Skills["strength"] = SkillProgress{Level: 51}
+
+	for index, weaponID := range []string{"frontier_pistol", "resonance_focus"} {
+		player.Inventory[weaponID] = 1
+		if err := player.EquipItem(weaponID); err != nil {
+			t.Fatalf("equip %s: %v", weaponID, err)
+		}
+		result, _, err := player.AttackEnemy(enemy, EnemyState{}, now.Add(time.Duration(index*2)*time.Second))
+		if err != nil {
+			t.Fatalf("attack with %s: %v", weaponID, err)
+		}
+		wantSkill := "pistols"
+		if weaponID == "resonance_focus" {
+			wantSkill = "magic"
+		}
+		if result.SkillID != wantSkill || result.ParentSkillID != "ranged" {
+			t.Fatalf("%s attribution = %s/%s, want %s/ranged", weaponID, result.SkillID, result.ParentSkillID, wantSkill)
+		}
+		// Base 2 + weapon attackBonus 2 + ranged level 21 (+1) = 5 (Strength 51 must not add melee bonus).
+		if result.DamageDealt != 5 {
+			t.Fatalf("%s damage = %d, want 5 (ranged parent bonus applied, strength excluded)", weaponID, result.DamageDealt)
+		}
+		if player.Skills["strength"].Experience != 0 {
+			t.Fatalf("%s unexpectedly awarded melee strength XP: %+v", weaponID, player.Skills["strength"])
+		}
+	}
+}

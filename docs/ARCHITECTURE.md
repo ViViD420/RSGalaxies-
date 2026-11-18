@@ -272,3 +272,25 @@ Client #192 exposed that the checked-parser edit had matched the earlier enemy s
 ### Interaction response error hardening verification
 
 Client Action #193 passed the malformed-response and request-start error-feedback tests, contextual hint tests, terrain/movement smoke, editor import and Web export. The malformed JSON path produced no parser ERROR output, and the full job log contained no Godot errors or RID/resource leak diagnostics. The #191/#192 failures and corrections remain preserved in the handoff. Physical-device review remains outstanding.
+
+
+## Full 18-Skill Loop & Grounded Node Presentation (2026-11-18)
+
+- All 18 active skills now have end-to-end server-authoritative loops: `farming` (`crop-001` -> `frontier_grain` -> `frontier-ration` via `cooking`), `scavenging` (`scrap-001` -> `salvaged_scrap` -> `salvaged-power-cell`), and crafted specialization weapons for `pistols` (`frontier_pistol`), `rifles` (`frontier_rifle`), and `magic` (`resonance_focus`) alongside `blades`, `polearms`, and `unarmed`.
+- `Player.AttackEnemy` derives parent-skill damage scaling from the governing specialization's `ParentID` (`melee` or `ranged`) and restricts `strength` co-skill XP and melee damage bonuses to `melee` specializations.
+- Godot grounds gathering nodes and initial enemy spawns on `_terrain_height_at(x, z)` and renders distinct low-poly meshes for crop plots, scrap piles, and equipped weapon families.
+
+
+## HAM Primary Pools, Secondary Attributes (Constitution/Stamina/Willpower), Medpacks & Expanded World Catalog (2026-11-18)
+
+- Characters now track three primary pools (`Health`, `Action`, `Mind`) and three secondary attributes (`Constitution`, `Stamina`, `Willpower`). `Constitution` increases maximum Health and `HealthRegenRate()` (`1 + Constitution/5` per 5s heartbeat); `Stamina` governs `Action` ceiling and regeneration; `Willpower` governs `Mind` ceiling and regeneration.
+- Consumables support both instant medical packs (`field_medpack`, `advanced_medpack`) and 10-minute attribute buff enhancers (`vitality_stim_pack`, `adrenal_action_booster`, `neural_mind_tonic`).
+- Starter zone now includes 9 gathering nodes (adding `iron-001`, `titanium-001`, `crystal-001`), 6 enemy spawns (adding `canyon-stalker-001`, `ash-hound-001`, `ruin-sentinel-001` with multi-item loot tables), 47 items, and 23 recipes.
+
+
+## Tier 1–10 World Catalog, Player Controls & UI Panels (2026-11-18)
+
+- **World catalog totals (server-authoritative):** **23 gathering nodes** across `mining`, `woodcutting`, `foraging`, `farming`, and `scavenging` (Tiers 1–10 up to `nova-prism-001`), **104 item definitions** (ores, crystals, alloy bars, medical packs, attribute buff enhancers, monster harvest drops, and specialization weapons/armor), **51 crafting recipes** across `frontier-workbench` and `frontier-forge`, **19 enemy definitions**, and **21 multi-item loot tables**.
+- **Consumable buff vs. restore invariant:** `Player.UseItem` applies `BuffHealthAmount` / `BuffActionAmount` / `BuffMindAmount` strictly to effective pool caps (`MaxHealthBuff`, `MaxActionBuff`, `MaxMindBuff`) while pool restoration comes solely from `HealAmount`, `ActionRestoreAmount`, and `MindRestoreAmount`.
+- **Godot client controls & panels:** `player_controller.gd` provides `PresentationState` (`IDLE`..`RESPAWN`), touch camera drag isolation, walk/run pace toggle (`set_walk_mode`/`toggle_walk_mode`), autorun (`set_autorun`/`toggle_autorun`), and First-Person/Third-Person camera switching (`camera_min_distance = 0.5m` with `BodyMesh` hide below `1.0m` and `reset_camera_behind_character()`). `main.gd` exposes the `CRAFTING SCHEMATICS`, `CHARACTER VITALS & ATTRIBUTES`, `FRONTIER WORLD ATLAS & DIRECTORY`, and `OPTIONS, CAMERA & CONTROLS` panels plus `Med/Stim` quick-use.
+- **Workspace engineering skill:** `.agents/skills/rs-galaxies-ultimate-engineer/SKILL.md` (with `references/`, `templates/`, `workflows/`, `AGENTS.md`, and `scripts/validate_package.py`) codifies the local-first protocol, no-hidden-errors rule, and vertical-slice verification standards.

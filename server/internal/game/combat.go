@@ -8,125 +8,196 @@ import (
 
 const (
 	MaxPlayerHealth = 100
-	CombatCooldown = time.Second
+	CombatCooldown  = time.Second
 )
 
 var (
-	ErrUnknownEnemy = errors.New("unknown enemy")
-	ErrEnemyOutOfRange = errors.New("enemy is out of range")
-	ErrEnemyRespawning = errors.New("enemy is respawning")
-	ErrCombatCooldown = errors.New("combat action is cooling down")
-	ErrPlayerDefeated = errors.New("player is defeated")
-	ErrRestOutOfRange = errors.New("resting is only possible near a safe spawn")
+	ErrUnknownEnemy      = errors.New("unknown enemy")
+	ErrEnemyOutOfRange   = errors.New("enemy is out of range")
+	ErrEnemyRespawning   = errors.New("enemy is respawning")
+	ErrCombatCooldown    = errors.New("combat action is cooling down")
+	ErrPlayerDefeated    = errors.New("player is defeated")
+	ErrRestOutOfRange    = errors.New("resting is only possible near a safe spawn")
 	ErrInvalidBossAttack = errors.New("invalid boss attack parameters")
 )
 
 type EnemyDefinition struct {
-	ID string `json:"id"`
-	Name string `json:"name"`
-	MaxHealth int `json:"maxHealth"`
-	Attack int `json:"attack"`
-	Defense int `json:"defense"`
-	Experience int `json:"experience"`
-	LootItemID string `json:"lootItemId"`
-	LootQuantity int `json:"lootQuantity"`
-	LootTableID string `json:"lootTableId,omitempty"`
-	Position WorldPosition `json:"position"`
-	InteractionRange float64 `json:"interactionRange"`
-	RespawnSeconds int `json:"respawnSeconds"`
+	ID               string        `json:"id"`
+	Name             string        `json:"name"`
+	MaxHealth        int           `json:"maxHealth"`
+	Attack           int           `json:"attack"`
+	Defense          int           `json:"defense"`
+	Experience       int           `json:"experience"`
+	LootItemID       string        `json:"lootItemId"`
+	LootQuantity     int           `json:"lootQuantity"`
+	LootTableID      string        `json:"lootTableId,omitempty"`
+	Position         WorldPosition `json:"position"`
+	InteractionRange float64       `json:"interactionRange"`
+	RespawnSeconds   int           `json:"respawnSeconds"`
 }
 
 type EnemyState struct {
-	Health int
-	RespawnAt time.Time
+	Health      int
+	RespawnAt   time.Time
 	Initialized bool
 }
 
 type CombatResult struct {
-	EnemyID string `json:"enemyId"`
-	SkillID string `json:"skillId"`
-	ParentSkillID string `json:"parentSkillId,omitempty"`
-	ParentExperience int `json:"parentExperience,omitempty"`
-	EnemyHealth int `json:"enemyHealth"`
-	PlayerHealth int `json:"playerHealth"`
-	DamageDealt int `json:"damageDealt"`
-	DamageReceived int `json:"damageReceived"`
-	EnemyDefeated bool `json:"enemyDefeated"`
-	PlayerDefeated bool `json:"playerDefeated"`
-	Experience int `json:"experience"`
-	LootItemID string `json:"lootItemId,omitempty"`
-	LootQuantity int `json:"lootQuantity,omitempty"`
+	EnemyID          string `json:"enemyId"`
+	SkillID          string `json:"skillId"`
+	ParentSkillID    string `json:"parentSkillId,omitempty"`
+	ParentExperience int    `json:"parentExperience,omitempty"`
+	EnemyHealth      int    `json:"enemyHealth"`
+	PlayerHealth     int    `json:"playerHealth"`
+	DamageDealt      int    `json:"damageDealt"`
+	DamageReceived   int    `json:"damageReceived"`
+	EnemyDefeated    bool   `json:"enemyDefeated"`
+	PlayerDefeated   bool   `json:"playerDefeated"`
+	Experience       int    `json:"experience"`
+	LootItemID       string `json:"lootItemId,omitempty"`
+	LootQuantity     int    `json:"lootQuantity,omitempty"`
 }
 
 var enemyDefinitions = []EnemyDefinition{
-	{ID:"frontier-rat-001",Name:"Frontier Rat",MaxHealth:12,Attack:2,Defense:0,Experience:25,LootTableID:"frontier-rat-harvest",Position:WorldPosition{ZoneID:DefaultWorldZoneID,X:8,Z:0},InteractionRange:3,RespawnSeconds:30},
-	{ID:"frontier-boar-001",Name:"Wild Boar",MaxHealth:35,Attack:6,Defense:2,Experience:60,LootTableID:"frontier-boar-harvest",Position:WorldPosition{ZoneID:DefaultWorldZoneID,X:-8,Z:0},InteractionRange:3,RespawnSeconds:60},
-	{ID:"stoneback-colossus",Name:"Stoneback Colossus",MaxHealth:100,Attack:0,Defense:2,Experience:500,LootTableID:"stoneback-colossus-harvest",Position:WorldPosition{ZoneID:DefaultWorldZoneID,X:32,Z:32},InteractionRange:3,RespawnSeconds:300},
+	{ID: "frontier-rat-001", Name: "Frontier Rat", MaxHealth: 12, Attack: 2, Defense: 0, Experience: 25, LootTableID: "frontier-rat-harvest", Position: WorldPosition{ZoneID: DefaultWorldZoneID, X: 8, Z: 0}, InteractionRange: 3, RespawnSeconds: 30},
+	{ID: "frontier-boar-001", Name: "Wild Boar", MaxHealth: 35, Attack: 6, Defense: 2, Experience: 60, LootTableID: "frontier-boar-harvest", Position: WorldPosition{ZoneID: DefaultWorldZoneID, X: -8, Z: 0}, InteractionRange: 3, RespawnSeconds: 60},
+	{ID: "stoneback-colossus", Name: "Stoneback Colossus", MaxHealth: 100, Attack: 0, Defense: 2, Experience: 500, LootTableID: "stoneback-colossus-harvest", Position: WorldPosition{ZoneID: DefaultWorldZoneID, X: 32, Z: 32}, InteractionRange: 3, RespawnSeconds: 300},
+	// 6 Additional Enemies & Monsters across the Frontier
+	{ID: "canyon-stalker-001", Name: "Canyon Stalker", MaxHealth: 24, Attack: 4, Defense: 1, Experience: 45, LootTableID: "canyon-stalker-harvest", Position: WorldPosition{ZoneID: DefaultWorldZoneID, X: 18, Z: 12}, InteractionRange: 3, RespawnSeconds: 45},
+	{ID: "mire-drake-001", Name: "Mire Drake", MaxHealth: 38, Attack: 5, Defense: 2, Experience: 70, LootTableID: "mire-drake-harvest", Position: WorldPosition{ZoneID: DefaultWorldZoneID, X: -18, Z: 20}, InteractionRange: 3, RespawnSeconds: 55},
+	{ID: "ash-hound-001", Name: "Ash Hound", MaxHealth: 45, Attack: 7, Defense: 2, Experience: 85, LootTableID: "ash-hound-harvest", Position: WorldPosition{ZoneID: DefaultWorldZoneID, X: -20, Z: -16}, InteractionRange: 3, RespawnSeconds: 65},
+	{ID: "frost-prowler-001", Name: "Frost Prowler", MaxHealth: 52, Attack: 8, Defense: 3, Experience: 105, LootTableID: "frost-prowler-harvest", Position: WorldPosition{ZoneID: DefaultWorldZoneID, X: 22, Z: -8}, InteractionRange: 3, RespawnSeconds: 75},
+	{ID: "ruin-sentinel-001", Name: "Ruin Sentinel", MaxHealth: 65, Attack: 9, Defense: 4, Experience: 130, LootTableID: "ruin-sentinel-harvest", Position: WorldPosition{ZoneID: DefaultWorldZoneID, X: 24, Z: -20}, InteractionRange: 3, RespawnSeconds: 90},
+	{ID: "aether-wraith-001", Name: "Aether Wraith", MaxHealth: 78, Attack: 11, Defense: 3, Experience: 165, LootTableID: "aether-wraith-harvest", Position: WorldPosition{ZoneID: DefaultWorldZoneID, X: -28, Z: 10}, InteractionRange: 3, RespawnSeconds: 105},
+	{ID: "feral-drone-001", Name: "Feral Scavenger Drone", MaxHealth: 30, Attack: 5, Defense: 2, Experience: 55, LootTableID: "feral-drone-harvest", Position: WorldPosition{ZoneID: DefaultWorldZoneID, X: 12, Z: -18}, InteractionRange: 3, RespawnSeconds: 50},
+	{ID: "thornback-behemoth-001", Name: "Thornback Behemoth", MaxHealth: 88, Attack: 12, Defense: 4, Experience: 190, LootTableID: "thornback-behemoth-harvest", Position: WorldPosition{ZoneID: DefaultWorldZoneID, X: 32, Z: -12}, InteractionRange: 3, RespawnSeconds: 115},
+	{ID: "obsidian-wyrm-001", Name: "Obsidian Wyrm", MaxHealth: 95, Attack: 13, Defense: 5, Experience: 220, LootTableID: "obsidian-wyrm-harvest", Position: WorldPosition{ZoneID: DefaultWorldZoneID, X: -36, Z: -20}, InteractionRange: 3, RespawnSeconds: 125},
+	{ID: "void-reaver-001", Name: "Void Reaver", MaxHealth: 110, Attack: 14, Defense: 4, Experience: 260, LootTableID: "void-reaver-harvest", Position: WorldPosition{ZoneID: DefaultWorldZoneID, X: 36, Z: 26}, InteractionRange: 3, RespawnSeconds: 135},
+	{ID: "star-golem-001", Name: "Star-Forged Construct", MaxHealth: 125, Attack: 15, Defense: 6, Experience: 310, LootTableID: "star-golem-harvest", Position: WorldPosition{ZoneID: DefaultWorldZoneID, X: -38, Z: 28}, InteractionRange: 3, RespawnSeconds: 150},
+	{ID: "dune-scorpion-001", Name: "Armored Dune Scorpion", MaxHealth: 60, Attack: 8, Defense: 3, Experience: 115, LootTableID: "dune-scorpion-harvest", Position: WorldPosition{ZoneID: DefaultWorldZoneID, X: 28, Z: 6}, InteractionRange: 3, RespawnSeconds: 80},
+	{ID: "crystalline-mantis-001", Name: "Crystalline Mantis", MaxHealth: 72, Attack: 10, Defense: 3, Experience: 145, LootTableID: "crystalline-mantis-harvest", Position: WorldPosition{ZoneID: DefaultWorldZoneID, X: -24, Z: -28}, InteractionRange: 3, RespawnSeconds: 95},
+	{ID: "magma-crusher-001", Name: "Magma Crusher", MaxHealth: 105, Attack: 13, Defense: 6, Experience: 240, LootTableID: "magma-crusher-harvest", Position: WorldPosition{ZoneID: DefaultWorldZoneID, X: 40, Z: -24}, InteractionRange: 3, RespawnSeconds: 130},
+	{ID: "rift-specter-001", Name: "Rift Specter", MaxHealth: 118, Attack: 15, Defense: 4, Experience: 280, LootTableID: "rift-specter-harvest", Position: WorldPosition{ZoneID: DefaultWorldZoneID, X: -42, Z: 18}, InteractionRange: 3, RespawnSeconds: 140},
+	{ID: "apex-devourer-001", Name: "Apex Rift Devourer", MaxHealth: 145, Attack: 17, Defense: 6, Experience: 360, LootTableID: "apex-devourer-harvest", Position: WorldPosition{ZoneID: DefaultWorldZoneID, X: 42, Z: 42}, InteractionRange: 3, RespawnSeconds: 165},
 }
 
 func EnemyDefinitions() []EnemyDefinition {
-	result:=make([]EnemyDefinition,len(enemyDefinitions));copy(result,enemyDefinitions);return result
+	result := make([]EnemyDefinition, len(enemyDefinitions))
+	copy(result, enemyDefinitions)
+	return result
 }
 
-func FindEnemy(id string)(EnemyDefinition,bool){
-	for _,enemy:=range enemyDefinitions{if enemy.ID==id{return enemy,true}}
-	return EnemyDefinition{},false
+func FindEnemy(id string) (EnemyDefinition, bool) {
+	for _, enemy := range enemyDefinitions {
+		if enemy.ID == id {
+			return enemy, true
+		}
+	}
+	return EnemyDefinition{}, false
 }
 
 func (p *Player) CanAct() error {
-	if p.Health <= 0 { return ErrPlayerDefeated }
+	if p.Health <= 0 {
+		return ErrPlayerDefeated
+	}
 	return nil
 }
 
-func (p *Player) AttackEnemy(enemy EnemyDefinition,state EnemyState,now time.Time)(CombatResult,EnemyState,error){
-	if err:=p.CanAct();err!=nil{return CombatResult{},state,err}
-	if p.Position.ZoneID!=enemy.Position.ZoneID||math.Hypot(p.Position.X-enemy.Position.X,p.Position.Z-enemy.Position.Z)>enemy.InteractionRange{return CombatResult{},state,ErrEnemyOutOfRange}
-	if !p.LastCombatAt.IsZero()&&now.Sub(p.LastCombatAt)<CombatCooldown{return CombatResult{},state,ErrCombatCooldown}
-	if !state.Initialized{state.Health=enemy.MaxHealth;state.Initialized=true}
-	if state.Health>enemy.MaxHealth{state.Health=enemy.MaxHealth}
-	if state.Health<=0{
-		if now.Before(state.RespawnAt){return CombatResult{},state,ErrEnemyRespawning}
-		state.Health=enemy.MaxHealth
-		state.RespawnAt=time.Time{}
+func (p *Player) AttackEnemy(enemy EnemyDefinition, state EnemyState, now time.Time) (CombatResult, EnemyState, error) {
+	if err := p.CanAct(); err != nil {
+		return CombatResult{}, state, err
 	}
-	attackBonus,_:=p.EquipmentBonuses()
+	p.EnsureVitalDefaults()
+	p.ExpireBuffsIfNeeded(now)
+	if p.Position.ZoneID != enemy.Position.ZoneID || math.Hypot(p.Position.X-enemy.Position.X, p.Position.Z-enemy.Position.Z) > enemy.InteractionRange {
+		return CombatResult{}, state, ErrEnemyOutOfRange
+	}
+	if !p.LastCombatAt.IsZero() && now.Sub(p.LastCombatAt) < CombatCooldown {
+		return CombatResult{}, state, ErrCombatCooldown
+	}
+	if !state.Initialized {
+		state.Health = enemy.MaxHealth
+		state.Initialized = true
+	}
+	if state.Health > enemy.MaxHealth {
+		state.Health = enemy.MaxHealth
+	}
+	if state.Health <= 0 {
+		if now.Before(state.RespawnAt) {
+			return CombatResult{}, state, ErrEnemyRespawning
+		}
+		state.Health = enemy.MaxHealth
+		state.RespawnAt = time.Time{}
+	}
+	attackBonus, _ := p.EquipmentBonuses()
 	styleSkillID := "unarmed"
 	if weaponID := p.Equipment["main_hand"]; weaponID != "" {
 		if weapon, exists := FindItem(weaponID); exists {
-			if weaponSkill, known := skillDefinition(weapon.RequiredSkillID); known && weaponSkill.ParentID != "" { styleSkillID = weapon.RequiredSkillID }
+			if weaponSkill, known := skillDefinition(weapon.RequiredSkillID); known && weaponSkill.ParentID != "" {
+				styleSkillID = weapon.RequiredSkillID
+			}
 		}
 	}
 	parentSkillID := skillParentID(styleSkillID)
+	if parentSkillID == "" {
+		parentSkillID = "melee"
+	}
 	styleLevel := p.Skills[styleSkillID].Level
-	meleeLevel := p.Skills["melee"].Level
+	parentLevel := p.Skills[parentSkillID].Level
 	strengthLevel := p.Skills["strength"].Level
 	defenseLevel := p.Skills["defense"].Level
-	damage := 2 + attackBonus + (strengthLevel-1)/10 + (styleLevel-1)/20 + (meleeLevel-1)/20 - enemy.Defense
-	if damage<1{damage=1}
-	if damage>state.Health{damage=state.Health}
-	if _, err := p.AwardExperience("strength", 1); err != nil && !errors.Is(err, ErrExperienceOverflow) { return CombatResult{}, state, err }
-	state.Health-=damage
-	result:=CombatResult{EnemyID:enemy.ID,SkillID:styleSkillID,ParentSkillID:parentSkillID,EnemyHealth:state.Health,DamageDealt:damage}
-	if state.Health==0{
-		state.RespawnAt=now.Add(time.Duration(enemy.RespawnSeconds)*time.Second)
-		result.EnemyDefeated=true
+	strengthBonus := 0
+	if parentSkillID == "melee" {
+		strengthBonus = (strengthLevel - 1) / 10
+	}
+	damage := 2 + attackBonus + strengthBonus + (styleLevel-1)/20 + (parentLevel-1)/20 - enemy.Defense
+	if damage < 1 {
+		damage = 1
+	}
+	if damage > state.Health {
+		damage = state.Health
+	}
+	if styleSkillID == "magic" {
+		if p.Mind > 2 {
+			p.Mind -= 2
+		}
+	} else if p.Action > 2 {
+		p.Action -= 2
+	}
+	if parentSkillID == "melee" {
+		if _, err := p.AwardExperience("strength", 1); err != nil && !errors.Is(err, ErrExperienceOverflow) {
+			return CombatResult{}, state, err
+		}
+	}
+	state.Health -= damage
+	result := CombatResult{EnemyID: enemy.ID, SkillID: styleSkillID, ParentSkillID: parentSkillID, EnemyHealth: state.Health, DamageDealt: damage}
+	if state.Health == 0 {
+		state.RespawnAt = now.Add(time.Duration(enemy.RespawnSeconds) * time.Second)
+		result.EnemyDefeated = true
 		// Kill rewards are settled by the PostgreSQL encounter transaction.
 		// The domain combat calculation must never grant them directly to the
 		// final attacker, or group rewards could be duplicated or bypass claims.
-
-	}else{
-		_,defenseBonus:=p.EquipmentBonuses()
-		incoming:=enemy.Attack-defenseBonus-(defenseLevel-1)/10
-		if incoming<0{incoming=0}
-		if incoming>p.Health{incoming=p.Health}
-		if incoming > 0 { if _, err := p.AwardExperience("defense", 1); err != nil && !errors.Is(err, ErrExperienceOverflow) { return CombatResult{}, state, err } }
-		p.Health-=incoming
-		result.DamageReceived=incoming
-		result.PlayerDefeated=p.Health==0
+	} else {
+		_, defenseBonus := p.EquipmentBonuses()
+		incoming := enemy.Attack - defenseBonus - (defenseLevel-1)/10
+		if incoming < 0 {
+			incoming = 0
+		}
+		if incoming > p.Health {
+			incoming = p.Health
+		}
+		if incoming > 0 {
+			if _, err := p.AwardExperience("defense", 1); err != nil && !errors.Is(err, ErrExperienceOverflow) {
+				return CombatResult{}, state, err
+			}
+		}
+		p.Health -= incoming
+		result.DamageReceived = incoming
+		result.PlayerDefeated = p.Health == 0
 	}
-	p.LastCombatAt=now
-	result.PlayerHealth=p.Health
-	return result,state,nil
+	p.LastCombatAt = now
+	result.PlayerHealth = p.Health
+	return result, state, nil
 }
 
 // EnemyAttackResult contains server-calculated damage from one completed enemy
@@ -207,10 +278,20 @@ func (p *Player) ReceiveBossAttack(damage int, bossPosition WorldPosition, minRa
 }
 
 func (p *Player) Rest() error {
-	zone,ok:=FindWorldZone(p.Position.ZoneID);if !ok{return ErrUnknownWorldZone}
-	if p.Health>0&&math.Hypot(p.Position.X-zone.Spawn.X,p.Position.Z-zone.Spawn.Z)>4{return ErrRestOutOfRange}
-	if p.Health<=0{p.Position=zone.Spawn}
-	p.Health=MaxPlayerHealth
-	p.LastCombatAt=time.Time{}
+	zone, ok := FindWorldZone(p.Position.ZoneID)
+	if !ok {
+		return ErrUnknownWorldZone
+	}
+	if p.Health > 0 && math.Hypot(p.Position.X-zone.Spawn.X, p.Position.Z-zone.Spawn.Z) > 4 {
+		return ErrRestOutOfRange
+	}
+	if p.Health <= 0 {
+		p.Position = zone.Spawn
+	}
+	p.EnsureVitalDefaults()
+	p.Health = p.EffectiveMaxHealth()
+	p.Action = p.EffectiveMaxAction()
+	p.Mind = p.EffectiveMaxMind()
+	p.LastCombatAt = time.Time{}
 	return nil
 }

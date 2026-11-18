@@ -57,6 +57,14 @@ var current_equipment: Dictionary = {}
 var current_attack_bonus := 0
 var current_defense_bonus := 0
 var current_health := 100
+var current_max_health := 100
+var current_action := 100
+var current_max_action := 100
+var current_mind := 100
+var current_max_mind := 100
+var current_constitution := 10
+var current_stamina := 10
+var current_willpower := 10
 var chat_panel: PanelContainer
 var chat_history: RichTextLabel
 var chat_input: LineEdit
@@ -129,6 +137,31 @@ var market_catalog: Array = []
 var enemy_catalog: Array = []
 var gathering_catalog: Array = []
 var station_catalog: Array = []
+var recipe_catalog: Array = []
+var crafting_button: Button
+var crafting_panel: PanelContainer
+var crafting_station_filter: OptionButton
+var crafting_recipes_column: VBoxContainer
+var crafting_status_label: Label
+var crafting_selected_station := "all"
+var stats_button: Button
+var stats_panel: PanelContainer
+var stats_summary_label: Label
+var hud_health_bar: ProgressBar
+var hud_action_bar: ProgressBar
+var hud_mind_bar: ProgressBar
+var guide_button: Button
+var guide_panel: PanelContainer
+var guide_filter_select: OptionButton
+var guide_entries_column: VBoxContainer
+var guide_selected_filter := "all"
+var quick_heal_button: Button
+var settings_button: Button
+var settings_panel: PanelContainer
+var settings_status_label: Label
+var tracked_waypoint_name := ""
+var tracked_waypoint_position := Vector3.ZERO
+var tracked_waypoint_active := false
 var api_request: HTTPRequest
 var movement_request: HTTPRequest
 var gather_request: HTTPRequest
@@ -296,6 +329,7 @@ func _build_gathering_node_visuals() -> void:
 		if not position_data is Dictionary:
 			continue
 		var at := Vector3(float(position_data.get("x", 0.0)), 0.0, float(position_data.get("z", 0.0)))
+		at.y = _terrain_height_at(at.x, at.z)
 		match str(node.get("resourceId", "")):
 			"softwood_log":
 				_add_tree(at)
@@ -305,6 +339,44 @@ func _build_gathering_node_visuals() -> void:
 				_add_copper_vein(at)
 			"wild_herb":
 				_add_herb_patch(at)
+			"frontier_grain":
+				_add_crop_plot(at)
+			"salvaged_scrap":
+				_add_scrap_pile(at)
+			"iron_ore":
+				_add_iron_vein(at)
+			"titanium_ore":
+				_add_titanium_outcrop(at)
+			"aether_crystal":
+				_add_aether_crystal_node(at)
+			"cobalt_ore":
+				_add_cobalt_vein(at)
+			"durasteel_ore":
+				_add_durasteel_fissure(at)
+			"luminite_gem":
+				_add_luminite_geode(at)
+			"mythril_ore":
+				_add_mythril_vein(at)
+			"orichalcum_ore":
+				_add_orichalcum_vein(at)
+			"obsidian_shard":
+				_add_obsidian_outcrop(at)
+			"void_quartz":
+				_add_void_quartz_monolith(at)
+			"neutronium_ore":
+				_add_neutronium_vein(at)
+			"starsteel_ore":
+				_add_starsteel_meteorite(at)
+			"electrum_ore":
+				_add_electrum_vein(at)
+			"solarite_crystal":
+				_add_solarite_spire(at)
+			"chronite_ore":
+				_add_chronite_anomaly(at)
+			"abyssal_ore":
+				_add_abyssal_chasm(at)
+			"nova_prism":
+				_add_nova_prism_matrix(at)
 			_:
 				_add_generic_gathering_node(at, str(node.get("name", "Resource Node")))
 
@@ -345,6 +417,517 @@ func _add_herb_patch(at: Vector3) -> void:
 	add_child(patch)
 
 
+func _add_crop_plot(at: Vector3) -> void:
+	var plot := Node3D.new()
+	plot.position = at
+	var soil_material := StandardMaterial3D.new()
+	soil_material.albedo_color = Color(0.26, 0.18, 0.11)
+	var stalk_material := StandardMaterial3D.new()
+	stalk_material.albedo_color = Color(0.76, 0.64, 0.22)
+	var bed := MeshInstance3D.new()
+	var bed_mesh := BoxMesh.new()
+	bed_mesh.size = Vector3(1.8, 0.14, 1.8)
+	bed.mesh = bed_mesh
+	bed.position.y = 0.07
+	bed.material_override = soil_material
+	plot.add_child(bed)
+	for row in [-0.5, 0.0, 0.5]:
+		for col in [-0.5, 0.0, 0.5]:
+			var stalk := MeshInstance3D.new()
+			var stalk_mesh := CylinderMesh.new()
+			stalk_mesh.top_radius = 0.04
+			stalk_mesh.bottom_radius = 0.06
+			stalk_mesh.height = 0.68
+			stalk.mesh = stalk_mesh
+			stalk.position = Vector3(row, 0.42, col)
+			stalk.material_override = stalk_material
+			plot.add_child(stalk)
+	var label := Label3D.new()
+	label.text = "Frontier Crop Plot"
+	label.position.y = 1.05
+	label.billboard = BaseMaterial3D.BILLBOARD_ENABLED
+	label.font_size = 22
+	plot.add_child(label)
+	add_child(plot)
+
+
+func _add_scrap_pile(at: Vector3) -> void:
+	var pile := Node3D.new()
+	pile.position = at
+	var hull_material := StandardMaterial3D.new()
+	hull_material.albedo_color = Color(0.38, 0.41, 0.45)
+	var conduit_material := StandardMaterial3D.new()
+	conduit_material.albedo_color = Color(0.24, 0.56, 0.68)
+	for index in range(3):
+		var plate := MeshInstance3D.new()
+		var plate_mesh := BoxMesh.new()
+		plate_mesh.size = Vector3(0.85, 0.18, 0.62)
+		plate.mesh = plate_mesh
+		plate.position = Vector3(float(index - 1) * 0.28, 0.18 + float(index) * 0.12, float(index % 2) * 0.18 - 0.09)
+		plate.rotation = Vector3(0.18 * float(index), 0.65 * float(index), -0.15)
+		plate.material_override = hull_material
+		pile.add_child(plate)
+	var core := MeshInstance3D.new()
+	var core_mesh := CylinderMesh.new()
+	core_mesh.top_radius = 0.16
+	core_mesh.bottom_radius = 0.16
+	core_mesh.height = 0.52
+	core.mesh = core_mesh
+	core.position = Vector3(0.0, 0.42, 0.08)
+	core.rotation.z = 0.45
+	core.material_override = conduit_material
+	pile.add_child(core)
+	var label := Label3D.new()
+	label.text = "Debris Scrap Pile"
+	label.position.y = 1.05
+	label.billboard = BaseMaterial3D.BILLBOARD_ENABLED
+	label.font_size = 22
+	pile.add_child(label)
+	add_child(pile)
+
+
+func _add_iron_vein(at: Vector3) -> void:
+	var deposit := Node3D.new()
+	deposit.position = at
+	var slate_material := StandardMaterial3D.new()
+	slate_material.albedo_color = Color(0.24, 0.25, 0.28)
+	var iron_material := StandardMaterial3D.new()
+	iron_material.albedo_color = Color(0.46, 0.30, 0.26)
+	for index in range(4):
+		var boulder := MeshInstance3D.new()
+		var mesh := SphereMesh.new()
+		mesh.radius = 0.50 + float(index % 2) * 0.14
+		mesh.height = mesh.radius * 1.65
+		boulder.mesh = mesh
+		boulder.position = Vector3(float(index % 2) * 0.58 - 0.28, 0.36, float(index / 2) * 0.52 - 0.26)
+		boulder.material_override = slate_material
+		deposit.add_child(boulder)
+	var seam := MeshInstance3D.new()
+	var seam_mesh := BoxMesh.new()
+	seam_mesh.size = Vector3(0.65, 0.42, 0.38)
+	seam.mesh = seam_mesh
+	seam.position = Vector3(0.0, 0.58, -0.15)
+	seam.rotation = Vector3(0.2, 0.4, -0.15)
+	seam.material_override = iron_material
+	deposit.add_child(seam)
+	var label := Label3D.new()
+	label.text = "Deep Iron Vein"
+	label.position.y = 1.25
+	label.billboard = BaseMaterial3D.BILLBOARD_ENABLED
+	label.font_size = 22
+	deposit.add_child(label)
+	add_child(deposit)
+
+
+func _add_titanium_outcrop(at: Vector3) -> void:
+	var outcrop := Node3D.new()
+	outcrop.position = at
+	var base_material := StandardMaterial3D.new()
+	base_material.albedo_color = Color(0.32, 0.35, 0.40)
+	var titanium_material := StandardMaterial3D.new()
+	titanium_material.albedo_color = Color(0.74, 0.80, 0.88)
+	titanium_material.roughness = 0.35
+	for index in range(3):
+		var spire := MeshInstance3D.new()
+		var spire_mesh := CylinderMesh.new()
+		spire_mesh.top_radius = 0.14
+		spire_mesh.bottom_radius = 0.42
+		spire_mesh.height = 1.25 + float(index) * 0.22
+		spire.mesh = spire_mesh
+		spire.position = Vector3(float(index - 1) * 0.42, spire_mesh.height * 0.48, float(index % 2) * 0.22 - 0.11)
+		spire.rotation.z = float(index - 1) * 0.16
+		spire.material_override = titanium_material if index == 1 else base_material
+		outcrop.add_child(spire)
+	var label := Label3D.new()
+	label.text = "Titanium Outcrop"
+	label.position.y = 1.75
+	label.billboard = BaseMaterial3D.BILLBOARD_ENABLED
+	label.font_size = 22
+	outcrop.add_child(label)
+	add_child(outcrop)
+
+
+func _add_aether_crystal_node(at: Vector3) -> void:
+	var cluster := Node3D.new()
+	cluster.position = at
+	var crystal_material := StandardMaterial3D.new()
+	crystal_material.albedo_color = Color(0.28, 0.78, 0.92)
+	crystal_material.emission_enabled = true
+	crystal_material.emission = Color(0.14, 0.48, 0.64)
+	crystal_material.roughness = 0.2
+	for index in range(4):
+		var shard := MeshInstance3D.new()
+		var shard_mesh := CylinderMesh.new()
+		shard_mesh.top_radius = 0.04
+		shard_mesh.bottom_radius = 0.24
+		shard_mesh.height = 1.15 + float(index % 2) * 0.35
+		shard.mesh = shard_mesh
+		var angle := float(index) * TAU / 4.0
+		shard.position = Vector3(cos(angle) * 0.24, shard_mesh.height * 0.46, sin(angle) * 0.24)
+		shard.rotation = Vector3(sin(angle) * 0.22, angle, cos(angle) * 0.22)
+		shard.material_override = crystal_material
+		cluster.add_child(shard)
+	var label := Label3D.new()
+	label.text = "Aether Crystal Formation"
+	label.position.y = 1.75
+	label.billboard = BaseMaterial3D.BILLBOARD_ENABLED
+	label.font_size = 22
+	cluster.add_child(label)
+	add_child(cluster)
+
+
+func _add_cobalt_vein(at: Vector3) -> void:
+	var ridge := Node3D.new()
+	ridge.position = at
+	var rock_mat := StandardMaterial3D.new()
+	rock_mat.albedo_color = Color(0.22, 0.26, 0.34)
+	var cobalt_mat := StandardMaterial3D.new()
+	cobalt_mat.albedo_color = Color(0.20, 0.46, 0.86)
+	for index in range(3):
+		var slab := MeshInstance3D.new()
+		var slab_mesh := BoxMesh.new()
+		slab_mesh.size = Vector3(0.75, 0.55 + float(index) * 0.18, 0.52)
+		slab.mesh = slab_mesh
+		slab.position = Vector3(float(index - 1) * 0.38, slab_mesh.size.y * 0.5, float(index % 2) * 0.16)
+		slab.rotation.y = float(index) * 0.35
+		slab.material_override = cobalt_mat if index == 1 else rock_mat
+		ridge.add_child(slab)
+	var label := Label3D.new()
+	label.text = "Cobalt Ridge Seam"
+	label.position.y = 1.35
+	label.billboard = BaseMaterial3D.BILLBOARD_ENABLED
+	label.font_size = 22
+	ridge.add_child(label)
+	add_child(ridge)
+
+
+func _add_durasteel_fissure(at: Vector3) -> void:
+	var fissure := Node3D.new()
+	fissure.position = at
+	var dark_mat := StandardMaterial3D.new()
+	dark_mat.albedo_color = Color(0.18, 0.20, 0.22)
+	var steel_mat := StandardMaterial3D.new()
+	steel_mat.albedo_color = Color(0.54, 0.58, 0.62)
+	steel_mat.roughness = 0.4
+	for index in range(4):
+		var pillar := MeshInstance3D.new()
+		var pillar_mesh := CylinderMesh.new()
+		pillar_mesh.top_radius = 0.22
+		pillar_mesh.bottom_radius = 0.36
+		pillar_mesh.height = 1.1 + float(index % 2) * 0.35
+		pillar.mesh = pillar_mesh
+		pillar.position = Vector3(float(index % 2) * 0.52 - 0.26, pillar_mesh.height * 0.48, float(index / 2) * 0.52 - 0.26)
+		pillar.material_override = steel_mat if index % 2 == 0 else dark_mat
+		fissure.add_child(pillar)
+	var label := Label3D.new()
+	label.text = "Durasteel Fissure"
+	label.position.y = 1.75
+	label.billboard = BaseMaterial3D.BILLBOARD_ENABLED
+	label.font_size = 22
+	fissure.add_child(label)
+	add_child(fissure)
+
+
+func _add_luminite_geode(at: Vector3) -> void:
+	var geode := Node3D.new()
+	geode.position = at
+	var gem_mat := StandardMaterial3D.new()
+	gem_mat.albedo_color = Color(0.92, 0.76, 0.26)
+	gem_mat.emission_enabled = true
+	gem_mat.emission = Color(0.55, 0.42, 0.12)
+	for index in range(4):
+		var prism := MeshInstance3D.new()
+		var prism_mesh := CylinderMesh.new()
+		prism_mesh.top_radius = 0.05
+		prism_mesh.bottom_radius = 0.26
+		prism_mesh.height = 1.25
+		prism.mesh = prism_mesh
+		var angle := float(index) * TAU / 4.0
+		prism.position = Vector3(cos(angle) * 0.26, 0.58, sin(angle) * 0.26)
+		prism.rotation = Vector3(sin(angle) * 0.25, angle, cos(angle) * 0.25)
+		prism.material_override = gem_mat
+		geode.add_child(prism)
+	var label := Label3D.new()
+	label.text = "Luminite Geode Cluster"
+	label.position.y = 1.75
+	label.billboard = BaseMaterial3D.BILLBOARD_ENABLED
+	label.font_size = 22
+	geode.add_child(label)
+	add_child(geode)
+
+
+func _add_mythril_vein(at: Vector3) -> void:
+	var vein := Node3D.new()
+	vein.position = at
+	var mythril_mat := StandardMaterial3D.new()
+	mythril_mat.albedo_color = Color(0.68, 0.88, 0.96)
+	mythril_mat.emission_enabled = true
+	mythril_mat.emission = Color(0.22, 0.42, 0.54)
+	mythril_mat.roughness = 0.25
+	for index in range(3):
+		var spire := MeshInstance3D.new()
+		var spire_mesh := CylinderMesh.new()
+		spire_mesh.top_radius = 0.10
+		spire_mesh.bottom_radius = 0.38
+		spire_mesh.height = 1.45 + float(index) * 0.2
+		spire.mesh = spire_mesh
+		spire.position = Vector3(float(index - 1) * 0.40, spire_mesh.height * 0.48, 0.0)
+		spire.rotation.z = float(index - 1) * 0.18
+		spire.material_override = mythril_mat
+		vein.add_child(spire)
+	var label := Label3D.new()
+	label.text = "Mythril Star-Vein"
+	label.position.y = 1.95
+	label.billboard = BaseMaterial3D.BILLBOARD_ENABLED
+	label.font_size = 22
+	vein.add_child(label)
+	add_child(vein)
+
+
+func _add_orichalcum_vein(at: Vector3) -> void:
+	var node := Node3D.new()
+	node.position = at
+	var mat := StandardMaterial3D.new()
+	mat.albedo_color = Color(0.88, 0.44, 0.18)
+	mat.roughness = 0.35
+	for index in range(3):
+		var col := MeshInstance3D.new()
+		var mesh := CylinderMesh.new()
+		mesh.top_radius = 0.14
+		mesh.bottom_radius = 0.36
+		mesh.height = 1.3 + float(index) * 0.2
+		col.mesh = mesh
+		col.position = Vector3(float(index - 1) * 0.38, mesh.height * 0.48, 0.0)
+		col.material_override = mat
+		node.add_child(col)
+	var label := Label3D.new()
+	label.text = "Orichalcum Vent Seam"
+	label.position.y = 1.85
+	label.billboard = BaseMaterial3D.BILLBOARD_ENABLED
+	label.font_size = 22
+	node.add_child(label)
+	add_child(node)
+
+
+func _add_obsidian_outcrop(at: Vector3) -> void:
+	var node := Node3D.new()
+	node.position = at
+	var mat := StandardMaterial3D.new()
+	mat.albedo_color = Color(0.12, 0.10, 0.16)
+	mat.roughness = 0.15
+	for index in range(4):
+		var shard := MeshInstance3D.new()
+		var mesh := BoxMesh.new()
+		mesh.size = Vector3(0.38, 1.25 + float(index % 2) * 0.35, 0.28)
+		shard.mesh = mesh
+		shard.position = Vector3(float(index - 1.5) * 0.32, mesh.size.y * 0.48, float(index % 2) * 0.18)
+		shard.rotation = Vector3(0.15, float(index) * 0.4, -0.18)
+		shard.material_override = mat
+		node.add_child(shard)
+	var label := Label3D.new()
+	label.text = "Volcanic Obsidian Outcrop"
+	label.position.y = 1.85
+	label.billboard = BaseMaterial3D.BILLBOARD_ENABLED
+	label.font_size = 22
+	node.add_child(label)
+	add_child(node)
+
+
+func _add_void_quartz_monolith(at: Vector3) -> void:
+	var node := Node3D.new()
+	node.position = at
+	var mat := StandardMaterial3D.new()
+	mat.albedo_color = Color(0.58, 0.24, 0.86)
+	mat.emission_enabled = true
+	mat.emission = Color(0.32, 0.10, 0.52)
+	var obelisk := MeshInstance3D.new()
+	var mesh := BoxMesh.new()
+	mesh.size = Vector3(0.65, 1.85, 0.65)
+	obelisk.mesh = mesh
+	obelisk.position.y = 0.92
+	obelisk.rotation.y = 0.4
+	obelisk.material_override = mat
+	node.add_child(obelisk)
+	var label := Label3D.new()
+	label.text = "Void Quartz Monolith"
+	label.position.y = 2.15
+	label.billboard = BaseMaterial3D.BILLBOARD_ENABLED
+	label.font_size = 22
+	node.add_child(label)
+	add_child(node)
+
+
+func _add_neutronium_vein(at: Vector3) -> void:
+	var node := Node3D.new()
+	node.position = at
+	var mat := StandardMaterial3D.new()
+	mat.albedo_color = Color(0.28, 0.34, 0.42)
+	mat.roughness = 0.3
+	for index in range(3):
+		var mass := MeshInstance3D.new()
+		var mesh := SphereMesh.new()
+		mesh.radius = 0.56
+		mesh.height = 1.1
+		mass.mesh = mesh
+		mass.position = Vector3(float(index - 1) * 0.42, 0.52, float(index % 2) * 0.2)
+		mass.material_override = mat
+		node.add_child(mass)
+	var label := Label3D.new()
+	label.text = "Neutronium Crater Vein"
+	label.position.y = 1.55
+	label.billboard = BaseMaterial3D.BILLBOARD_ENABLED
+	label.font_size = 22
+	node.add_child(label)
+	add_child(node)
+
+
+func _add_starsteel_meteorite(at: Vector3) -> void:
+	var node := Node3D.new()
+	node.position = at
+	var mat := StandardMaterial3D.new()
+	mat.albedo_color = Color(0.84, 0.88, 0.96)
+	mat.emission_enabled = true
+	mat.emission = Color(0.35, 0.42, 0.65)
+	mat.roughness = 0.2
+	var core := MeshInstance3D.new()
+	var mesh := SphereMesh.new()
+	mesh.radius = 0.78
+	mesh.height = 1.35
+	core.mesh = mesh
+	core.position.y = 0.68
+	core.material_override = mat
+	node.add_child(core)
+	var label := Label3D.new()
+	label.text = "Fallen Star-Metal Meteorite"
+	label.position.y = 1.85
+	label.billboard = BaseMaterial3D.BILLBOARD_ENABLED
+	label.font_size = 22
+	node.add_child(label)
+	add_child(node)
+
+
+func _add_electrum_vein(at: Vector3) -> void:
+	var node := Node3D.new()
+	node.position = at
+	var mat := StandardMaterial3D.new()
+	mat.albedo_color = Color(0.94, 0.82, 0.32)
+	mat.roughness = 0.25
+	for index in range(3):
+		var bar := MeshInstance3D.new()
+		var mesh := CylinderMesh.new()
+		mesh.top_radius = 0.12
+		mesh.bottom_radius = 0.34
+		mesh.height = 1.35 + float(index) * 0.18
+		bar.mesh = mesh
+		bar.position = Vector3(float(index - 1) * 0.36, mesh.height * 0.48, 0.0)
+		bar.material_override = mat
+		node.add_child(bar)
+	var label := Label3D.new()
+	label.text = "Electrum Crest Vein"
+	label.position.y = 1.85
+	label.billboard = BaseMaterial3D.BILLBOARD_ENABLED
+	label.font_size = 22
+	node.add_child(label)
+	add_child(node)
+
+
+func _add_solarite_spire(at: Vector3) -> void:
+	var node := Node3D.new()
+	node.position = at
+	var mat := StandardMaterial3D.new()
+	mat.albedo_color = Color(0.98, 0.56, 0.14)
+	mat.emission_enabled = true
+	mat.emission = Color(0.62, 0.28, 0.06)
+	var spire := MeshInstance3D.new()
+	var mesh := CylinderMesh.new()
+	mesh.top_radius = 0.06
+	mesh.bottom_radius = 0.48
+	mesh.height = 2.0
+	spire.mesh = mesh
+	spire.position.y = 1.0
+	spire.material_override = mat
+	node.add_child(spire)
+	var label := Label3D.new()
+	label.text = "Solarite Sun-Spire"
+	label.position.y = 2.25
+	label.billboard = BaseMaterial3D.BILLBOARD_ENABLED
+	label.font_size = 22
+	node.add_child(label)
+	add_child(node)
+
+
+func _add_chronite_anomaly(at: Vector3) -> void:
+	var node := Node3D.new()
+	node.position = at
+	var mat := StandardMaterial3D.new()
+	mat.albedo_color = Color(0.32, 0.88, 0.78)
+	mat.emission_enabled = true
+	mat.emission = Color(0.14, 0.48, 0.42)
+	for index in range(3):
+		var ring := MeshInstance3D.new()
+		var mesh := BoxMesh.new()
+		mesh.size = Vector3(0.62, 0.62, 0.62)
+		ring.mesh = mesh
+		ring.position = Vector3(0.0, 0.55 + float(index) * 0.45, 0.0)
+		ring.rotation = Vector3(0.4 * float(index), 0.6 * float(index), 0.3)
+		ring.material_override = mat
+		node.add_child(ring)
+	var label := Label3D.new()
+	label.text = "Chronite Rift Anomaly"
+	label.position.y = 2.15
+	label.billboard = BaseMaterial3D.BILLBOARD_ENABLED
+	label.font_size = 22
+	node.add_child(label)
+	add_child(node)
+
+
+func _add_abyssal_chasm(at: Vector3) -> void:
+	var node := Node3D.new()
+	node.position = at
+	var mat := StandardMaterial3D.new()
+	mat.albedo_color = Color(0.14, 0.16, 0.24)
+	mat.roughness = 0.2
+	for index in range(4):
+		var monolith := MeshInstance3D.new()
+		var mesh := BoxMesh.new()
+		mesh.size = Vector3(0.45, 1.45 + float(index % 2) * 0.35, 0.45)
+		monolith.mesh = mesh
+		monolith.position = Vector3(float(index - 1.5) * 0.36, mesh.size.y * 0.48, 0.0)
+		monolith.material_override = mat
+		node.add_child(monolith)
+	var label := Label3D.new()
+	label.text = "Abyssal Adamant Chasm"
+	label.position.y = 2.05
+	label.billboard = BaseMaterial3D.BILLBOARD_ENABLED
+	label.font_size = 22
+	node.add_child(label)
+	add_child(node)
+
+
+func _add_nova_prism_matrix(at: Vector3) -> void:
+	var node := Node3D.new()
+	node.position = at
+	var mat := StandardMaterial3D.new()
+	mat.albedo_color = Color(0.96, 0.42, 0.78)
+	mat.emission_enabled = true
+	mat.emission = Color(0.58, 0.18, 0.44)
+	var crystal := MeshInstance3D.new()
+	var mesh := SphereMesh.new()
+	mesh.radius = 0.68
+	mesh.height = 1.65
+	crystal.mesh = mesh
+	crystal.position.y = 0.85
+	crystal.material_override = mat
+	node.add_child(crystal)
+	var label := Label3D.new()
+	label.text = "Nova Core Matrix"
+	label.position.y = 2.05
+	label.billboard = BaseMaterial3D.BILLBOARD_ENABLED
+	label.font_size = 22
+	node.add_child(label)
+	add_child(node)
+
+
 func _add_generic_gathering_node(at: Vector3, node_name: String) -> void:
 	var root := Node3D.new()
 	root.position = at
@@ -377,6 +960,7 @@ func _build_enemy_spawns() -> void:
 		if enemy_id.is_empty():
 			continue
 		var at := Vector3(float(position_data.get("x", 0.0)), 0.0, float(position_data.get("z", 0.0)))
+		at.y = _terrain_height_at(at.x, at.z)
 		_add_enemy_visual(enemy_id, at, str(enemy.get("name", "Frontier Creature")), int(enemy.get("maxHealth", 10)))
 
 func _add_enemy_visual(enemy_id: String, at: Vector3, enemy_name: String, max_health: int) -> void:
@@ -385,7 +969,42 @@ func _add_enemy_visual(enemy_id: String, at: Vector3, enemy_name: String, max_he
 	creature.position = at
 	var is_boss := enemy_id == "stoneback-colossus"
 	var hide_material := StandardMaterial3D.new()
-	hide_material.albedo_color = Color(0.27, 0.29, 0.30) if is_boss else (Color(0.48, 0.30, 0.18) if max_health < 20 else Color(0.32, 0.25, 0.18))
+	if is_boss:
+		hide_material.albedo_color = Color(0.27, 0.29, 0.30)
+	elif enemy_id.begins_with("canyon-stalker"):
+		hide_material.albedo_color = Color(0.58, 0.42, 0.22)
+	elif enemy_id.begins_with("mire-drake"):
+		hide_material.albedo_color = Color(0.18, 0.46, 0.32)
+	elif enemy_id.begins_with("ash-hound"):
+		hide_material.albedo_color = Color(0.42, 0.18, 0.16)
+	elif enemy_id.begins_with("frost-prowler"):
+		hide_material.albedo_color = Color(0.68, 0.82, 0.92)
+	elif enemy_id.begins_with("ruin-sentinel"):
+		hide_material.albedo_color = Color(0.44, 0.48, 0.54)
+	elif enemy_id.begins_with("aether-wraith"):
+		hide_material.albedo_color = Color(0.42, 0.26, 0.68)
+	elif enemy_id.begins_with("feral-drone"):
+		hide_material.albedo_color = Color(0.62, 0.54, 0.26)
+	elif enemy_id.begins_with("thornback-behemoth"):
+		hide_material.albedo_color = Color(0.34, 0.42, 0.22)
+	elif enemy_id.begins_with("obsidian-wyrm"):
+		hide_material.albedo_color = Color(0.18, 0.14, 0.22)
+	elif enemy_id.begins_with("void-reaver"):
+		hide_material.albedo_color = Color(0.54, 0.18, 0.48)
+	elif enemy_id.begins_with("star-golem"):
+		hide_material.albedo_color = Color(0.72, 0.80, 0.94)
+	elif enemy_id.begins_with("dune-scorpion"):
+		hide_material.albedo_color = Color(0.76, 0.58, 0.28)
+	elif enemy_id.begins_with("crystalline-mantis"):
+		hide_material.albedo_color = Color(0.28, 0.84, 0.62)
+	elif enemy_id.begins_with("magma-crusher"):
+		hide_material.albedo_color = Color(0.72, 0.24, 0.12)
+	elif enemy_id.begins_with("rift-specter"):
+		hide_material.albedo_color = Color(0.36, 0.68, 0.92)
+	elif enemy_id.begins_with("apex-devourer"):
+		hide_material.albedo_color = Color(0.58, 0.12, 0.24)
+	else:
+		hide_material.albedo_color = Color(0.48, 0.30, 0.18) if max_health < 20 else Color(0.32, 0.25, 0.18)
 	hide_material.roughness = 0.92
 	var body := MeshInstance3D.new()
 	var body_mesh := CapsuleMesh.new()
@@ -772,6 +1391,31 @@ func _build_hud() -> void:
 	presence_label.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
 	column.add_child(presence_label)
 
+	var bars_row := HBoxContainer.new()
+	bars_row.add_theme_constant_override("separation", 6)
+	column.add_child(bars_row)
+	hud_health_bar = ProgressBar.new()
+	hud_health_bar.max_value = 100
+	hud_health_bar.value = 100
+	hud_health_bar.show_percentage = false
+	hud_health_bar.custom_minimum_size = Vector2(90, 12)
+	hud_health_bar.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	bars_row.add_child(hud_health_bar)
+	hud_action_bar = ProgressBar.new()
+	hud_action_bar.max_value = 100
+	hud_action_bar.value = 100
+	hud_action_bar.show_percentage = false
+	hud_action_bar.custom_minimum_size = Vector2(90, 12)
+	hud_action_bar.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	bars_row.add_child(hud_action_bar)
+	hud_mind_bar = ProgressBar.new()
+	hud_mind_bar.max_value = 100
+	hud_mind_bar.value = 100
+	hud_mind_bar.show_percentage = false
+	hud_mind_bar.custom_minimum_size = Vector2(90, 12)
+	hud_mind_bar.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	bars_row.add_child(hud_mind_bar)
+
 	inventory_label = Label.new()
 	inventory_label.text = "Inventory: empty"
 	inventory_label.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
@@ -794,12 +1438,36 @@ func _build_hud() -> void:
 
 	skills_button = _create_action_button(action_toolbar, "Skills", _toggle_skills_panel)
 	skills_button.visible = false
+	stats_button = _create_action_button(action_toolbar, "Vitals", _show_stats_panel)
+	stats_button.visible = false
 	bag_button = _create_action_button(action_toolbar, "Bag", _show_inventory_panel)
 	bag_button.visible = false
+	crafting_button = _create_action_button(action_toolbar, "Craft", func() -> void: _show_crafting_panel())
+	crafting_button.visible = false
+	if stats_button != null:
+		stats_button.visible = false
+	if guide_button != null:
+		guide_button.visible = false
+	if quick_heal_button != null:
+		quick_heal_button.visible = false
+	if settings_button != null:
+		settings_button.visible = false
+	if settings_panel != null:
+		settings_panel.visible = false
+	if stats_panel != null:
+		stats_panel.visible = false
+	if guide_panel != null:
+		guide_panel.visible = false
+	guide_button = _create_action_button(action_toolbar, "Atlas", _show_guide_panel)
+	guide_button.visible = false
+	quick_heal_button = _create_action_button(action_toolbar, "Med/Stim", _use_best_consumable)
+	quick_heal_button.visible = false
 	rest_button = _create_action_button(action_toolbar, "Rest", _rest_character)
 	rest_button.visible = false
 	equipment_button = _create_action_button(action_toolbar, "Gear", _show_equipment_panel)
 	equipment_button.visible = false
+	settings_button = _create_action_button(action_toolbar, "Options", _show_settings_panel)
+	settings_button.visible = false
 	character_button = _create_action_button(action_toolbar, "Chars", _request_character_list)
 	character_button.visible = false
 	logout_button = _create_action_button(action_toolbar, "Sign out", _logout)
@@ -993,6 +1661,9 @@ func _on_api_request_completed(result: int, response_code: int, _headers: Packed
 		var enemies: Variant = payload.get("enemies", [])
 		var nodes: Variant = payload.get("nodes", [])
 		var stations: Variant = payload.get("stations", [])
+		var recipes: Variant = payload.get("recipes", [])
+		if recipes is Array:
+			recipe_catalog = recipes
 		if catalog_items is Array:
 			market_catalog = catalog_items
 		if enemies is Array:
@@ -1178,6 +1849,56 @@ func _update_interaction_hint() -> void:
 		interaction_hint_label.text = "Move closer • " + best_name + " (" + str(snappedf(best_distance, 0.1)) + "m)"
 
 
+func _select_forge_recipe() -> String:
+	if int(current_inventory.get("titanium_bar", 0)) >= 2 and int(current_inventory.get("sentinel_core", 0)) >= 1 and int(current_inventory.get("salvaged_power_cell", 0)) >= 1:
+		return "titanium-carbine"
+	if int(current_inventory.get("stalker_chitin", 0)) >= 3 and int(current_inventory.get("iron_bar", 0)) >= 2:
+		return "chitin-cuirass"
+	if int(current_inventory.get("iron_bar", 0)) >= 3 and int(current_inventory.get("hound_fang", 0)) >= 2 and int(current_inventory.get("wooden_plank", 0)) >= 1:
+		return "iron-greatsword"
+	if int(current_inventory.get("titanium_ore", 0)) >= 2 and int(current_inventory.get("iron_bar", 0)) >= 1:
+		return "titanium-bar"
+	if int(current_inventory.get("iron_ore", 0)) >= 2:
+		return "iron-bar"
+	if int(current_inventory.get("copper_bar", 0)) >= 2 and int(current_inventory.get("boar_tusk", 0)) >= 2 and int(current_inventory.get("wooden_plank", 0)) >= 1:
+		return "boar-tusk-spear"
+	if int(current_inventory.get("salvaged_power_cell", 0)) >= 1 and int(current_inventory.get("copper_bar", 0)) >= 2 and int(current_inventory.get("wooden_plank", 0)) >= 1:
+		return "frontier-rifle"
+	if int(current_inventory.get("copper_bar", 0)) >= 2 and int(current_inventory.get("rat_tooth", 0)) >= 2 and int(current_inventory.get("wooden_plank", 0)) >= 1:
+		return "rat-tooth-blade"
+	if int(current_inventory.get("copper_bar", 0)) >= 3 and int(current_inventory.get("wooden_plank", 0)) >= 1:
+		return "copper-sword"
+	return "copper-bar"
+
+
+func _select_workbench_recipe() -> String:
+	if int(current_inventory.get("bacta_gel", 0)) >= 2 and int(current_inventory.get("stalker_venom_sac", 0)) >= 1 and int(current_inventory.get("aether_crystal", 0)) >= 1:
+		return "advanced-medpack"
+	if int(current_inventory.get("bacta_gel", 0)) >= 1 and int(current_inventory.get("frontier_grain", 0)) >= 2 and int(current_inventory.get("aether_crystal", 0)) >= 1:
+		return "vitality-stim-pack"
+	if int(current_inventory.get("bacta_gel", 0)) >= 1 and int(current_inventory.get("hound_fang", 0)) >= 1 and int(current_inventory.get("wild_herb", 0)) >= 2:
+		return "adrenal-action-booster"
+	if int(current_inventory.get("aether_crystal", 0)) >= 1 and int(current_inventory.get("herbal_bundle", 0)) >= 1 and int(current_inventory.get("wild_herb", 0)) >= 1:
+		return "neural-mind-tonic"
+	if int(current_inventory.get("bacta_gel", 0)) >= 1 and int(current_inventory.get("herbal_bundle", 0)) >= 1:
+		return "field-medpack"
+	if int(current_inventory.get("wild_herb", 0)) >= 2 and int(current_inventory.get("rough_stone", 0)) >= 1:
+		return "bacta-gel"
+	if int(current_inventory.get("salvaged_power_cell", 0)) >= 1 and int(current_inventory.get("wooden_plank", 0)) >= 2 and int(current_inventory.get("wild_herb", 0)) >= 1:
+		return "resonance-focus"
+	if int(current_inventory.get("salvaged_scrap", 0)) >= 2 and int(current_inventory.get("copper_bar", 0)) >= 1 and int(current_inventory.get("wooden_plank", 0)) >= 1:
+		return "frontier-pistol"
+	if int(current_inventory.get("salvaged_scrap", 0)) >= 2 and int(current_inventory.get("copper_bar", 0)) >= 1:
+		return "salvaged-power-cell"
+	if int(current_inventory.get("frontier_grain", 0)) >= 2 and int(current_inventory.get("wild_herb", 0)) >= 1:
+		return "frontier-ration"
+	if int(current_inventory.get("herbal_bundle", 0)) >= 1 and int(current_inventory.get("wild_herb", 0)) >= 1:
+		return "herbal-tea"
+	if int(current_inventory.get("wild_herb", 0)) >= 3 and int(current_inventory.get("wooden_plank", 0)) >= 1:
+		return "herbal-bundle"
+	return "basic-plank"
+
+
 func _request_interaction() -> void:
 	var bank_distance := Vector2(player_node.global_position.x, player_node.global_position.z + 4.0).length()
 	var merchant_distance := Vector2(player_node.global_position.x - 4.0, player_node.global_position.z).length()
@@ -1254,11 +1975,9 @@ func _request_interaction() -> void:
 			JSON.stringify({"itemId": selected_item, "quantity": 1})
 		)
 	elif nearest_station_id == "frontier-forge" and nearest_station_distance <= 3.0 and nearest_station_distance <= nearest_node_distance and nearest_station_distance <= enemy_distance:
-		var recipe_id := "copper-bar"
-		if int(current_inventory.get("copper_bar", 0)) >= 3 and int(current_inventory.get("wooden_plank", 0)) >= 1:
-			recipe_id = "copper-sword"
+		var recipe_id := _select_forge_recipe()
 		interaction_type = "craft"
-		status_label.text = "Using frontier forge..."
+		status_label.text = "Using frontier forge (" + recipe_id.replace("-", " ") + ")..."
 		error = gather_request.request(
 			api_base_url + "/api/v1/account/characters/" + player_id + "/craft/" + recipe_id,
 			_api_headers(),
@@ -1266,13 +1985,9 @@ func _request_interaction() -> void:
 			""
 		)
 	elif nearest_station_id == "frontier-workbench" and nearest_station_distance <= 3.0 and nearest_station_distance <= nearest_node_distance and nearest_station_distance <= enemy_distance:
-		var recipe_id := "basic-plank"
-		if int(current_inventory.get("herbal_bundle", 0)) >= 1 and int(current_inventory.get("wild_herb", 0)) >= 1:
-			recipe_id = "herbal-tea"
-		elif int(current_inventory.get("wild_herb", 0)) >= 3 and int(current_inventory.get("wooden_plank", 0)) >= 1:
-			recipe_id = "herbal-bundle"
+		var recipe_id := _select_workbench_recipe()
 		interaction_type = "craft"
-		status_label.text = "Using frontier workbench..."
+		status_label.text = "Using frontier workbench (" + recipe_id.replace("-", " ") + ")..."
 		error = gather_request.request(
 			api_base_url + "/api/v1/account/characters/" + player_id + "/craft/" + recipe_id,
 			_api_headers(),
@@ -1335,6 +2050,9 @@ func _on_gather_completed(result: int, response_code: int, _headers: PackedStrin
 		if interaction_type == "bank_deposit" or interaction_type == "bank_withdraw":
 			if inventory_status_label != null:
 				inventory_status_label.text = message
+		if interaction_type == "craft":
+			if crafting_status_label != null:
+				crafting_status_label.text = message
 		if interaction_type == "combat":
 			if error_code == "combat_cooldown":
 				status_label.text = "Combat: wait for your next attack"
@@ -1344,6 +2062,7 @@ func _on_gather_completed(result: int, response_code: int, _headers: PackedStrin
 				status_label.text = "Defeated • use Rest to respawn"
 		return
 	var player_data: Dictionary = payload.get("character", payload.get("player", {}))
+	_sync_vital_attributes_from_character(player_data)
 	if interaction_type == "combat":
 		var combat: Dictionary = payload.get("combat", {})
 		if player_node != null and is_instance_valid(player_node):
@@ -1357,6 +2076,8 @@ func _on_gather_completed(result: int, response_code: int, _headers: PackedStrin
 			if not str(combat.get("lootItemId", "")).is_empty():
 				combat_message += " • Loot: " + str(combat.get("lootItemId", "")).replace("_", " ")
 		if bool(combat.get("playerDefeated", false)):
+			if player_node != null and is_instance_valid(player_node):
+				player_node.call("play_defeat_animation")
 			combat_message = "You were defeated • use Rest to respawn"
 			if movement_timer != null:
 				movement_timer.stop()
@@ -1364,11 +2085,15 @@ func _on_gather_completed(result: int, response_code: int, _headers: PackedStrin
 		_refresh_skills_panel()
 		return
 	if interaction_type == "use_item":
+		if player_node != null and is_instance_valid(player_node):
+			player_node.call("play_use_item_animation")
 		var item_id := str(payload.get("itemId", "minor_healing_potion"))
 		_update_inventory(player_data.get("inventory", {}), player_data.get("bank", {}), player_data.get("coins", current_coins), player_data.get("equipment", {}), payload.get("health", player_data.get("health", current_health)))
 		status_label.text = "Used " + item_id.replace("_", " ") + " • +" + str(payload.get("healed", 0)) + " health"
 		return
 	if interaction_type == "rest":
+		if player_node != null and is_instance_valid(player_node):
+			player_node.call("play_respawn_animation")
 		_update_inventory(player_data.get("inventory", {}), player_data.get("bank", {}), player_data.get("coins", current_coins), player_data.get("equipment", {}), payload.get("health", player_data.get("health", current_health)))
 		var position_data: Variant = player_data.get("position", {})
 		if position_data is Dictionary:
@@ -1402,6 +2127,8 @@ func _on_gather_completed(result: int, response_code: int, _headers: PackedStrin
 			_show_inventory_panel()
 		return
 	if interaction_type == "craft":
+		if player_node != null and is_instance_valid(player_node):
+			player_node.call("play_craft_animation")
 		var crafting: Dictionary = payload.get("crafting", {})
 		var output_name := "crafted item"
 		var outputs: Array = crafting.get("outputs", [])
@@ -1410,8 +2137,13 @@ func _on_gather_completed(result: int, response_code: int, _headers: PackedStrin
 			for item in market_catalog:
 				if item is Dictionary and str(item.get("id", "")) == output_id:
 					output_name = str(item.get("name", output_id))
-		status_label.text = "Crafted " + output_name + " • +" + str(crafting.get("experience", 0)) + " " + str(crafting.get("skillId", "crafting")) + " XP"
+		var craft_msg := "Crafted " + output_name + " • +" + str(crafting.get("experience", 0)) + " " + str(crafting.get("skillId", "crafting")) + " XP"
+		status_label.text = craft_msg
+		if crafting_status_label != null:
+			crafting_status_label.text = craft_msg
 	else:
+		if player_node != null and is_instance_valid(player_node):
+			player_node.call("play_gather_animation")
 		var gathering: Dictionary = payload.get("gathering", {})
 		var item_name := str(gathering.get("itemId", "resource")).replace("_", " ")
 		for item in market_catalog:
@@ -1419,6 +2151,8 @@ func _on_gather_completed(result: int, response_code: int, _headers: PackedStrin
 				item_name = str(item.get("name", item_name))
 		status_label.text = "Gathered " + item_name + " • +" + str(gathering.get("experience", 0)) + " " + str(gathering.get("skillId", "")) + " XP"
 	_update_inventory(player_data.get("inventory", {}), player_data.get("bank", {}), player_data.get("coins", current_coins), player_data.get("equipment", {}), player_data.get("health", current_health))
+	if crafting_panel != null and crafting_panel.visible:
+		_refresh_crafting_recipe_list()
 	_refresh_skills_panel()
 
 
@@ -1496,6 +2230,28 @@ func _refresh_inventory_item_list() -> void:
 		inventory_items_column.add_child(empty_label)
 
 
+func _sync_vital_attributes_from_character(character_data: Variant) -> void:
+	if not character_data is Dictionary:
+		return
+	var data: Dictionary = character_data
+	if data.has("action"):
+		current_action = int(data.get("action", current_action))
+	if data.has("mind"):
+		current_mind = int(data.get("mind", current_mind))
+	if data.has("constitution"):
+		current_constitution = max(10, int(data.get("constitution", 10)))
+	if data.has("stamina"):
+		current_stamina = max(10, int(data.get("stamina", 10)))
+	if data.has("willpower"):
+		current_willpower = max(10, int(data.get("willpower", 10)))
+	var buff_h := int(data.get("maxHealthBuff", 0))
+	var buff_a := int(data.get("maxActionBuff", 0))
+	var buff_m := int(data.get("maxMindBuff", 0))
+	current_max_health = game_max_health + buff_h + max(0, current_constitution - 10) * 2
+	current_max_action = 100 + buff_a + max(0, current_stamina - 10) * 2
+	current_max_mind = 100 + buff_m + max(0, current_willpower - 10) * 2
+
+
 func _update_inventory(inventory_data: Variant, bank_data: Variant = {}, coins_data: Variant = null, equipment_data: Variant = {}, health_data: Variant = null) -> void:
 	if not inventory_data is Dictionary:
 		return
@@ -1514,18 +2270,24 @@ func _update_inventory(inventory_data: Variant, bank_data: Variant = {}, coins_d
 				current_attack_bonus += int(item.get("attackBonus", 0))
 				current_defense_bonus += int(item.get("defenseBonus", 0))
 	_refresh_equipment_visuals()
-	inventory_label.text = "HP %d/%d • Coins %d • ATK %d DEF %d • Bag L:%d P:%d S:%d Cu:%d/%d • Bank L:%d P:%d S:%d Cu:%d/%d" % [
-			current_health, game_max_health, current_coins, current_attack_bonus, current_defense_bonus,
-		int(current_inventory.get("softwood_log", 0)),
-		int(current_inventory.get("wooden_plank", 0)),
-		int(current_inventory.get("rough_stone", 0)),
-		int(current_inventory.get("copper_ore", 0)),
-		int(current_inventory.get("copper_bar", 0)),
-		int(current_bank.get("softwood_log", 0)),
-		int(current_bank.get("wooden_plank", 0)),
-		int(current_bank.get("rough_stone", 0)),
-		int(current_bank.get("copper_ore", 0)),
-		int(current_bank.get("copper_bar", 0))
+	if hud_health_bar != null:
+		hud_health_bar.max_value = max(1, current_max_health)
+		hud_health_bar.value = clamp(current_health, 0, current_max_health)
+	if hud_action_bar != null:
+		hud_action_bar.max_value = max(1, current_max_action)
+		hud_action_bar.value = clamp(current_action, 0, current_max_action)
+	if hud_mind_bar != null:
+		hud_mind_bar.max_value = max(1, current_max_mind)
+		hud_mind_bar.value = clamp(current_mind, 0, current_max_mind)
+	if stats_panel != null and stats_panel.visible:
+		_refresh_stats_panel()
+	var hp_regen := 1 + int(current_constitution / 5)
+	inventory_label.text = "HP %d/%d (+%d/5s) • ACT %d/%d • MND %d/%d • CON %d STA %d WIL %d • Coins %d • ATK %d DEF %d" % [
+		current_health, current_max_health, hp_regen,
+		current_action, current_max_action,
+		current_mind, current_max_mind,
+		current_constitution, current_stamina, current_willpower,
+		current_coins, current_attack_bonus, current_defense_bonus
 	]
 	if inventory_panel != null and inventory_panel.visible:
 		_show_inventory_panel()
@@ -1546,8 +2308,30 @@ func _apply_server_position(position_data: Dictionary, force: bool) -> void:
 		player_node.global_position = player_node.global_position.lerp(target, 0.08)
 
 func _unhandled_input(event: InputEvent) -> void:
-	if event is InputEventKey and event.pressed and event.keycode == KEY_ESCAPE:
-		Input.mouse_mode = Input.MOUSE_MODE_VISIBLE
+	if event is InputEventKey and event.pressed and not event.echo:
+		if event.keycode == KEY_ESCAPE:
+			Input.mouse_mode = Input.MOUSE_MODE_VISIBLE
+			return
+		if player_id.is_empty():
+			return
+		var focus_owner := get_viewport().gui_get_focus_owner() if get_viewport() != null else null
+		if focus_owner is LineEdit:
+			return
+		match event.physical_keycode:
+			KEY_I:
+				_show_inventory_panel()
+			KEY_K:
+				_toggle_skills_panel()
+			KEY_C:
+				_show_crafting_panel()
+			KEY_V:
+				_show_stats_panel()
+			KEY_G:
+				_show_guide_panel()
+			KEY_H:
+				_use_best_consumable()
+			KEY_O:
+				_show_settings_panel()
 func _build_auth_panel(parent: CanvasLayer) -> void:
 	auth_panel = PanelContainer.new()
 	auth_panel.position = Vector2(18, 155)
@@ -1632,6 +2416,7 @@ func _activate_character(character_data: Dictionary) -> void:
 	if spawn is Dictionary:
 		_apply_server_position(spawn, true)
 	status_label.text = "Server: connected • account character ready"
+	_sync_vital_attributes_from_character(character_data)
 	_update_inventory(character_data.get("inventory", {}), character_data.get("bank", {}), character_data.get("coins", current_coins), character_data.get("equipment", {}), character_data.get("health", current_health))
 	auth_panel.visible = false
 	if character_panel != null:
@@ -1646,7 +2431,20 @@ func _activate_character(character_data: Dictionary) -> void:
 		market_panel.visible = false
 	if rewards_panel != null:
 		rewards_panel.visible = false
+	if crafting_panel != null:
+		crafting_panel.visible = false
 	logout_button.visible = true
+	crafting_button.visible = true
+	stats_button.visible = true
+	guide_button.visible = true
+	quick_heal_button.visible = true
+	settings_button.visible = true
+	if settings_panel != null:
+		settings_panel.visible = false
+	if stats_panel != null:
+		stats_panel.visible = false
+	if guide_panel != null:
+		guide_panel.visible = false
 	trade_button.visible = true
 	rewards_button.visible = true
 	character_button.visible = true
@@ -1718,6 +2516,9 @@ func _expire_session() -> void:
 		skills_panel.visible = false
 	if inventory_panel != null:
 		inventory_panel.visible = false
+	if crafting_panel != null:
+		crafting_panel.visible = false
+	crafting_button.visible = false
 	bag_button.visible = false
 	skills_button.visible = false
 	status_label.text = "Server: session expired"
@@ -1735,6 +2536,24 @@ func _show_character_selection(characters: Array) -> void:
 		inventory_panel.visible = false
 	if rewards_panel != null:
 		rewards_panel.visible = false
+	if crafting_panel != null:
+		crafting_panel.visible = false
+	if crafting_button != null:
+		crafting_button.visible = false
+	if stats_button != null:
+		stats_button.visible = false
+	if guide_button != null:
+		guide_button.visible = false
+	if quick_heal_button != null:
+		quick_heal_button.visible = false
+	if settings_button != null:
+		settings_button.visible = false
+	if settings_panel != null:
+		settings_panel.visible = false
+	if stats_panel != null:
+		stats_panel.visible = false
+	if guide_panel != null:
+		guide_panel.visible = false
 	if movement_timer != null:
 		movement_timer.stop()
 	movement_pending = false
@@ -1794,6 +2613,8 @@ func _show_character_selection(characters: Array) -> void:
 
 
 func _show_market_panel() -> void:
+	if crafting_panel != null:
+		crafting_panel.visible = false
 	if skills_panel != null:
 		skills_panel.visible = false
 	if inventory_panel != null:
@@ -1884,6 +2705,8 @@ func _submit_market_trade(buy: bool) -> void:
 
 
 func _show_equipment_panel(message: String = "") -> void:
+	if crafting_panel != null:
+		crafting_panel.visible = false
 	if skills_panel != null:
 		skills_panel.visible = false
 	if market_panel != null:
@@ -2818,6 +3641,8 @@ func _show_rewards_panel() -> void:
 	if rewards_panel != null:
 		rewards_panel.visible = not rewards_panel.visible
 		if rewards_panel.visible:
+			if crafting_panel != null:
+				crafting_panel.visible = false
 			if skills_panel != null:
 				skills_panel.visible = false
 			if inventory_panel != null:
@@ -2828,6 +3653,8 @@ func _show_rewards_panel() -> void:
 				equipment_panel.visible = false
 			_request_reward_claims()
 		return
+	if crafting_panel != null:
+		crafting_panel.visible = false
 	if skills_panel != null:
 		skills_panel.visible = false
 	if inventory_panel != null:
@@ -3021,7 +3848,476 @@ func _render_reward_claims(claims: Variant) -> void:
 		rewards_status_label.text = str(pending_count) + " pending encounter reward(s)."
 
 
+func _use_best_consumable() -> void:
+	if player_id.is_empty() or auth_token.is_empty() or interaction_pending or gather_request == null:
+		return
+	var priority_items := [
+		"phoenix_resuscitation_pack",
+		"nanite_repair_injector",
+		"surgical_trauma_kit",
+		"advanced_medpack",
+		"field_medpack",
+		"minor_healing_potion",
+		"frontier_ration",
+		"herbal_tea",
+		"celestial_harmony_draught",
+		"overdrive_omni_stim",
+		"titan_constitution_elixir",
+		"vitality_stim_pack",
+		"adrenal_action_booster",
+		"neural_mind_tonic"
+	]
+	var chosen := ""
+	for item_id in priority_items:
+		if int(current_inventory.get(item_id, 0)) > 0:
+			chosen = item_id
+			break
+	if chosen.is_empty():
+		status_label.text = "Med/Stim: no medical packs or enhancers in bag"
+		return
+	interaction_type = "use_item"
+	var error := gather_request.request(
+		api_base_url + "/api/v1/account/characters/" + player_id + "/items/use/" + chosen,
+		_api_headers(),
+		HTTPClient.METHOD_POST,
+		""
+	)
+	if error == OK:
+		interaction_pending = true
+		status_label.text = "Using " + chosen.replace("_", " ") + "..."
+	else:
+		_report_interaction_request_error(error)
+
+
+func _show_settings_panel() -> void:
+	if skills_panel != null:
+		skills_panel.visible = false
+	if inventory_panel != null:
+		inventory_panel.visible = false
+	if market_panel != null:
+		market_panel.visible = false
+	if equipment_panel != null:
+		equipment_panel.visible = false
+	if rewards_panel != null:
+		rewards_panel.visible = false
+	if crafting_panel != null:
+		crafting_panel.visible = false
+	if stats_panel != null:
+		stats_panel.visible = false
+	if guide_panel != null:
+		guide_panel.visible = false
+	if settings_panel != null:
+		settings_panel.visible = not settings_panel.visible
+		return
+	settings_panel = PanelContainer.new()
+	settings_panel.position = Vector2(390, 125)
+	settings_panel.custom_minimum_size = Vector2(400, 320)
+	var column := VBoxContainer.new()
+	settings_panel.add_child(column)
+	var heading := Label.new()
+	heading.text = "OPTIONS, CAMERA & CONTROLS"
+	heading.add_theme_font_size_override("font_size", 18)
+	column.add_child(heading)
+	var sens_row := HBoxContainer.new()
+	column.add_child(sens_row)
+	var sens_down := Button.new()
+	sens_down.text = "Look Sens -"
+	sens_down.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	sens_down.pressed.connect(func() -> void:
+		if player_node != null and is_instance_valid(player_node):
+			var cur := float(player_node.get("mouse_sensitivity"))
+			player_node.set("mouse_sensitivity", maxf(0.0008, cur - 0.0005))
+			settings_status_label.text = "Look sensitivity: %.4f" % float(player_node.get("mouse_sensitivity"))
+	)
+	sens_row.add_child(sens_down)
+	var sens_up := Button.new()
+	sens_up.text = "Look Sens +"
+	sens_up.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	sens_up.pressed.connect(func() -> void:
+		if player_node != null and is_instance_valid(player_node):
+			var cur := float(player_node.get("mouse_sensitivity"))
+			player_node.set("mouse_sensitivity", minf(0.0080, cur + 0.0005))
+			settings_status_label.text = "Look sensitivity: %.4f" % float(player_node.get("mouse_sensitivity"))
+	)
+	sens_row.add_child(sens_up)
+	var zoom_row := HBoxContainer.new()
+	column.add_child(zoom_row)
+	var first_person_btn := Button.new()
+	first_person_btn.text = "First-Person View"
+	first_person_btn.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	first_person_btn.pressed.connect(func() -> void:
+		if player_node != null and is_instance_valid(player_node):
+			player_node.call("_adjust_camera_zoom", -20.0)
+			settings_status_label.text = "Camera: First-Person View"
+	)
+	zoom_row.add_child(first_person_btn)
+	var third_person_btn := Button.new()
+	third_person_btn.text = "Third-Person View"
+	third_person_btn.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	third_person_btn.pressed.connect(func() -> void:
+		if player_node != null and is_instance_valid(player_node):
+			player_node.call("_adjust_camera_zoom", 5.0)
+			player_node.call("reset_camera_behind_character")
+			settings_status_label.text = "Camera: Reset Third-Person View"
+	)
+	zoom_row.add_child(third_person_btn)
+	var hotkeys_label := Label.new()
+	hotkeys_label.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+	hotkeys_label.text = (
+		"Controls & Hotkeys:\n"
+		+ "  • WASD / Touch Pad: Move  •  Space / JUMP: Jump\n"
+		+ "  • E / USE: Gather, Craft, Attack, Bank, Trader\n"
+		+ "  • R: Toggle Autorun  •  CapsLock: Walk/Run Pace\n"
+		+ "  • Home: Reset Camera Behind Character\n"
+		+ "  • I: Bag/Bank  •  K: Skills  •  C: Crafting\n"
+		+ "  • V: Vitals/Stats  •  G: World Atlas  •  H: Quick Med/Stim"
+	)
+	column.add_child(hotkeys_label)
+	settings_status_label = Label.new()
+	settings_status_label.text = "Adjust camera, view mode, or review keybindings."
+	column.add_child(settings_status_label)
+	var close_button := Button.new()
+	close_button.text = "Close"
+	close_button.pressed.connect(func() -> void: settings_panel.visible = false)
+	column.add_child(close_button)
+	if auth_panel != null and auth_panel.get_parent() != null:
+		auth_panel.get_parent().add_child(settings_panel)
+	else:
+		add_child(settings_panel)
+
+
+func _show_guide_panel() -> void:
+	if skills_panel != null:
+		skills_panel.visible = false
+	if inventory_panel != null:
+		inventory_panel.visible = false
+	if market_panel != null:
+		market_panel.visible = false
+	if equipment_panel != null:
+		equipment_panel.visible = false
+	if rewards_panel != null:
+		rewards_panel.visible = false
+	if crafting_panel != null:
+		crafting_panel.visible = false
+	if stats_panel != null:
+		stats_panel.visible = false
+	if guide_panel != null:
+		guide_panel.visible = not guide_panel.visible
+		if guide_panel.visible:
+			_refresh_guide_panel()
+		return
+	guide_panel = PanelContainer.new()
+	guide_panel.position = Vector2(390, 120)
+	guide_panel.custom_minimum_size = Vector2(420, 350)
+	var column := VBoxContainer.new()
+	guide_panel.add_child(column)
+	var heading := Label.new()
+	heading.text = "FRONTIER WORLD ATLAS & DIRECTORY"
+	heading.add_theme_font_size_override("font_size", 18)
+	column.add_child(heading)
+	guide_filter_select = OptionButton.new()
+	guide_filter_select.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	guide_filter_select.add_item("All World Locations")
+	guide_filter_select.set_item_metadata(0, "all")
+	guide_filter_select.add_item("Gathering & Mining Nodes")
+	guide_filter_select.set_item_metadata(1, "nodes")
+	guide_filter_select.add_item("Crafting Stations")
+	guide_filter_select.set_item_metadata(2, "stations")
+	guide_filter_select.add_item("Monsters & Enemies")
+	guide_filter_select.set_item_metadata(3, "enemies")
+	guide_filter_select.item_selected.connect(func(idx: int) -> void:
+		guide_selected_filter = str(guide_filter_select.get_item_metadata(idx))
+		_refresh_guide_panel()
+	)
+	column.add_child(guide_filter_select)
+	var scroll := ScrollContainer.new()
+	scroll.custom_minimum_size = Vector2(390, 230)
+	scroll.size_flags_vertical = Control.SIZE_EXPAND_FILL
+	column.add_child(scroll)
+	guide_entries_column = VBoxContainer.new()
+	guide_entries_column.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	scroll.add_child(guide_entries_column)
+	var close_button := Button.new()
+	close_button.text = "Close"
+	close_button.pressed.connect(func() -> void: guide_panel.visible = false)
+	column.add_child(close_button)
+	if auth_panel != null and auth_panel.get_parent() != null:
+		auth_panel.get_parent().add_child(guide_panel)
+	else:
+		add_child(guide_panel)
+	_refresh_guide_panel()
+
+
+func _refresh_guide_panel() -> void:
+	if guide_entries_column == null:
+		return
+	for child in guide_entries_column.get_children():
+		child.queue_free()
+	var player_pos := player_node.global_position if player_node != null and is_instance_valid(player_node) else Vector3.ZERO
+	if guide_selected_filter == "all" or guide_selected_filter == "stations":
+		for station in station_catalog:
+			if station is Dictionary:
+				var pos: Dictionary = station.get("position", {})
+				var sx := float(pos.get("x", 0.0))
+				var sz := float(pos.get("z", 0.0))
+				var dist := Vector2(player_pos.x - sx, player_pos.z - sz).length()
+				var lbl := Label.new()
+				lbl.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+				lbl.text = "[Station] %s • (%.0f, %.0f) • %.1fm away" % [str(station.get("name", "Station")), sx, sz, dist]
+				guide_entries_column.add_child(lbl)
+	if guide_selected_filter == "all" or guide_selected_filter == "nodes":
+		for node in gathering_catalog:
+			if node is Dictionary:
+				var pos: Dictionary = node.get("position", {})
+				var nx := float(pos.get("x", 0.0))
+				var nz := float(pos.get("z", 0.0))
+				var dist := Vector2(player_pos.x - nx, player_pos.z - nz).length()
+				var lbl := Label.new()
+				lbl.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+				lbl.text = "[%s Lv %d] %s • (%.0f, %.0f) • %.1fm" % [str(node.get("skillId", "gather")).capitalize(), int(node.get("requiredLevel", 1)), str(node.get("name", "Node")), nx, nz, dist]
+				guide_entries_column.add_child(lbl)
+	if guide_selected_filter == "all" or guide_selected_filter == "enemies":
+		for enemy in enemy_catalog:
+			if enemy is Dictionary:
+				var pos: Dictionary = enemy.get("position", {})
+				var ex := float(pos.get("x", 0.0))
+				var ez := float(pos.get("z", 0.0))
+				var dist := Vector2(player_pos.x - ex, player_pos.z - ez).length()
+				var lbl := Label.new()
+				lbl.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+				lbl.text = "[Enemy HP %d • ATK %d] %s • (%.0f, %.0f) • %.1fm" % [int(enemy.get("maxHealth", 10)), int(enemy.get("attack", 1)), str(enemy.get("name", "Creature")), ex, ez, dist]
+				guide_entries_column.add_child(lbl)
+
+
+func _show_stats_panel() -> void:
+	if skills_panel != null:
+		skills_panel.visible = false
+	if inventory_panel != null:
+		inventory_panel.visible = false
+	if market_panel != null:
+		market_panel.visible = false
+	if equipment_panel != null:
+		equipment_panel.visible = false
+	if rewards_panel != null:
+		rewards_panel.visible = false
+	if crafting_panel != null:
+		crafting_panel.visible = false
+	if stats_panel != null:
+		stats_panel.visible = not stats_panel.visible
+		if stats_panel.visible:
+			_refresh_stats_panel()
+		return
+	stats_panel = PanelContainer.new()
+	stats_panel.position = Vector2(400, 130)
+	stats_panel.custom_minimum_size = Vector2(390, 310)
+	var column := VBoxContainer.new()
+	stats_panel.add_child(column)
+	var heading := Label.new()
+	heading.text = "CHARACTER VITALS & ATTRIBUTES"
+	heading.add_theme_font_size_override("font_size", 18)
+	column.add_child(heading)
+	stats_summary_label = Label.new()
+	stats_summary_label.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+	column.add_child(stats_summary_label)
+	var pace_button := Button.new()
+	pace_button.text = "Toggle Walk / Run Pace (CapsLock)"
+	pace_button.pressed.connect(func() -> void:
+		if player_node != null and is_instance_valid(player_node):
+			player_node.call("toggle_walk_mode")
+			_refresh_stats_panel()
+	)
+	column.add_child(pace_button)
+	var autorun_button := Button.new()
+	autorun_button.text = "Toggle Autorun (R)"
+	autorun_button.pressed.connect(func() -> void:
+		if player_node != null and is_instance_valid(player_node):
+			player_node.call("toggle_autorun")
+			_refresh_stats_panel()
+	)
+	column.add_child(autorun_button)
+	var close_button := Button.new()
+	close_button.text = "Close"
+	close_button.pressed.connect(func() -> void: stats_panel.visible = false)
+	column.add_child(close_button)
+	if auth_panel != null and auth_panel.get_parent() != null:
+		auth_panel.get_parent().add_child(stats_panel)
+	else:
+		add_child(stats_panel)
+	_refresh_stats_panel()
+
+
+func _refresh_stats_panel() -> void:
+	if stats_summary_label == null:
+		return
+	var hp_regen := 1 + int(current_constitution / 5)
+	var act_regen := 2 + int(current_stamina / 5)
+	var mnd_regen := 2 + int(current_willpower / 5)
+	var pace_text := "RUN (100%)"
+	if player_node != null and is_instance_valid(player_node) and bool(player_node.call("is_walk_mode")):
+		pace_text = "WALK (55%)"
+	stats_summary_label.text = (
+		"Primary HAM Pools:\n"
+		+ "  • Health: %d / %d  (+%d HP / 5s)\n" % [current_health, current_max_health, hp_regen]
+		+ "  • Action: %d / %d  (+%d ACT / 5s)\n" % [current_action, current_max_action, act_regen]
+		+ "  • Mind: %d / %d  (+%d MND / 5s)\n\n" % [current_mind, current_max_mind, mnd_regen]
+		+ "Secondary Attributes:\n"
+		+ "  • Constitution (Health Regen & Cap): %d\n" % current_constitution
+		+ "  • Stamina (Action Regen & Cap): %d\n" % current_stamina
+		+ "  • Willpower (Mind Regen & Cap): %d\n\n" % current_willpower
+		+ "Combat & Movement:\n"
+		+ "  • Attack Bonus: +%d  •  Defense Bonus: +%d\n" % [current_attack_bonus, current_defense_bonus]
+		+ "  • Locomotion Pace: %s" % pace_text
+	)
+
+
+func _show_crafting_panel(station_id: String = "") -> void:
+	if stats_panel != null:
+		stats_panel.visible = false
+	if skills_panel != null:
+		skills_panel.visible = false
+	if inventory_panel != null:
+		inventory_panel.visible = false
+	if market_panel != null:
+		market_panel.visible = false
+	if equipment_panel != null:
+		equipment_panel.visible = false
+	if rewards_panel != null:
+		rewards_panel.visible = false
+	if not station_id.is_empty():
+		crafting_selected_station = station_id
+	if crafting_panel != null:
+		if station_id.is_empty():
+			crafting_panel.visible = not crafting_panel.visible
+		else:
+			crafting_panel.visible = true
+		if crafting_panel.visible:
+			_sync_crafting_station_filter()
+			_refresh_crafting_recipe_list()
+		return
+	crafting_panel = PanelContainer.new()
+	crafting_panel.position = Vector2(400, 130)
+	crafting_panel.custom_minimum_size = Vector2(410, 340)
+	var column := VBoxContainer.new()
+	crafting_panel.add_child(column)
+	var heading := Label.new()
+	heading.text = "CRAFTING SCHEMATICS"
+	heading.add_theme_font_size_override("font_size", 18)
+	column.add_child(heading)
+	crafting_station_filter = OptionButton.new()
+	crafting_station_filter.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	crafting_station_filter.add_item("All Stations")
+	crafting_station_filter.set_item_metadata(0, "all")
+	crafting_station_filter.add_item("Frontier Workbench")
+	crafting_station_filter.set_item_metadata(1, "frontier-workbench")
+	crafting_station_filter.add_item("Frontier Forge")
+	crafting_station_filter.set_item_metadata(2, "frontier-forge")
+	crafting_station_filter.item_selected.connect(func(idx: int) -> void:
+		crafting_selected_station = str(crafting_station_filter.get_item_metadata(idx))
+		_refresh_crafting_recipe_list()
+	)
+	column.add_child(crafting_station_filter)
+	var scroll := ScrollContainer.new()
+	scroll.custom_minimum_size = Vector2(380, 210)
+	scroll.size_flags_vertical = Control.SIZE_EXPAND_FILL
+	column.add_child(scroll)
+	crafting_recipes_column = VBoxContainer.new()
+	crafting_recipes_column.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	scroll.add_child(crafting_recipes_column)
+	crafting_status_label = Label.new()
+	crafting_status_label.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+	crafting_status_label.text = "Move within 3m of the required station to craft."
+	column.add_child(crafting_status_label)
+	var close_button := Button.new()
+	close_button.text = "Close"
+	close_button.pressed.connect(func() -> void: crafting_panel.visible = false)
+	column.add_child(close_button)
+	if auth_panel != null and auth_panel.get_parent() != null:
+		auth_panel.get_parent().add_child(crafting_panel)
+	else:
+		add_child(crafting_panel)
+	_sync_crafting_station_filter()
+	_refresh_crafting_recipe_list()
+
+
+func _sync_crafting_station_filter() -> void:
+	if crafting_station_filter == null:
+		return
+	for idx in range(crafting_station_filter.item_count):
+		if str(crafting_station_filter.get_item_metadata(idx)) == crafting_selected_station:
+			crafting_station_filter.select(idx)
+			return
+
+
+func _refresh_crafting_recipe_list() -> void:
+	if crafting_recipes_column == null:
+		return
+	for child in crafting_recipes_column.get_children():
+		child.queue_free()
+	var matched := 0
+	for value in recipe_catalog:
+		if not value is Dictionary:
+			continue
+		var recipe: Dictionary = value
+		var station_id := str(recipe.get("stationId", ""))
+		if crafting_selected_station != "all" and station_id != crafting_selected_station:
+			continue
+		matched += 1
+		var recipe_id := str(recipe.get("id", ""))
+		var recipe_name := str(recipe.get("name", recipe_id))
+		var skill_id := str(recipe.get("skillId", "crafting")).capitalize()
+		var req_level := int(recipe.get("requiredLevel", 1))
+		var xp := int(recipe.get("experience", 0))
+		var ing_parts: Array[String] = []
+		var has_all_ingredients := true
+		var ingredients: Variant = recipe.get("ingredients", [])
+		if ingredients is Array:
+			for ing in ingredients:
+				if ing is Dictionary:
+					var item_id := str(ing.get("itemId", ""))
+					var need := int(ing.get("quantity", 1))
+					var have := int(current_inventory.get(item_id, 0))
+					if have < need:
+						has_all_ingredients = false
+					ing_parts.append(item_id.replace("_", " ") + " " + str(have) + "/" + str(need))
+		var row_label := Label.new()
+		row_label.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+		row_label.text = recipe_name + " (" + skill_id + " Lv " + str(req_level) + " • +" + str(xp) + " XP)\nRequires: " + ", ".join(ing_parts)
+		crafting_recipes_column.add_child(row_label)
+		var craft_btn := Button.new()
+		craft_btn.text = "Craft " + recipe_name if has_all_ingredients else "Missing ingredients (" + recipe_name + ")"
+		craft_btn.disabled = not has_all_ingredients
+		craft_btn.pressed.connect(_submit_craft_recipe.bind(recipe_id))
+		crafting_recipes_column.add_child(craft_btn)
+		var sep := HSeparator.new()
+		crafting_recipes_column.add_child(sep)
+	if matched == 0:
+		var empty_lbl := Label.new()
+		empty_lbl.text = "No crafting recipes available for this station."
+		crafting_recipes_column.add_child(empty_lbl)
+
+
+func _submit_craft_recipe(recipe_id: String) -> void:
+	if player_id.is_empty() or auth_token.is_empty() or interaction_pending or gather_request == null:
+		return
+	interaction_type = "craft"
+	var error := gather_request.request(
+		api_base_url + "/api/v1/account/characters/" + player_id + "/craft/" + recipe_id,
+		_api_headers(),
+		HTTPClient.METHOD_POST,
+		""
+	)
+	if error == OK:
+		interaction_pending = true
+		status_label.text = "Crafting " + recipe_id.replace("-", " ") + "..."
+		if crafting_status_label != null:
+			crafting_status_label.text = "Crafting " + recipe_id.replace("-", " ") + "..."
+	else:
+		_report_interaction_request_error(error)
+
+
 func _show_inventory_panel() -> void:
+	if crafting_panel != null:
+		crafting_panel.visible = false
 	if rewards_panel != null:
 		rewards_panel.visible = false
 	if skills_panel != null:
@@ -3137,24 +4433,48 @@ func _refresh_equipment_visuals() -> void:
 	var cloth := StandardMaterial3D.new()
 	cloth.albedo_color = Color(0.35, 0.25, 0.16)
 	if current_equipment.has("main_hand"):
-		var sword := Node3D.new()
-		sword.position = Vector3(0.48, 0.95, -0.05)
-		sword.rotation_degrees.z = -22.0
-		var blade := MeshInstance3D.new()
-		var blade_mesh := BoxMesh.new()
-		blade_mesh.size = Vector3(0.10, 0.85, 0.07)
-		blade.mesh = blade_mesh
-		blade.position.y = 0.42
-		blade.material_override = metal
-		sword.add_child(blade)
+		var weapon_id := str(current_equipment.get("main_hand", ""))
+		var weapon := Node3D.new()
+		weapon.position = Vector3(0.48, 0.95, -0.05)
+		weapon.rotation_degrees.z = -22.0
+		var primary := MeshInstance3D.new()
+		var primary_mesh := BoxMesh.new()
+		if weapon_id == "boar_tusk_spear":
+			primary_mesh.size = Vector3(0.08, 1.35, 0.08)
+			primary.position.y = 0.55
+		elif weapon_id == "frontier_pistol":
+			primary_mesh.size = Vector3(0.10, 0.22, 0.36)
+			primary.position = Vector3(0.0, 0.10, -0.14)
+		elif weapon_id == "frontier_rifle":
+			primary_mesh.size = Vector3(0.10, 0.20, 0.82)
+			primary.position = Vector3(0.0, 0.12, -0.32)
+		elif weapon_id == "resonance_focus":
+			primary_mesh.size = Vector3(0.09, 1.25, 0.09)
+			primary.position.y = 0.50
+			var focus_orb := MeshInstance3D.new()
+			var orb_mesh := SphereMesh.new()
+			orb_mesh.radius = 0.14
+			orb_mesh.height = 0.28
+			focus_orb.mesh = orb_mesh
+			focus_orb.position.y = 1.18
+			var orb_mat := StandardMaterial3D.new()
+			orb_mat.albedo_color = Color(0.28, 0.68, 0.88)
+			focus_orb.material_override = orb_mat
+			weapon.add_child(focus_orb)
+		else:
+			primary_mesh.size = Vector3(0.10, 0.85, 0.07)
+			primary.position.y = 0.42
+		primary.mesh = primary_mesh
+		primary.material_override = metal
+		weapon.add_child(primary)
 		var grip := MeshInstance3D.new()
 		var grip_mesh := BoxMesh.new()
 		grip_mesh.size = Vector3(0.12, 0.24, 0.12)
 		grip.mesh = grip_mesh
 		grip.position.y = -0.12
 		grip.material_override = leather
-		sword.add_child(grip)
-		equipment_visual_root.add_child(sword)
+		weapon.add_child(grip)
+		equipment_visual_root.add_child(weapon)
 	if current_equipment.has("head"):
 		var cap := MeshInstance3D.new()
 		var cap_mesh := SphereMesh.new()
@@ -3219,6 +4539,8 @@ func _toggle_skills_panel() -> void:
 	if skills_panel != null and skills_panel.visible:
 		skills_panel.visible = false
 		return
+	if crafting_panel != null:
+		crafting_panel.visible = false
 	if market_panel != null:
 		market_panel.visible = false
 	if inventory_panel != null:

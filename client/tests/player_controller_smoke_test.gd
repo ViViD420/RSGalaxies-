@@ -262,7 +262,106 @@ func _run_movement_smoke_test() -> void:
 		_fail("Attack swing animation did not return to neutral; rotation_y=%s active=%s." % [final_attack_rotation, attack_animation_still_active])
 		return
 
-	print("PASS: terrain mesh/collision, deterministic height, movement acceleration, sustained speed, deceleration, jump, camera zoom bounds, attack swing and collision/presentation separation.")
+	# Validate mobile touch camera isolation (D-pad exclusion vs. active camera zone).
+	var camera_pivot := player.get_node("CameraPivot") as Node3D
+	var viewport_size := root.get_visible_rect().size
+	var yaw_before_dpad := camera_pivot.rotation.y
+	var dpad_touch := InputEventScreenTouch.new()
+	dpad_touch.index = 1
+	dpad_touch.pressed = true
+	dpad_touch.position = Vector2(80.0, viewport_size.y - 100.0)
+	player.call("_unhandled_input", dpad_touch)
+	var dpad_drag := InputEventScreenDrag.new()
+	dpad_drag.index = 1
+	dpad_drag.position = Vector2(95.0, viewport_size.y - 110.0)
+	dpad_drag.relative = Vector2(40.0, 0.0)
+	player.call("_unhandled_input", dpad_drag)
+	if not is_equal_approx(camera_pivot.rotation.y, yaw_before_dpad):
+		_fail("Touch drag inside the D-pad exclusion zone unexpectedly rotated the camera.")
+		return
+
+	var cam_touch := InputEventScreenTouch.new()
+	cam_touch.index = 2
+	cam_touch.pressed = true
+	cam_touch.position = Vector2(viewport_size.x * 0.5, viewport_size.y * 0.3)
+	player.call("_unhandled_input", cam_touch)
+	var cam_drag := InputEventScreenDrag.new()
+	cam_drag.index = 2
+	cam_drag.position = Vector2(viewport_size.x * 0.5 + 30.0, viewport_size.y * 0.3)
+	cam_drag.relative = Vector2(30.0, 0.0)
+	player.call("_unhandled_input", cam_drag)
+	if is_equal_approx(camera_pivot.rotation.y, yaw_before_dpad):
+		_fail("Touch drag in the camera look region did not rotate the camera.")
+		return
+	var cam_release := InputEventScreenTouch.new()
+	cam_release.index = 2
+	cam_release.pressed = false
+	player.call("_unhandled_input", cam_release)
+
+	# Validate presentation state machine transitions without altering collision.
+	player.call("play_gather_animation")
+	if str(player.call("get_presentation_state_name")) != "GATHER":
+		_fail("Expected GATHER presentation state after play_gather_animation().")
+		return
+	player.call("play_defeat_animation")
+	if str(player.call("get_presentation_state_name")) != "DEFEAT":
+		_fail("Expected DEFEAT presentation state after play_defeat_animation().")
+		return
+	player.call("play_respawn_animation")
+	if str(player.call("get_presentation_state_name")) != "RESPAWN":
+		_fail("Expected RESPAWN presentation state after play_respawn_animation().")
+		return
+	if not is_equal_approx(collision_shape.position.y, 0.9):
+		_fail("Presentation state transitions altered CollisionShape3D transform.")
+		return
+
+	# Validate walk/run pace toggle scales effective move speed without breaking server speed bounds.
+	if bool(player.call("is_walk_mode")):
+		_fail("Player controller unexpectedly started in walk mode.")
+		return
+	var toggled_walk := bool(player.call("toggle_walk_mode"))
+	var walk_speed := float(player.call("get_effective_move_speed"))
+	if not toggled_walk or walk_speed >= configured_move_speed or walk_speed <= 0.0:
+		_fail("Walk mode toggle did not reduce effective movement speed: walk_speed=%s" % walk_speed)
+		return
+	player.call("set_walk_mode", false)
+	if not is_equal_approx(float(player.call("get_effective_move_speed")), configured_move_speed):
+		_fail("Restoring run mode did not restore configured move_speed.")
+		return
+
+	# Validate autorun toggle and automatic cancellation when manual directional input is pressed.
+	if bool(player.call("is_autorun")):
+		_fail("Player controller unexpectedly started with autorun enabled.")
+		return
+	if not bool(player.call("toggle_autorun")) or not bool(player.call("is_autorun")):
+		_fail("toggle_autorun() did not enable autorun.")
+		return
+	await physics_frame
+	if Vector2(player.velocity.x, player.velocity.z).length() <= 0.0:
+		_fail("Autorun did not advance horizontal velocity.")
+		return
+	Input.action_press("move_back")
+	await physics_frame
+	Input.action_release("move_back")
+	if bool(player.call("is_autorun")):
+		_fail("Manual movement input did not cancel active autorun.")
+		return
+
+	# Validate camera reset behind character and first-person body mesh visibility toggle.
+	player.call("reset_camera_behind_character")
+	if not is_equal_approx(camera_pivot.rotation.y, 0.0):
+		_fail("reset_camera_behind_character() did not reset camera yaw to 0.")
+		return
+	player.call("_adjust_camera_zoom", -20.0)
+	if (player.get_node("BodyMesh") as MeshInstance3D).visible:
+		_fail("First-person camera zoom (0.5m) did not hide local BodyMesh.")
+		return
+	player.call("_adjust_camera_zoom", 5.0)
+	if not (player.get_node("BodyMesh") as MeshInstance3D).visible:
+		_fail("Third-person camera zoom did not restore local BodyMesh visibility.")
+		return
+
+	print("PASS: terrain mesh/collision, deterministic height, movement acceleration, sustained speed, deceleration, jump, camera zoom bounds, touch camera isolation, presentation state machine, walk/run pace toggle, autorun toggle/cancel, first/third-person camera reset, attack swing and collision/presentation separation.")
 	for child in root.get_children():
 		child.queue_free()
 	await process_frame

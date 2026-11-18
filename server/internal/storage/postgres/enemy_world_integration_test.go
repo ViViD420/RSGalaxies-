@@ -111,7 +111,9 @@ func TestPostgresEnemyWorldTickCommitsAttackExactlyOnce(t *testing.T) {
 
 	snapshots, err := accountRepo.ListEnemySnapshotsForAccount(ctx, account.ID, playerID, now.Add(4*time.Second))
 	if err != nil { t.Fatalf("list enemy snapshots: %v", err) }
-	if len(snapshots) != 3 { t.Fatalf("snapshot count = %d, want three zone enemies including Stoneback", len(snapshots)) }
+	// ListEnemySnapshotsForAccount returns one snapshot per catalogued enemy in the starter zone.
+	wantSnapshots := len(game.EnemyDefinitions())
+	if len(snapshots) != wantSnapshots { t.Fatalf("snapshot count = %d, want %d zone enemies", len(snapshots), wantSnapshots) }
 	found := false
 	for _, snapshot := range snapshots {
 		if snapshot.EnemyID == enemyID {

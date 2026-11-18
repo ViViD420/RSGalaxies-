@@ -1,6 +1,9 @@
 extends SceneTree
 
 const MAIN_SCRIPT := preload("res://scripts/main.gd")
+# Use the real player scene (controller script + nodes) so main.gd is exercised
+# against the same player contract it relies on in production.
+const PLAYER_SCENE := preload("res://scenes/player.tscn")
 var test_main_node: Node3D
 
 
@@ -17,7 +20,7 @@ func _run_interaction_hint_smoke_test() -> void:
 	var status_test_label := Label.new()
 	main_node.add_child(status_test_label)
 	main_node.set("status_label", status_test_label)
-	var player := CharacterBody3D.new()
+	var player := PLAYER_SCENE.instantiate() as CharacterBody3D
 	root.add_child(player)
 	main_node.set("player_node", player)
 	main_node.set("player_id", "interaction-hint-test")
@@ -67,7 +70,74 @@ func _run_interaction_hint_smoke_test() -> void:
 		_fail("Interaction request startup failure was not surfaced: " + status_test_label.text)
 		return
 
-	print("PASS: contextual interaction hints select the nearest gathering target, show range guidance, expose pending state, hide before character selection and report malformed/startup errors.")
+	# Validate workbench and forge recipe priority selection for farming/scavenging/weapon loops.
+	main_node.set("current_inventory", {"frontier_grain": 2, "wild_herb": 1})
+	if str(main_node.call("_select_workbench_recipe")) != "frontier-ration":
+		_fail("Workbench recipe selector did not prioritize frontier-ration when grain and herb are present.")
+		return
+	main_node.set("current_inventory", {"salvaged_scrap": 2, "copper_bar": 1})
+	if str(main_node.call("_select_workbench_recipe")) != "salvaged-power-cell":
+		_fail("Workbench recipe selector did not prioritize salvaged-power-cell.")
+		return
+	main_node.set("current_inventory", {"salvaged_power_cell": 1, "copper_bar": 2, "wooden_plank": 1})
+	if str(main_node.call("_select_forge_recipe")) != "frontier-rifle":
+		_fail("Forge recipe selector did not prioritize frontier-rifle when power cell, copper and plank are present.")
+		return
+
+	# Validate Crafting Schematics panel builds, filters by station, and cleans up.
+	main_node.set("recipe_catalog", [
+		{"id": "basic-plank", "name": "Basic Wooden Plank", "skillId": "crafting", "requiredLevel": 1, "stationId": "frontier-workbench", "ingredients": [{"itemId": "softwood_log", "quantity": 2}], "outputs": [{"itemId": "wooden_plank", "quantity": 1}], "experience": 30},
+		{"id": "copper-bar", "name": "Smelt Copper Bar", "skillId": "smithing", "requiredLevel": 1, "stationId": "frontier-forge", "ingredients": [{"itemId": "copper_ore", "quantity": 2}], "outputs": [{"itemId": "copper_bar", "quantity": 1}], "experience": 35}
+	])
+	main_node.call("_show_crafting_panel", "frontier-forge")
+	var craft_panel := main_node.get("crafting_panel") as PanelContainer
+	var craft_column := main_node.get("crafting_recipes_column") as VBoxContainer
+	if craft_panel == null or not craft_panel.visible or craft_column == null or craft_column.get_child_count() == 0:
+		_fail("Crafting Schematics panel did not build and populate for frontier-forge.")
+		return
+
+	# Validate new medpack/buff/alloy recipe selectors and HAM/Secondary attribute sync.
+	main_node.set("current_inventory", {"bacta_gel": 1, "herbal_bundle": 1})
+	if str(main_node.call("_select_workbench_recipe")) != "field-medpack":
+		_fail("Workbench recipe selector did not prioritize field-medpack.")
+		return
+	main_node.set("current_inventory", {"bacta_gel": 1, "frontier_grain": 2, "aether_crystal": 1})
+	if str(main_node.call("_select_workbench_recipe")) != "vitality-stim-pack":
+		_fail("Workbench recipe selector did not prioritize vitality-stim-pack.")
+		return
+	main_node.set("current_inventory", {"iron_ore": 2})
+	if str(main_node.call("_select_forge_recipe")) != "iron-bar":
+		_fail("Forge recipe selector did not prioritize iron-bar.")
+		return
+	main_node.call("_sync_vital_attributes_from_character", {"action": 95, "mind": 90, "constitution": 15, "stamina": 12, "willpower": 14, "maxHealthBuff": 35})
+	if int(main_node.get("current_max_health")) != 145 or int(main_node.get("current_constitution")) != 15:
+		_fail("HAM/Secondary attribute sync did not compute expected max health and constitution.")
+		return
+
+	# Validate Character Vitals & Attributes panel builds and renders HAM + Secondary attributes.
+	main_node.call("_show_stats_panel")
+	var vitals_panel := main_node.get("stats_panel") as PanelContainer
+	var vitals_label := main_node.get("stats_summary_label") as Label
+	if vitals_panel == null or not vitals_panel.visible or vitals_label == null or not vitals_label.text.contains("Constitution"):
+		_fail("Character Vitals & Attributes panel did not build or render Constitution summary.")
+		return
+
+	# Validate Frontier World Atlas & Directory panel builds and populates station/node entries.
+	main_node.call("_show_guide_panel")
+	var atlas_panel := main_node.get("guide_panel") as PanelContainer
+	var atlas_column := main_node.get("guide_entries_column") as VBoxContainer
+	if atlas_panel == null or not atlas_panel.visible or atlas_column == null or atlas_column.get_child_count() == 0:
+		_fail("Frontier World Atlas & Directory panel did not build or populate entries.")
+		return
+
+	# Validate Options, Camera & Controls panel builds cleanly.
+	main_node.call("_show_settings_panel")
+	var opt_panel := main_node.get("settings_panel") as PanelContainer
+	if opt_panel == null or not opt_panel.visible:
+		_fail("Options, Camera & Controls panel did not build or become visible.")
+		return
+
+	print("PASS: contextual interaction hints select the nearest gathering target, show range guidance, expose pending state, hide before character selection, select station recipes, build Crafting Schematics, Character Vitals, World Atlas and Options panels, sync HAM/Secondary attributes and report malformed/startup errors.")
 	player.queue_free()
 	main_node.free()
 	await process_frame

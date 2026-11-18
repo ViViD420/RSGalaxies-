@@ -50,6 +50,7 @@ func scanPlayer(row scanner) (game.Player, error) {
 	if player.Inventory == nil { player.Inventory = make(map[string]int) }
 	if player.Bank == nil { player.Bank = make(map[string]int) }
 	if player.Equipment == nil { player.Equipment = make(map[string]string) }
+	player.EnsureVitalDefaults()
 	return player, nil
 }
 

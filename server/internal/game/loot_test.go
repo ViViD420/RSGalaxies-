@@ -44,8 +44,21 @@ func TestRollLootTableRejectsUnknownTablesAndOutOfRangeRolls(t *testing.T) {
 
 func TestLootTableCatalogIsValidAndDefensivelyCopied(t *testing.T) {
 	tables := LootTableDefinitions()
-	if len(tables) != 5 {
-		t.Fatalf("loot table count=%d, want 5", len(tables))
+	// 5 original tables + 16 enemy harvest tables added with the tier 2-10 enemy roster.
+	if len(tables) != 21 {
+		t.Fatalf("loot table count=%d, want 21", len(tables))
+	}
+	tableIDs := map[string]bool{}
+	for _, table := range tables {
+		if tableIDs[table.ID] {
+			t.Fatalf("duplicate loot table id %s", table.ID)
+		}
+		tableIDs[table.ID] = true
+	}
+	for _, enemy := range EnemyDefinitions() {
+		if enemy.LootTableID != "" && !tableIDs[enemy.LootTableID] {
+			t.Fatalf("enemy %s references missing loot table %s", enemy.ID, enemy.LootTableID)
+		}
 	}
 	for _, table := range tables {
 		if table.ID == "" || table.Version < 1 {
@@ -150,7 +163,7 @@ func TestRollLootTableDropsValidatesRollCountAndBounds(t *testing.T) {
 
 func TestLootTableCatalogCopiesNestedMultiDropSlices(t *testing.T) {
 	tables:=LootTableDefinitions()
-	if len(tables)!=5{t.Fatalf("loot table count=%d, want 5",len(tables))}
+	if len(tables)!=21{t.Fatalf("loot table count=%d, want 21",len(tables))}
 	for index := range tables {
 		if tables[index].ID == "frontier-rat-harvest" {
 			tables[index].GuaranteedDrops[0].ItemID = "corrupted"

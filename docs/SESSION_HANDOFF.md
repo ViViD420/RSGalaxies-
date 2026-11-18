@@ -1710,3 +1710,113 @@ The procedural placement algorithm is deterministic by design and now has direct
 - Client #191 and #192 remain historical failures with root causes and corrections documented. #193 validates the corrected target-specific parser and all accumulated interaction hint/error-feedback code.
 - No client code changed after the #193 validated code commit; this update is documentation-only.
 - Physical desktop/mobile visual and touch QA remains outstanding.
+
+
+## Android APK CI, Touch Camera Isolation & Presentation State Machine (written locally; CI verification pending)
+
+- **Files changed:**
+  - `client/export_presets.cfg`: Added `[preset.1]` `"Android"` debug APK export preset (`arm64-v8a`, internet/network permissions, `build/android/rs-galaxies-debug.apk`).
+  - `.github/workflows/client.yml`: Added `android-apk` job (dependent on `godot-check`) installing JDK 17, Android SDK (`platform-tools`, `build-tools;34.0.0`, `platforms;android-34`), generating a debug keystore, exporting `rs-galaxies-debug.apk`, enforcing `SCRIPT ERROR:|ERROR:` log failure checks, and uploading the APK artifact (`rs-galaxies-android-debug-apk`).
+  - `client/scripts/player_controller.gd`: Added multi-touch-safe camera drag isolation (`_active_camera_touch_index` with bottom-left D-pad and bottom-right action button exclusion zones) and an explicit `PresentationState` state machine (`IDLE`, `WALK`, `RUN`, `JUMP`, `FALL`, `LAND`, `ATTACK`, `GATHER`, `CRAFT`, `USE_ITEM`, `HIT`, `DEFEAT`, `RESPAWN`) strictly decoupled from `CollisionShape3D` and authoritative state.
+  - `client/scripts/main.gd`: Wired server-confirmed `combat` (`playerDefeated`), `use_item`, `rest` (respawn), `craft`, and `gather` callbacks to the new presentation methods on `player_node`.
+  - `client/tests/player_controller_smoke_test.gd`: Added regression checks for D-pad touch exclusion vs. camera-zone drag rotation, `GATHER`/`DEFEAT`/`RESPAWN` state transitions, and `CollisionShape3D` invariance.
+- **Verification status:** Code written and inspected; **not yet executed in Godot 4.3 or GitHub Actions** (sandbox has no local Godot binary or outbound git push). Must be uploaded/committed to `main` and verified via the `client` GitHub Actions workflow (`godot-check` + `android-apk`) and physical Android device testing before marking complete.
+
+
+## Core 18-Skill Loop Completion: Farming, Scavenging, Ranged/Magic Specializations & Grounded Node Visuals (written locally; CI verification pending)
+
+- **Files changed:**
+  - `server/internal/game/items.go`: Added 7 items (`frontier_grain`, `frontier_ration`, `salvaged_scrap`, `salvaged_power_cell`, `frontier_pistol`, `frontier_rifle`, `resonance_focus`) bringing the item catalog to 29 items and providing equippable `main_hand` weapons for `pistols`, `rifles`, and `magic`.
+  - `server/internal/game/gathering.go`: Added `crop-001` (`Frontier Crop Plot`, `farming` skill) and `scrap-001` (`Debris Scrap Pile`, `scavenging` skill) so all 4 gathering skills have active starter-zone nodes (6 total nodes).
+  - `server/internal/game/crafting.go`: Added 5 recipes (`frontier-ration`, `salvaged-power-cell`, `frontier-pistol`, `frontier-rifle`, `resonance-focus`) across `frontier-workbench` and `frontier-forge` (12 total recipes).
+  - `server/internal/game/combat.go`: Updated `AttackEnemy` to resolve the active `parentSkillID` (`melee` vs. `ranged`) for parent-level damage scaling and to award `strength` co-skill XP/damage bonus only when `parentSkillID == "melee"`, per `docs/COMBAT_PROGRESSION.md` and `docs/SKILL_ROSTER.md`.
+  - `server/internal/game/gathering_test.go`, `server/internal/game/crafting_test.go`, `server/internal/game/combat_test.go`, `server/internal/httpapi/server_test.go`: Added unit and HTTP catalog regression coverage for `crop-001`, `scrap-001`, the 5 new recipes, ranged/magic parent attribution without melee `strength` bleed, and the updated 6-node / 29-item / 12-recipe catalog counts.
+  - `client/scripts/main.gd` & `client/tests/interaction_hint_smoke_test.gd`: Grounded gathering node and initial enemy spawn Y-coordinates on `_terrain_height_at(at.x, at.z)`, added `_add_crop_plot()` and `_add_scrap_pile()` 3D prop visuals, added `_select_forge_recipe()` and `_select_workbench_recipe()` with smoke-test coverage, and added distinct weapon-family visuals in `_refresh_equipment_visuals()`.
+- **Verification status:** Code written and inspected locally; **pending GitHub Actions (`server.yml` and `client.yml`) and physical device verification**.
+
+
+## Crafting Schematics Browser Panel & HUD Craft Button (written locally; CI verification pending)
+
+- **Files changed:**
+  - `client/scripts/main.gd`: Added `recipe_catalog`, `crafting_button` in `ActionToolbar`, and `_show_crafting_panel()`, `_sync_crafting_station_filter()`, `_refresh_crafting_recipe_list()`, and `_submit_craft_recipe()` so players can inspect all 12 server recipes, filter by station (`All Stations`, `Frontier Workbench`, `Frontier Forge`), see `have/need` ingredient counts, and trigger any craftable recipe directly.
+  - `client/tests/interaction_hint_smoke_test.gd`: Added headless smoke test verifying `_show_crafting_panel("frontier-forge")` builds and populates the recipe list and cleans up without leaking resources.
+- **Verification status:** Code written and inspected locally; **pending GitHub Actions (`client.yml`) and physical device verification**.
+
+
+## Mining Expansion, Medical Packs, HAM + Secondary Attributes (Constitution/Stamina/Willpower) & New Enemies (written locally; CI verification pending)
+
+- **Files changed:**
+  - `server/internal/game/player.go`: Added primary `Action` and `Mind` pools alongside `Health`, secondary attributes (`Constitution`, `Stamina`, `Willpower` via `SecondaryAttributes` and `EffectiveSecondaryAttributes()`), temporary attribute buff fields (`MaxHealthBuff`, `MaxActionBuff`, `MaxMindBuff`, `BuffExpiresAt`), and `HealthRegenRate()` / `ActionRegenRate()` / `MindRegenRate()` / `RegenerateVitals()`.
+  - `server/internal/game/consumable.go` & `server/internal/game/consumable_test.go`: Expanded `UseItem` to support medical packs (`field_medpack`, `advanced_medpack`), Action/Mind recovery, and attribute buff enhancers (`vitality_stim_pack`, `adrenal_action_booster`, `neural_mind_tonic`) that work even at full base health and boost `Constitution`, `Stamina`, and `Willpower`.
+  - `server/internal/game/gathering.go` & `server/internal/game/gathering_test.go`: Added `iron-001` (`Deep Iron Vein`, Mining Lv 2), `titanium-001` (`Titanium Outcrop`, Mining Lv 3), and `crystal-001` (`Aether Crystal Formation`, Mining Lv 2) bringing total gathering nodes to 9.
+  - `server/internal/game/items.go` & `server/internal/game/crafting.go`: Expanded item catalog to 47 items and crafting catalog to 23 recipes (adding `iron_bar`, `titanium_bar`, `bacta_gel`, `field_medpack`, `advanced_medpack`, `vitality_stim_pack`, `adrenal_action_booster`, `neural_mind_tonic`, `iron_greatsword`, `titanium_carbine`, and `chitin_cuirass`).
+  - `server/internal/game/combat.go` & `server/internal/game/loot.go`: Added 3 new enemies (`canyon-stalker-001`, `ash-hound-001`, `ruin-sentinel-001` — 6 enemies total) with dedicated multi-item harvest loot tables (`canyon-stalker-harvest`, `ash-hound-harvest`, `ruin-sentinel-harvest`).
+  - `server/internal/storage/postgres/accounts.go`, `server/internal/storage/postgres/repository.go`, `server/internal/httpapi/server_test.go`: Wired `RegenerateVitals(now)` into `HeartbeatPresenceForAccount`, added `EnsureVitalDefaults()` on player load, and updated HTTP catalog test assertions (47 items, 9 nodes, 6 enemies, 23 recipes).
+  - `client/scripts/main.gd` & `client/tests/interaction_hint_smoke_test.gd`: Added 3D visuals for `Deep Iron Vein`, `Titanium Outcrop`, and `Aether Crystal Formation`, updated HUD to show `HP (+regen/5s)`, `ACT`, `MND`, `CON`, `STA`, `WIL`, and added smoke-test coverage.
+- **Verification status:** Code written and inspected locally; **pending GitHub Actions (`server.yml` and `client.yml`) and physical device verification**.
+
+
+## 5+ Full-Tier Expansion: 13 Gathering Nodes, 67 Items, 34 Recipes, 9 Enemies, Character Vitals Panel & Walk/Run Pace Toggle (written locally; CI verification pending)
+
+- **Files changed:**
+  - `server/internal/game/gathering.go`: Expanded to **13 gathering nodes** (7 new mining nodes across Mining Lv 2–5: `iron-001`, `cobalt-001`, `crystal-001`, `titanium-001`, `durasteel-001`, `luminite-001`, `mythril-001` plus `crop-001` and `scrap-001`).
+  - `server/internal/game/items.go`: Expanded to **67 item definitions** covering 6 new ores/gems, 5 smelted alloy bars (`iron_bar`, `cobalt_bar`, `titanium_bar`, `durasteel_bar`, `mythril_bar`), 4 medical/compound items (`bacta_gel`, `field_medpack`, `advanced_medpack`, `surgical_trauma_kit`), 4 attribute buff enhancers (`vitality_stim_pack`, `adrenal_action_booster`, `neural_mind_tonic`, `overdrive_omni_stim`), 9 monster material drops, and 9 high-tier weapons/armor pieces with `ConstitutionBonus`, `StaminaBonus`, and `WillpowerBonus`.
+  - `server/internal/game/crafting.go`: Expanded to **34 crafting recipes** across `frontier-workbench` and `frontier-forge`.
+  - `server/internal/game/combat.go` & `server/internal/game/loot.go`: Expanded to **9 enemy definitions** (adding 6 new monsters: `canyon-stalker-001`, `mire-drake-001`, `ash-hound-001`, `frost-prowler-001`, `ruin-sentinel-001`, `aether-wraith-001`) with 6 dedicated multi-item harvest loot tables.
+  - `client/scripts/player_controller.gd` & `client/tests/player_controller_smoke_test.gd`: Added `set_walk_mode` / `toggle_walk_mode` (`KEY_CAPSLOCK` + UI button) scaling movement pace cleanly within server speed bounds, covered by headless smoke tests.
+  - `client/scripts/main.gd` & `client/tests/interaction_hint_smoke_test.gd`: Added 3D visual builders for all 7 new mining deposits and 6 new monster palettes, added live `Health` / `Action` / `Mind` `ProgressBar` widgets to the HUD, and added the `CHARACTER VITALS & ATTRIBUTES` panel (`Vitals` button in `ActionToolbar`) displaying primary pools, `Constitution`/`Stamina`/`Willpower` regeneration rates, combat bonuses, and a Walk/Run pace toggle button.
+- **Verification status:** Code written and inspected locally; **pending GitHub Actions (`server.yml` and `client.yml`) and physical device verification**.
+
+
+## Tier 6–8 Mining, 86 Items, 43 Recipes, 14 Monsters, Frontier World Atlas, Quick-Heal/Stim & Autorun (written locally; CI verification pending)
+
+- **Files changed:**
+  - `server/internal/game/gathering.go`: Expanded to **18 gathering nodes** (adding 5 Tier 5–7 mining deposits: `orichalcum-001`, `obsidian-001`, `void-quartz-001`, `neutronium-001`, `starsteel-001`).
+  - `server/internal/game/items.go`: Expanded to **86 item definitions** (adding `orichalcum_ore`/`bar`, `obsidian_shard`, `neutronium_ore`/`bar`, `void_quartz`, `starsteel_ore`/`bar`, 5 monster drops, `nanite_repair_injector`, `titan_constitution_elixir`, `orichalcum_glaive`, `neutronium_platebody`, `void_psionic_crown`, and `starsteel_longblade`).
+  - `server/internal/game/crafting.go`: Expanded to **43 crafting recipes** across `frontier-workbench` and `frontier-forge`.
+  - `server/internal/game/combat.go` & `server/internal/game/loot.go`: Expanded to **14 enemy definitions** (adding `feral-drone-001`, `thornback-behemoth-001`, `obsidian-wyrm-001`, `void-reaver-001`, `star-golem-001`) and 5 new multi-item harvest loot tables.
+  - `client/scripts/player_controller.gd` & `client/tests/player_controller_smoke_test.gd`: Added `set_autorun` / `toggle_autorun` (`KEY_R` + UI button) with automatic cancellation when manual WASD/D-pad input is pressed or on defeat, plus smoke-test coverage.
+  - `client/scripts/main.gd` & `client/tests/interaction_hint_smoke_test.gd`: Added the `FRONTIER WORLD ATLAS & DIRECTORY` panel (`Atlas` button / `G` hotkey), `Med/Stim` quick-use button (`H` hotkey), desktop panel hotkeys (`I`, `K`, `C`, `V`, `G`, `H`), 3D prop visuals for all 5 new mining deposits, and monster palettes for all 5 new enemies.
+- **Verification status:** Code written and inspected locally; **pending GitHub Actions (`server.yml` and `client.yml`) and physical device verification**.
+
+
+## Tier 7–10 Mining, 104 Items, 51 Recipes, 19 Enemies, Options/Camera Panel & First/Third-Person View (written locally; CI verification pending)
+
+- **Files changed:**
+  - `server/internal/game/gathering.go`: Expanded to **23 gathering nodes** (adding 5 Tier 6–10 mining deposits: `electrum-001`, `solarite-001`, `chronite-001`, `abyssal-001`, `nova-prism-001`).
+  - `server/internal/game/items.go`: Expanded to **104 item definitions** (adding `electrum_ore`/`bar`, `chronite_ore`/`bar`, `solarite_crystal`, `abyssal_ore`/`bar`, `nova_prism`, 5 monster drops, `phoenix_resuscitation_pack`, `celestial_harmony_draught`, `electrum_knuckles`, `chronite_sniper_rifle`, and `abyssal_bulwark_armor`).
+  - `server/internal/game/crafting.go`: Expanded to **51 crafting recipes** across `frontier-workbench` and `frontier-forge`.
+  - `server/internal/game/combat.go` & `server/internal/game/loot.go`: Expanded to **19 enemy definitions** (adding `dune-scorpion-001`, `crystalline-mantis-001`, `magma-crusher-001`, `rift-specter-001`, `apex-devourer-001`) with 5 dedicated multi-item harvest loot tables.
+  - `client/scripts/player_controller.gd` & `client/tests/player_controller_smoke_test.gd`: Lowered `camera_min_distance` to `0.5m` with automatic `BodyMesh` hide below `1.0m` for seamless First-Person/Third-Person switching, and added `reset_camera_behind_character()` (`KEY_HOME` + Options button), covered by smoke tests.
+  - `client/scripts/main.gd` & `client/tests/interaction_hint_smoke_test.gd`: Added the `OPTIONS, CAMERA & CONTROLS` panel (`Options` button / `O` hotkey) with look-sensitivity adjustment, First-Person/Third-Person camera toggle, and full hotkey directory, plus 3D prop visuals for all 5 new mining deposits and palettes for all 5 new monsters.
+- **Verification status:** Code written and inspected locally; **pending GitHub Actions (`server.yml` and `client.yml`) and physical device verification**.
+
+
+## Antigravity Local-First Stabilization, Skill Installation & Full Verification — 2026-11-18
+
+- **Workspace & skill installation:**
+  - Installed `AGENTS.md`, `ANTIGRAVITY_ACTIVATION_PROMPT.txt`, `scripts/validate_package.py`, and the complete `.agents/skills/rs-galaxies-ultimate-engineer/` skill package (`SKILL.md`, 5 `references/`, `templates/SESSION_HANDOFF.md`, and 4 `workflows/`).
+  - Verified `python3 scripts/validate_package.py`: `PACKAGE VALID: 14 required files present and non-empty.`
+- **Defects discovered and fixed under the permanent no-hidden-errors rule (while verifying the 6 locally written 2026-11-18 milestones):**
+  1. **`server/internal/game/consumable.go` (`TestMedicalPacksAndAttributeBuffEnhancersIncreasePoolsAndConstitutionRegen` failure: `maxHealth=145 health=145 regen=4`, want `health=135`):**
+     - *Root cause:* `UseItem` computed `healTarget := item.HealAmount + item.BuffHealthAmount` (and the equivalent sum for `ActionRestoreAmount + BuffActionAmount` and `MindRestoreAmount + BuffMindAmount`), double-counting the cap buff as instant restoration on top of `HealAmount`.
+     - *Fix & regression coverage:* Restored pools strictly from `HealAmount` / `ActionRestoreAmount` / `MindRestoreAmount` while `Buff*Amount` raises only the pool caps. Added `TestBuffItemsRestoreOnlyTheirDocumentedAmount` in `server/internal/game/consumable_test.go`.
+  2. **`server/internal/game/gathering_test.go` (`TestHigherTierMiningNodesEnforceLevelAndGrantOreAndCrystal` failure: `gather titanium-001 below mining level 3 = <nil>, want ErrInsufficientSkillLevel`):**
+     - *Root cause:* Awarding 100 XP (Level 2) and then gathering `iron-001` (+45 XP) and `crystal-001` (+55 XP) brought Mining XP to 200, which already exceeds the Level 3 threshold (`ExperienceForLevel(3) == 174`) before `titanium-001` was tested.
+     - *Fix:* Asserted the `titanium-001` Level 3 rejection at 100 XP (Level 2) before the XP-granting gathers, then verified that gathering `iron-001` and `crystal-001` advances Mining to Level 3 (200 XP) and unlocks `titanium-001`.
+  3. **`server/internal/game/loot_test.go` (`TestLootTableCatalogIsValidAndDefensivelyCopied` and `TestLootTableCatalogCopiesNestedMultiDropSlices` failure: `loot table count=21, want 5`):**
+     - *Root cause:* Adding 16 new enemy harvest loot tables across the Tier 2–10 enemy expansions brought `LootTableDefinitions()` from 5 to 21 tables, leaving the hardcoded `5` assertion stale.
+     - *Fix:* Updated expected count to `21`, verified uniqueness of all 21 table IDs, and added cross-verification that every enemy in `EnemyDefinitions()` references a registered loot table.
+  4. **`server/internal/storage/postgres/enemy_world_integration_test.go` (`TestPostgresEnemyWorldTickCommitsAttackExactlyOnce` failure: `snapshot count = 19, want three zone enemies including Stoneback`):**
+     - *Root cause:* `ListEnemySnapshotsForAccount` returns one snapshot per catalogued starter-zone enemy (`len(game.EnemyDefinitions()) == 19`), whereas the test still hardcoded `3`.
+     - *Fix:* Asserted `len(snapshots) == len(game.EnemyDefinitions())` (19).
+  5. **`client/tests/interaction_hint_smoke_test.gd` (`SCRIPT ERROR: Invalid call. Nonexistent function 'is_walk_mode (via call)' in base 'CharacterBody3D'` at `res://scripts/main.gd:4156`):**
+     - *Root cause:* The smoke test instantiated a bare `CharacterBody3D.new()` without `player_controller.gd`, whereas `_refresh_stats_panel()` calls `player_node.call("is_walk_mode")` on the player node.
+     - *Fix:* Instantiated `preload("res://scenes/player.tscn")` in `interaction_hint_smoke_test.gd` so the real `player_controller.gd` script and child nodes are attached, matching production `main.gd`.
+- **Local verification evidence (all passing before GitHub push):**
+  - `go vet ./...`: PASS (0 warnings/errors).
+  - `go test -race -count=1 ./...` with live PostgreSQL 16.2 (`RS_GALAXIES_TEST_DATABASE_URL` configured, 0 skipped integration tests): PASS across `internal/auth`, `internal/game`, `internal/httpapi`, and `internal/storage/postgres`.
+  - Godot 4.3 (`4.3.stable.official.77dcf97d8`) headless checks:
+    - `godot --headless --path . --script tests/interaction_hint_smoke_test.gd`: PASS (0 `SCRIPT ERROR:` / `ERROR:` lines).
+    - `godot --headless --path . --script tests/player_controller_smoke_test.gd`: PASS (0 `SCRIPT ERROR:` / `ERROR:` lines).
+    - `godot --headless --editor --path . --quit`: PASS (0 `SCRIPT ERROR:` / `ERROR:` lines).

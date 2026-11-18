@@ -262,3 +262,29 @@ Client Action #183 (run 42604378304) passed; #182 (42604361140) passed. Client #
 
 - [x] Client Action #193 (run 42620773070) passed interaction prompt/error feedback, terrain/movement smoke, Godot import and Web export with no errors or resource leaks.
 - [ ] Perform non-headless visual and physical desktop/mobile touch review.
+
+
+## Android CI & Player Presentation State Machine — 2026-11-18 (written; CI pending)
+
+- [ ] Verify `client/export_presets.cfg` Android preset and `.github/workflows/client.yml` `android-apk` artifact build in GitHub Actions.
+- [ ] Verify touch camera isolation and `PresentationState` (`IDLE`/`WALK`/`RUN`/`JUMP`/`FALL`/`LAND`/`ATTACK`/`GATHER`/`CRAFT`/`USE_ITEM`/`HIT`/`DEFEAT`/`RESPAWN`) in `godot-check` (`tests/player_controller_smoke_test.gd`) and on a physical Android device.
+
+
+## Full 18-Skill Gathering, Crafting & Combat Specialization Loop — 2026-11-18 (written; CI pending)
+
+- [ ] Verify server unit/integration tests and `go vet` in `server.yml` for `crop-001` (`farming`), `scrap-001` (`scavenging`), the 5 new workbench/forge recipes, ranged/magic parent attribution, and the 29-item / 6-node / 12-recipe world catalog.
+- [ ] Verify client smoke tests (`interaction_hint_smoke_test.gd` & `player_controller_smoke_test.gd`), Web export, and Android APK export in `client.yml`.
+
+- [ ] Verify the new `CRAFTING SCHEMATICS` browser panel (`_show_crafting_panel` / `_refresh_crafting_recipe_list`) in `client.yml` (`interaction_hint_smoke_test.gd`) and on desktop/Android viewports.
+
+
+## Mining Ores/Crystals, Medical Packs, HAM + Secondary Attributes & New Monsters — 2026-11-18 (written; CI pending)
+
+- [ ] Verify Go unit/integration tests and `go vet` in `server.yml` for the 9 gathering nodes, 47 items, 23 recipes, 6 enemies, medical packs, attribute buffs, and `Constitution`/`Stamina`/`Willpower` regeneration.
+- [ ] Verify Godot client smoke tests, Web export, and Android APK build in `client.yml`.
+
+- [ ] Verify the 13-node / 67-item / 34-recipe / 9-enemy catalog expansion in `server.yml` and the new `CHARACTER VITALS & ATTRIBUTES` panel, HAM HUD bars, and walk/run pace toggle in `client.yml`.
+
+- [ ] Verify the 18-node / 86-item / 43-recipe / 14-enemy catalog expansion in `server.yml` and the `FRONTIER WORLD ATLAS & DIRECTORY` panel, `Med/Stim` quick-use action, keyboard hotkeys, and autorun toggle in `client.yml`.
+
+- [ ] Verify the 23-node / 104-item / 51-recipe / 19-enemy catalog expansion in `server.yml` and the `OPTIONS, CAMERA & CONTROLS` panel, First-Person/Third-Person camera toggle, and `reset_camera_behind_character()` in `client.yml`.

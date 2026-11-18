@@ -7,44 +7,44 @@ import (
 )
 
 var (
-	ErrUnknownCraftingRecipe = errors.New("unknown crafting recipe")
-	ErrUnknownCraftingStation = errors.New("unknown crafting station")
-	ErrCraftingOutOfRange = errors.New("crafting station is out of range")
+	ErrUnknownCraftingRecipe   = errors.New("unknown crafting recipe")
+	ErrUnknownCraftingStation  = errors.New("unknown crafting station")
+	ErrCraftingOutOfRange      = errors.New("crafting station is out of range")
 	ErrInsufficientIngredients = errors.New("missing crafting ingredients")
-	ErrCraftingSkillTooLow = errors.New("crafting skill level is too low")
-	ErrCraftingOutputFull = errors.New("crafting output stack is full")
+	ErrCraftingSkillTooLow     = errors.New("crafting skill level is too low")
+	ErrCraftingOutputFull      = errors.New("crafting output stack is full")
 )
 
 type ItemQuantity struct {
-	ItemID string `json:"itemId"`
-	Quantity int `json:"quantity"`
+	ItemID   string `json:"itemId"`
+	Quantity int    `json:"quantity"`
 }
 
 type CraftingStationDefinition struct {
-	ID string `json:"id"`
-	Name string `json:"name"`
-	Position WorldPosition `json:"position"`
-	InteractionRange float64 `json:"interactionRange"`
+	ID               string        `json:"id"`
+	Name             string        `json:"name"`
+	Position         WorldPosition `json:"position"`
+	InteractionRange float64       `json:"interactionRange"`
 }
 
 type CraftingRecipeDefinition struct {
-	ID string `json:"id"`
-	Name string `json:"name"`
-	SkillID string `json:"skillId"`
-	RequiredLevel int `json:"requiredLevel"`
-	StationID string `json:"stationId"`
-	Ingredients []ItemQuantity `json:"ingredients"`
-	Outputs []ItemQuantity `json:"outputs"`
-	Experience int `json:"experience"`
+	ID            string         `json:"id"`
+	Name          string         `json:"name"`
+	SkillID       string         `json:"skillId"`
+	RequiredLevel int            `json:"requiredLevel"`
+	StationID     string         `json:"stationId"`
+	Ingredients   []ItemQuantity `json:"ingredients"`
+	Outputs       []ItemQuantity `json:"outputs"`
+	Experience    int            `json:"experience"`
 }
 
 type CraftingResult struct {
-	RecipeID string `json:"recipeId"`
-	Outputs []ItemQuantity `json:"outputs"`
-	SkillID string `json:"skillId"`
-	Experience int `json:"experience"`
-	Skill SkillProgress `json:"skill"`
-	LeveledUp bool `json:"leveledUp"`
+	RecipeID   string         `json:"recipeId"`
+	Outputs    []ItemQuantity `json:"outputs"`
+	SkillID    string         `json:"skillId"`
+	Experience int            `json:"experience"`
+	Skill      SkillProgress  `json:"skill"`
+	LeveledUp  bool           `json:"leveledUp"`
 }
 
 var craftingStations = []CraftingStationDefinition{
@@ -60,6 +60,53 @@ var craftingRecipes = []CraftingRecipeDefinition{
 	{ID: "boar-tusk-spear", Name: "Forge Boar-Tusk Spear", SkillID: "smithing", RequiredLevel: 3, StationID: "frontier-forge", Ingredients: []ItemQuantity{{ItemID: "copper_bar", Quantity: 2}, {ItemID: "boar_tusk", Quantity: 2}, {ItemID: "wooden_plank", Quantity: 1}}, Outputs: []ItemQuantity{{ItemID: "boar_tusk_spear", Quantity: 1}}, Experience: 120},
 	{ID: "herbal-bundle", Name: "Pack Herbal Bundle", SkillID: "crafting", RequiredLevel: 1, StationID: "frontier-workbench", Ingredients: []ItemQuantity{{ItemID: "wild_herb", Quantity: 3}, {ItemID: "wooden_plank", Quantity: 1}}, Outputs: []ItemQuantity{{ItemID: "herbal_bundle", Quantity: 1}}, Experience: 45},
 	{ID: "herbal-tea", Name: "Brew Herbal Tea", SkillID: "cooking", RequiredLevel: 1, StationID: "frontier-workbench", Ingredients: []ItemQuantity{{ItemID: "herbal_bundle", Quantity: 1}, {ItemID: "wild_herb", Quantity: 1}}, Outputs: []ItemQuantity{{ItemID: "herbal_tea", Quantity: 1}}, Experience: 35},
+	{ID: "frontier-ration", Name: "Bake Frontier Ration", SkillID: "cooking", RequiredLevel: 1, StationID: "frontier-workbench", Ingredients: []ItemQuantity{{ItemID: "frontier_grain", Quantity: 2}, {ItemID: "wild_herb", Quantity: 1}}, Outputs: []ItemQuantity{{ItemID: "frontier_ration", Quantity: 1}}, Experience: 45},
+	{ID: "salvaged-power-cell", Name: "Assemble Power Cell", SkillID: "crafting", RequiredLevel: 1, StationID: "frontier-workbench", Ingredients: []ItemQuantity{{ItemID: "salvaged_scrap", Quantity: 2}, {ItemID: "copper_bar", Quantity: 1}}, Outputs: []ItemQuantity{{ItemID: "salvaged_power_cell", Quantity: 1}}, Experience: 50},
+	{ID: "frontier-pistol", Name: "Assemble Frontier Pistol", SkillID: "crafting", RequiredLevel: 1, StationID: "frontier-workbench", Ingredients: []ItemQuantity{{ItemID: "salvaged_scrap", Quantity: 2}, {ItemID: "copper_bar", Quantity: 1}, {ItemID: "wooden_plank", Quantity: 1}}, Outputs: []ItemQuantity{{ItemID: "frontier_pistol", Quantity: 1}}, Experience: 65},
+	{ID: "frontier-rifle", Name: "Forge Frontier Carbine", SkillID: "smithing", RequiredLevel: 2, StationID: "frontier-forge", Ingredients: []ItemQuantity{{ItemID: "salvaged_power_cell", Quantity: 1}, {ItemID: "copper_bar", Quantity: 2}, {ItemID: "wooden_plank", Quantity: 1}}, Outputs: []ItemQuantity{{ItemID: "frontier_rifle", Quantity: 1}}, Experience: 95},
+	{ID: "resonance-focus", Name: "Craft Resonance Focus Staff", SkillID: "crafting", RequiredLevel: 1, StationID: "frontier-workbench", Ingredients: []ItemQuantity{{ItemID: "salvaged_power_cell", Quantity: 1}, {ItemID: "wooden_plank", Quantity: 2}, {ItemID: "wild_herb", Quantity: 1}}, Outputs: []ItemQuantity{{ItemID: "resonance_focus", Quantity: 1}}, Experience: 70},
+	// Alloy Smelting (5 new alloy recipes)
+	{ID: "iron-bar", Name: "Smelt Iron Bar", SkillID: "smithing", RequiredLevel: 2, StationID: "frontier-forge", Ingredients: []ItemQuantity{{ItemID: "iron_ore", Quantity: 2}}, Outputs: []ItemQuantity{{ItemID: "iron_bar", Quantity: 1}}, Experience: 55},
+	{ID: "cobalt-bar", Name: "Smelt Cobalt Bar", SkillID: "smithing", RequiredLevel: 2, StationID: "frontier-forge", Ingredients: []ItemQuantity{{ItemID: "cobalt_ore", Quantity: 2}}, Outputs: []ItemQuantity{{ItemID: "cobalt_bar", Quantity: 1}}, Experience: 65},
+	{ID: "titanium-bar", Name: "Smelt Titanium Bar", SkillID: "smithing", RequiredLevel: 3, StationID: "frontier-forge", Ingredients: []ItemQuantity{{ItemID: "titanium_ore", Quantity: 2}, {ItemID: "iron_bar", Quantity: 1}}, Outputs: []ItemQuantity{{ItemID: "titanium_bar", Quantity: 1}}, Experience: 85},
+	{ID: "durasteel-bar", Name: "Smelt Durasteel Bar", SkillID: "smithing", RequiredLevel: 4, StationID: "frontier-forge", Ingredients: []ItemQuantity{{ItemID: "durasteel_ore", Quantity: 2}, {ItemID: "titanium_bar", Quantity: 1}}, Outputs: []ItemQuantity{{ItemID: "durasteel_bar", Quantity: 1}}, Experience: 115},
+	{ID: "mythril-bar", Name: "Smelt Mythril Bar", SkillID: "smithing", RequiredLevel: 5, StationID: "frontier-forge", Ingredients: []ItemQuantity{{ItemID: "mythril_ore", Quantity: 2}, {ItemID: "luminite_gem", Quantity: 1}}, Outputs: []ItemQuantity{{ItemID: "mythril_bar", Quantity: 1}}, Experience: 155},
+	// Medical Packs & Attribute Buff Enhancers (8 medical/stim recipes)
+	{ID: "bacta-gel", Name: "Distill Bio-Gel Compound", SkillID: "cooking", RequiredLevel: 2, StationID: "frontier-workbench", Ingredients: []ItemQuantity{{ItemID: "wild_herb", Quantity: 2}, {ItemID: "rough_stone", Quantity: 1}}, Outputs: []ItemQuantity{{ItemID: "bacta_gel", Quantity: 1}}, Experience: 50},
+	{ID: "field-medpack", Name: "Assemble Field Medical Pack", SkillID: "crafting", RequiredLevel: 2, StationID: "frontier-workbench", Ingredients: []ItemQuantity{{ItemID: "bacta_gel", Quantity: 1}, {ItemID: "herbal_bundle", Quantity: 1}}, Outputs: []ItemQuantity{{ItemID: "field_medpack", Quantity: 1}}, Experience: 65},
+	{ID: "advanced-medpack", Name: "Synthesize Advanced Trauma Medpack", SkillID: "crafting", RequiredLevel: 3, StationID: "frontier-workbench", Ingredients: []ItemQuantity{{ItemID: "bacta_gel", Quantity: 2}, {ItemID: "stalker_venom_sac", Quantity: 1}, {ItemID: "aether_crystal", Quantity: 1}}, Outputs: []ItemQuantity{{ItemID: "advanced_medpack", Quantity: 1}}, Experience: 110},
+	{ID: "surgical-trauma-kit", Name: "Assemble Surgical Trauma Kit", SkillID: "crafting", RequiredLevel: 4, StationID: "frontier-workbench", Ingredients: []ItemQuantity{{ItemID: "bacta_gel", Quantity: 2}, {ItemID: "drake_bile", Quantity: 1}, {ItemID: "luminite_gem", Quantity: 1}}, Outputs: []ItemQuantity{{ItemID: "surgical_trauma_kit", Quantity: 1}}, Experience: 145},
+	{ID: "vitality-stim-pack", Name: "Synthesize Constitution Vitality Stim", SkillID: "cooking", RequiredLevel: 2, StationID: "frontier-workbench", Ingredients: []ItemQuantity{{ItemID: "bacta_gel", Quantity: 1}, {ItemID: "frontier_grain", Quantity: 2}, {ItemID: "aether_crystal", Quantity: 1}}, Outputs: []ItemQuantity{{ItemID: "vitality_stim_pack", Quantity: 1}}, Experience: 80},
+	{ID: "adrenal-action-booster", Name: "Synthesize Stamina Action Booster", SkillID: "cooking", RequiredLevel: 2, StationID: "frontier-workbench", Ingredients: []ItemQuantity{{ItemID: "bacta_gel", Quantity: 1}, {ItemID: "hound_fang", Quantity: 1}, {ItemID: "wild_herb", Quantity: 2}}, Outputs: []ItemQuantity{{ItemID: "adrenal_action_booster", Quantity: 1}}, Experience: 85},
+	{ID: "neural-mind-tonic", Name: "Brew Willpower Clarity Tonic", SkillID: "cooking", RequiredLevel: 2, StationID: "frontier-workbench", Ingredients: []ItemQuantity{{ItemID: "aether_crystal", Quantity: 1}, {ItemID: "herbal_bundle", Quantity: 1}, {ItemID: "wild_herb", Quantity: 1}}, Outputs: []ItemQuantity{{ItemID: "neural_mind_tonic", Quantity: 1}}, Experience: 85},
+	{ID: "overdrive-omni-stim", Name: "Synthesize Tri-Stat Overdrive Stim", SkillID: "cooking", RequiredLevel: 4, StationID: "frontier-workbench", Ingredients: []ItemQuantity{{ItemID: "bacta_gel", Quantity: 2}, {ItemID: "wraith_essence", Quantity: 1}, {ItemID: "luminite_gem", Quantity: 1}}, Outputs: []ItemQuantity{{ItemID: "overdrive_omni_stim", Quantity: 1}}, Experience: 160},
+	// High-Tier Weapons & Armor (9 equipment recipes)
+	{ID: "iron-greatsword", Name: "Forge Iron Broadsword", SkillID: "smithing", RequiredLevel: 3, StationID: "frontier-forge", Ingredients: []ItemQuantity{{ItemID: "iron_bar", Quantity: 3}, {ItemID: "hound_fang", Quantity: 2}, {ItemID: "wooden_plank", Quantity: 1}}, Outputs: []ItemQuantity{{ItemID: "iron_greatsword", Quantity: 1}}, Experience: 135},
+	{ID: "cobalt-repeater", Name: "Assemble Cobalt Blaster Pistol", SkillID: "crafting", RequiredLevel: 3, StationID: "frontier-workbench", Ingredients: []ItemQuantity{{ItemID: "cobalt_bar", Quantity: 2}, {ItemID: "salvaged_power_cell", Quantity: 1}, {ItemID: "wooden_plank", Quantity: 1}}, Outputs: []ItemQuantity{{ItemID: "cobalt_repeater", Quantity: 1}}, Experience: 125},
+	{ID: "titanium-carbine", Name: "Forge Titanium Pulse Rifle", SkillID: "smithing", RequiredLevel: 4, StationID: "frontier-forge", Ingredients: []ItemQuantity{{ItemID: "titanium_bar", Quantity: 2}, {ItemID: "sentinel_core", Quantity: 1}, {ItemID: "salvaged_power_cell", Quantity: 1}}, Outputs: []ItemQuantity{{ItemID: "titanium_carbine", Quantity: 1}}, Experience: 165},
+	{ID: "durasteel-halberd", Name: "Forge Durasteel Halberd", SkillID: "smithing", RequiredLevel: 4, StationID: "frontier-forge", Ingredients: []ItemQuantity{{ItemID: "durasteel_bar", Quantity: 2}, {ItemID: "prowler_claw", Quantity: 2}, {ItemID: "wooden_plank", Quantity: 1}}, Outputs: []ItemQuantity{{ItemID: "durasteel_halberd", Quantity: 1}}, Experience: 175},
+	{ID: "aether-scepter", Name: "Craft Luminite Aether Staff", SkillID: "crafting", RequiredLevel: 4, StationID: "frontier-workbench", Ingredients: []ItemQuantity{{ItemID: "luminite_gem", Quantity: 1}, {ItemID: "wraith_essence", Quantity: 1}, {ItemID: "cobalt_bar", Quantity: 2}}, Outputs: []ItemQuantity{{ItemID: "aether_scepter", Quantity: 1}}, Experience: 170},
+	{ID: "mythril-saber", Name: "Forge Mythril Edge", SkillID: "smithing", RequiredLevel: 5, StationID: "frontier-forge", Ingredients: []ItemQuantity{{ItemID: "mythril_bar", Quantity: 2}, {ItemID: "luminite_gem", Quantity: 1}, {ItemID: "wooden_plank", Quantity: 1}}, Outputs: []ItemQuantity{{ItemID: "mythril_saber", Quantity: 1}}, Experience: 210},
+	{ID: "chitin-cuirass", Name: "Forge Stalker Chitin Cuirass", SkillID: "smithing", RequiredLevel: 3, StationID: "frontier-forge", Ingredients: []ItemQuantity{{ItemID: "stalker_chitin", Quantity: 3}, {ItemID: "iron_bar", Quantity: 2}}, Outputs: []ItemQuantity{{ItemID: "chitin_cuirass", Quantity: 1}}, Experience: 140},
+	{ID: "durasteel-helm", Name: "Forge Durasteel Visor Helm", SkillID: "smithing", RequiredLevel: 4, StationID: "frontier-forge", Ingredients: []ItemQuantity{{ItemID: "durasteel_bar", Quantity: 2}, {ItemID: "drake_scale", Quantity: 2}}, Outputs: []ItemQuantity{{ItemID: "durasteel_helm", Quantity: 1}}, Experience: 160},
+	{ID: "prowler-striders", Name: "Craft Frost Prowler Greaves", SkillID: "crafting", RequiredLevel: 3, StationID: "frontier-workbench", Ingredients: []ItemQuantity{{ItemID: "prowler_pelt", Quantity: 2}, {ItemID: "titanium_bar", Quantity: 1}}, Outputs: []ItemQuantity{{ItemID: "prowler_striders", Quantity: 1}}, Experience: 145},
+	{ID: "orichalcum-bar", Name: "Smelt Orichalcum Bar", SkillID: "smithing", RequiredLevel: 5, StationID: "frontier-forge", Ingredients: []ItemQuantity{{ItemID: "orichalcum_ore", Quantity: 2}, {ItemID: "obsidian_shard", Quantity: 1}}, Outputs: []ItemQuantity{{ItemID: "orichalcum_bar", Quantity: 1}}, Experience: 165},
+	{ID: "neutronium-bar", Name: "Smelt Neutronium Bar", SkillID: "smithing", RequiredLevel: 6, StationID: "frontier-forge", Ingredients: []ItemQuantity{{ItemID: "neutronium_ore", Quantity: 2}, {ItemID: "durasteel_bar", Quantity: 1}}, Outputs: []ItemQuantity{{ItemID: "neutronium_bar", Quantity: 1}}, Experience: 195},
+	{ID: "starsteel-bar", Name: "Smelt Star-Metal Bar", SkillID: "smithing", RequiredLevel: 7, StationID: "frontier-forge", Ingredients: []ItemQuantity{{ItemID: "starsteel_ore", Quantity: 2}, {ItemID: "mythril_bar", Quantity: 1}}, Outputs: []ItemQuantity{{ItemID: "starsteel_bar", Quantity: 1}}, Experience: 240},
+	{ID: "nanite-repair-injector", Name: "Assemble Nanite Trauma Injector", SkillID: "crafting", RequiredLevel: 5, StationID: "frontier-workbench", Ingredients: []ItemQuantity{{ItemID: "bacta_gel", Quantity: 2}, {ItemID: "scavenger_servo", Quantity: 1}, {ItemID: "void_quartz", Quantity: 1}}, Outputs: []ItemQuantity{{ItemID: "nanite_repair_injector", Quantity: 1}}, Experience: 185},
+	{ID: "titan-constitution-elixir", Name: "Distill Titan Constitution Elixir", SkillID: "cooking", RequiredLevel: 5, StationID: "frontier-workbench", Ingredients: []ItemQuantity{{ItemID: "bacta_gel", Quantity: 2}, {ItemID: "wyrm_heartstone", Quantity: 1}, {ItemID: "void_quartz", Quantity: 1}}, Outputs: []ItemQuantity{{ItemID: "titan_constitution_elixir", Quantity: 1}}, Experience: 195},
+	{ID: "orichalcum-glaive", Name: "Forge Orichalcum Sonic Glaive", SkillID: "smithing", RequiredLevel: 5, StationID: "frontier-forge", Ingredients: []ItemQuantity{{ItemID: "orichalcum_bar", Quantity: 2}, {ItemID: "behemoth_horn", Quantity: 2}, {ItemID: "wooden_plank", Quantity: 1}}, Outputs: []ItemQuantity{{ItemID: "orichalcum_glaive", Quantity: 1}}, Experience: 225},
+	{ID: "neutronium-platebody", Name: "Forge Neutronium Vanguard Cuirass", SkillID: "smithing", RequiredLevel: 6, StationID: "frontier-forge", Ingredients: []ItemQuantity{{ItemID: "neutronium_bar", Quantity: 2}, {ItemID: "wyrm_carapace", Quantity: 2}}, Outputs: []ItemQuantity{{ItemID: "neutronium_platebody", Quantity: 1}}, Experience: 250},
+	{ID: "void-psionic-crown", Name: "Craft Void Quartz Circlet", SkillID: "crafting", RequiredLevel: 5, StationID: "frontier-workbench", Ingredients: []ItemQuantity{{ItemID: "void_quartz", Quantity: 2}, {ItemID: "orichalcum_bar", Quantity: 1}, {ItemID: "aether_crystal", Quantity: 1}}, Outputs: []ItemQuantity{{ItemID: "void_psionic_crown", Quantity: 1}}, Experience: 215},
+	{ID: "starsteel-longblade", Name: "Forge Star-Metal Vanguard Blade", SkillID: "smithing", RequiredLevel: 7, StationID: "frontier-forge", Ingredients: []ItemQuantity{{ItemID: "starsteel_bar", Quantity: 2}, {ItemID: "reaver_plasma_coil", Quantity: 1}, {ItemID: "wooden_plank", Quantity: 1}}, Outputs: []ItemQuantity{{ItemID: "starsteel_longblade", Quantity: 1}}, Experience: 285},
+	{ID: "electrum-bar", Name: "Smelt Electrum Bar", SkillID: "smithing", RequiredLevel: 6, StationID: "frontier-forge", Ingredients: []ItemQuantity{{ItemID: "electrum_ore", Quantity: 2}, {ItemID: "cobalt_bar", Quantity: 1}}, Outputs: []ItemQuantity{{ItemID: "electrum_bar", Quantity: 1}}, Experience: 180},
+	{ID: "chronite-bar", Name: "Smelt Chronite Bar", SkillID: "smithing", RequiredLevel: 8, StationID: "frontier-forge", Ingredients: []ItemQuantity{{ItemID: "chronite_ore", Quantity: 2}, {ItemID: "solarite_crystal", Quantity: 1}}, Outputs: []ItemQuantity{{ItemID: "chronite_bar", Quantity: 1}}, Experience: 255},
+	{ID: "abyssal-bar", Name: "Smelt Abyssal Adamant Bar", SkillID: "smithing", RequiredLevel: 9, StationID: "frontier-forge", Ingredients: []ItemQuantity{{ItemID: "abyssal_ore", Quantity: 2}, {ItemID: "neutronium_bar", Quantity: 1}}, Outputs: []ItemQuantity{{ItemID: "abyssal_bar", Quantity: 1}}, Experience: 310},
+	{ID: "phoenix-resuscitation-pack", Name: "Synthesize Phoenix Resuscitation Medpack", SkillID: "crafting", RequiredLevel: 6, StationID: "frontier-workbench", Ingredients: []ItemQuantity{{ItemID: "bacta_gel", Quantity: 3}, {ItemID: "scorpion_stinger", Quantity: 1}, {ItemID: "solarite_crystal", Quantity: 1}}, Outputs: []ItemQuantity{{ItemID: "phoenix_resuscitation_pack", Quantity: 1}}, Experience: 230},
+	{ID: "celestial-harmony-draught", Name: "Brew Celestial Tri-Stat Draught", SkillID: "cooking", RequiredLevel: 7, StationID: "frontier-workbench", Ingredients: []ItemQuantity{{ItemID: "bacta_gel", Quantity: 2}, {ItemID: "specter_shroud", Quantity: 1}, {ItemID: "nova_prism", Quantity: 1}}, Outputs: []ItemQuantity{{ItemID: "celestial_harmony_draught", Quantity: 1}}, Experience: 275},
+	{ID: "electrum-knuckles", Name: "Craft Electrum Shock Cestus", SkillID: "crafting", RequiredLevel: 6, StationID: "frontier-workbench", Ingredients: []ItemQuantity{{ItemID: "electrum_bar", Quantity: 2}, {ItemID: "mantis_scythe", Quantity: 2}}, Outputs: []ItemQuantity{{ItemID: "electrum_knuckles", Quantity: 1}}, Experience: 220},
+	{ID: "chronite-sniper-rifle", Name: "Forge Chronite Phase Longrifle", SkillID: "smithing", RequiredLevel: 8, StationID: "frontier-forge", Ingredients: []ItemQuantity{{ItemID: "chronite_bar", Quantity: 2}, {ItemID: "solarite_crystal", Quantity: 1}, {ItemID: "leviathan_fang", Quantity: 1}}, Outputs: []ItemQuantity{{ItemID: "chronite_sniper_rifle", Quantity: 1}}, Experience: 315},
+	{ID: "abyssal-bulwark-armor", Name: "Forge Abyssal Adamant Bulwark", SkillID: "smithing", RequiredLevel: 9, StationID: "frontier-forge", Ingredients: []ItemQuantity{{ItemID: "abyssal_bar", Quantity: 2}, {ItemID: "colossus_crab_shell", Quantity: 2}}, Outputs: []ItemQuantity{{ItemID: "abyssal_bulwark_armor", Quantity: 1}}, Experience: 350},
 }
 
 func CraftingStations() []CraftingStationDefinition {
@@ -80,7 +127,9 @@ func CraftingRecipes() []CraftingRecipeDefinition {
 
 func FindCraftingStation(id string) (CraftingStationDefinition, bool) {
 	for _, station := range craftingStations {
-		if station.ID == id { return station, true }
+		if station.ID == id {
+			return station, true
+		}
 	}
 	return CraftingStationDefinition{}, false
 }

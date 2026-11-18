@@ -187,3 +187,82 @@ func TestBoarTuskCraftingConnectsLootToPolearmsEquipment(t *testing.T) {
 	attack, _ := player.EquipmentBonuses()
 	if attack != 4 { t.Fatalf("boar-tusk spear attack bonus=%d, want 4", attack) }
 }
+
+func TestFarmingAndScavengingRecipesProduceConsumableAndRangedMagicWeapons(t *testing.T) {
+	now := time.Date(2026, 11, 18, 12, 0, 0, 0, time.UTC)
+	player, err := NewPlayer("frontier-artisan", "FrontierArtisan", now)
+	if err != nil {
+		t.Fatal(err)
+	}
+	workbench, ok := FindCraftingStation("frontier-workbench")
+	if !ok {
+		t.Fatal("frontier-workbench missing")
+	}
+	forge, ok := FindCraftingStation("frontier-forge")
+	if !ok {
+		t.Fatal("frontier-forge missing")
+	}
+
+	// 1. Bake Frontier Ration (Cooking) & consume
+	player.Position = workbench.Position
+	player.Inventory["frontier_grain"] = 2
+	player.Inventory["wild_herb"] = 1
+	rationRecipe, ok := FindCraftingRecipe("frontier-ration")
+	if !ok {
+		t.Fatal("frontier-ration recipe missing")
+	}
+	if _, err := player.Craft(rationRecipe, workbench, now); err != nil {
+		t.Fatalf("craft frontier-ration: %v", err)
+	}
+	if player.Inventory["frontier_ration"] != 1 || player.Skills["cooking"].Experience != 45 {
+		t.Fatalf("unexpected frontier-ration state: inv=%v cooking=%+v", player.Inventory, player.Skills["cooking"])
+	}
+	player.Health = 70
+	healed, err := player.UseItem("frontier_ration")
+	if err != nil || healed != 20 || player.Health != 90 {
+		t.Fatalf("use frontier_ration: healed=%d health=%d err=%v", healed, player.Health, err)
+	}
+
+	// 2. Assemble Power Cell, Frontier Pistol, and Resonance Focus Staff at Workbench
+	player.Inventory["salvaged_scrap"] = 4
+	player.Inventory["copper_bar"] = 2
+	player.Inventory["wooden_plank"] = 3
+	player.Inventory["wild_herb"] = 1
+	cellRecipe, _ := FindCraftingRecipe("salvaged-power-cell")
+	if _, err := player.Craft(cellRecipe, workbench, now); err != nil {
+		t.Fatalf("craft salvaged-power-cell: %v", err)
+	}
+	pistolRecipe, _ := FindCraftingRecipe("frontier-pistol")
+	if _, err := player.Craft(pistolRecipe, workbench, now); err != nil {
+		t.Fatalf("craft frontier-pistol: %v", err)
+	}
+	focusRecipe, _ := FindCraftingRecipe("resonance-focus")
+	if _, err := player.Craft(focusRecipe, workbench, now); err != nil {
+		t.Fatalf("craft resonance-focus: %v", err)
+	}
+	if player.Inventory["frontier_pistol"] != 1 || player.Inventory["resonance_focus"] != 1 {
+		t.Fatalf("expected crafted pistol and focus staff in inventory: %v", player.Inventory)
+	}
+
+	// 3. Forge Frontier Carbine at Forge (requires Smithing 2, Rifles 2 to equip)
+	player.Position = forge.Position
+	player.Inventory["salvaged_power_cell"] = 1
+	player.Inventory["copper_bar"] = 2
+	player.Inventory["wooden_plank"] = 1
+	if _, err := player.AwardExperience("smithing", 100); err != nil {
+		t.Fatal(err)
+	}
+	rifleRecipe, _ := FindCraftingRecipe("frontier-rifle")
+	if _, err := player.Craft(rifleRecipe, forge, now); err != nil {
+		t.Fatalf("craft frontier-rifle: %v", err)
+	}
+	if err := player.EquipItem("frontier_rifle"); !errors.Is(err, ErrInsufficientEquipmentSkill) {
+		t.Fatalf("equip frontier_rifle below rifles level 2: %v", err)
+	}
+	if _, err := player.AwardExperience("rifles", 100); err != nil {
+		t.Fatal(err)
+	}
+	if err := player.EquipItem("frontier_rifle"); err != nil {
+		t.Fatalf("equip frontier_rifle at rifles level 2: %v", err)
+	}
+}
